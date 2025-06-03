@@ -73,8 +73,8 @@ class ClaudeAGI:
         logger.info("Starting Claude AGI system...")
         logger.info(f"Environment: {self.config.get('environment', 'unknown')}")
         
-        # Create orchestrator
-        self.orchestrator = AGIOrchestrator()
+        # Create orchestrator with config
+        self.orchestrator = AGIOrchestrator(config=self.config)
         
         # Configure services based on config
         # (In a full implementation, this would configure each service)

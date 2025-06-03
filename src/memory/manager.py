@@ -7,9 +7,10 @@ import uuid
 from datetime import datetime, timedelta
 import logging
 import numpy as np
+from sentence_transformers import SentenceTransformer
 
-# Simplified imports for initial implementation
-# redis and asyncpg will be mocked until properly configured
+from ..database.connections import get_db_manager, DatabaseManager
+from ..database.models import MemoryData, MemoryType, ThoughtData, StreamType, EmotionalState
 
 logger = logging.getLogger(__name__)
 
@@ -17,11 +18,9 @@ class MemoryManager:
     """Manages short-term, long-term, and semantic memory"""
     
     def __init__(self):
-        self.redis_client = None  # Short-term memory
-        self.postgres_pool = None  # Long-term memory
-        self.vector_store = None   # Semantic memory
-        self.working_memory = {}   # Simple dict for now
-        self.long_term_memory = []  # Simple list for now
+        self.db_manager: Optional[DatabaseManager] = None
+        self.embedder: Optional[SentenceTransformer] = None
+        self.use_database = False  # Flag to enable database integration
         
     @classmethod
     async def create(cls):
@@ -30,23 +29,36 @@ class MemoryManager:
         await instance.initialize()
         return instance
         
-    async def initialize(self):
+    async def initialize(self, use_database: bool = False):
         """Initialize memory stores"""
-        # For initial implementation, use in-memory stores
-        # TODO: Integrate actual Redis and PostgreSQL when configured
-        
         logger.info("Initializing memory stores...")
         
-        # Initialize working memory
-        self.working_memory = {
-            'recent_thoughts': [],
-            'active_context': {},
-            'short_term': {}
-        }
+        self.use_database = use_database
         
-        # Initialize vector store for semantic search
-        self.vector_store = SimpleVectorStore()
-        await self.vector_store.initialize()
+        if use_database:
+            # Initialize database connections
+            try:
+                self.db_manager = await get_db_manager()
+                logger.info("Database connections established")
+                
+                # Initialize sentence transformer for embeddings
+                self.embedder = SentenceTransformer('all-MiniLM-L6-v2')
+                logger.info("Sentence transformer initialized")
+            except Exception as e:
+                logger.error(f"Failed to initialize database connections: {e}")
+                logger.info("Falling back to in-memory storage")
+                self.use_database = False
+        
+        if not self.use_database:
+            # Fallback to in-memory storage
+            self.working_memory = {
+                'recent_thoughts': [],
+                'active_context': {},
+                'short_term': {}
+            }
+            self.long_term_memory = []
+            self.vector_store = SimpleVectorStore()
+            await self.vector_store.initialize()
         
         logger.info("Memory stores initialized")
         
@@ -65,6 +77,65 @@ class MemoryManager:
             **thought
         }
         
+        if self.use_database and self.db_manager:
+            try:
+                # Create ThoughtData model
+                thought_data = ThoughtData(
+                    stream_type=thought.get('stream_type', StreamType.PRIMARY),
+                    content=enriched_thought['content'],
+                    emotional_state=thought.get('emotional_state'),
+                    context=thought.get('context', {}),
+                    memory_references=thought.get('memory_references', []),
+                    timestamp=timestamp
+                )
+                
+                # Store in Redis and PostgreSQL
+                await self.db_manager.add_thought(
+                    thought_data.stream_type.value,
+                    thought_data.model_dump()
+                )
+                
+                # Store in working memory (Redis)
+                await self.db_manager.set_working_memory(
+                    f"thought:{thought_id}",
+                    json.dumps(enriched_thought),
+                    ttl=86400  # 24 hours
+                )
+                
+                # If high importance, also store as long-term memory
+                if enriched_thought['importance'] >= 7:
+                    # Generate embedding if we have content
+                    embedding = None
+                    if self.embedder and enriched_thought['content']:
+                        embedding = self.embedder.encode(enriched_thought['content']).tolist()
+                    
+                    memory_data = {
+                        'memory_type': MemoryType.EPISODIC.value,
+                        'content': enriched_thought['content'],
+                        'embedding': embedding,
+                        'emotional_valence': self._get_emotional_valence(enriched_thought),
+                        'importance': enriched_thought['importance'] / 10.0,  # Normalize to 0-1
+                        'context': enriched_thought,
+                        'associations': []
+                    }
+                    
+                    await self.db_manager.store_memory(memory_data)
+                
+            except Exception as e:
+                logger.error(f"Failed to store thought in database: {e}")
+                # Fall back to in-memory storage
+                return await self._store_thought_in_memory(enriched_thought)
+        else:
+            # Use in-memory storage
+            return await self._store_thought_in_memory(enriched_thought)
+            
+        logger.debug(f"Stored thought {thought_id}")
+        return thought_id
+    
+    async def _store_thought_in_memory(self, enriched_thought: Dict[str, Any]) -> str:
+        """Store thought in in-memory storage (fallback)"""
+        thought_id = enriched_thought['id']
+        
         # Working memory - recent thoughts
         self.working_memory['recent_thoughts'].append(enriched_thought)
         # Keep only last 1000 thoughts
@@ -79,24 +150,55 @@ class MemoryManager:
             self.long_term_memory.append(enriched_thought)
             
         # Semantic memory - store with embedding if available
-        if 'embedding' in thought:
+        if 'embedding' in enriched_thought:
             await self.vector_store.add(
                 thought_id,
-                thought['embedding'],
+                enriched_thought['embedding'],
                 enriched_thought
             )
             
-        logger.debug(f"Stored thought {thought_id}")
         return thought_id
         
     async def recall_recent(self, n: int = 10) -> List[Dict]:
         """Recall n most recent thoughts"""
+        if self.use_database and self.db_manager:
+            try:
+                # Get recent thoughts from Redis
+                thoughts = []
+                for stream_type in [StreamType.PRIMARY, StreamType.SUBCONSCIOUS, 
+                                  StreamType.EMOTIONAL, StreamType.CREATIVE]:
+                    stream_thoughts = await self.db_manager.get_recent_thoughts(
+                        stream_type.value, 
+                        limit=n
+                    )
+                    thoughts.extend(stream_thoughts)
+                
+                # Sort by timestamp and return most recent
+                thoughts.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+                return thoughts[:n]
+            except Exception as e:
+                logger.error(f"Failed to recall from database: {e}")
+                # Fall back to in-memory
+        
+        # Use in-memory storage
         recent = self.working_memory['recent_thoughts'][-n:]
         return list(reversed(recent))
         
     async def recall_by_id(self, thought_id: str) -> Optional[Dict]:
         """Recall a specific thought by ID"""
-        # Check working memory first
+        if self.use_database and self.db_manager:
+            try:
+                # Check Redis working memory first
+                thought_json = await self.db_manager.get_working_memory(f"thought:{thought_id}")
+                if thought_json:
+                    return json.loads(thought_json)
+                
+                # TODO: Query PostgreSQL for older thoughts
+                # This would require adding a method to db_manager to query thoughts by ID
+            except Exception as e:
+                logger.error(f"Failed to recall from database: {e}")
+        
+        # Use in-memory storage
         if thought_id in self.working_memory['short_term']:
             return self.working_memory['short_term'][thought_id]
             
@@ -109,15 +211,28 @@ class MemoryManager:
         
     async def recall_similar(self, query: str, k: int = 5) -> List[Dict]:
         """Recall memories similar to query"""
-        # For now, simple keyword matching
-        # TODO: Implement proper embedding-based search
+        if self.use_database and self.db_manager and self.embedder:
+            try:
+                # Generate embedding for query
+                query_embedding = self.embedder.encode(query).tolist()
+                
+                # Search in FAISS index
+                similar_memories = await self.db_manager.search_similar_memories(
+                    query_embedding, 
+                    k=k
+                )
+                
+                return similar_memories
+            except Exception as e:
+                logger.error(f"Failed to search similar memories: {e}")
         
+        # Fallback to keyword matching
         query_lower = query.lower()
         scored_memories = []
         
         # Search in all memories
         all_memories = (
-            self.working_memory['recent_thoughts'] + 
+            self.working_memory.get('recent_thoughts', []) + 
             self.long_term_memory
         )
         
@@ -137,15 +252,41 @@ class MemoryManager:
         logger.info("Starting memory consolidation...")
         
         # Get recent thoughts
-        recent_thoughts = self.working_memory['recent_thoughts'][-100:]
+        if self.use_database and self.db_manager:
+            recent_thoughts = []
+            for stream_type in [StreamType.PRIMARY, StreamType.SUBCONSCIOUS]:
+                thoughts = await self.db_manager.get_recent_thoughts(stream_type.value, 100)
+                recent_thoughts.extend(thoughts)
+        else:
+            recent_thoughts = self.working_memory['recent_thoughts'][-100:]
         
         # Identify important memories based on various factors
         important_memories = await self.identify_important_memories(recent_thoughts)
         
-        # Strengthen important memories by moving to long-term
-        for memory in important_memories:
-            if memory not in self.long_term_memory:
-                self.long_term_memory.append(memory)
+        # Store important memories in long-term storage
+        if self.use_database and self.db_manager and self.embedder:
+            for memory in important_memories:
+                # Generate embedding
+                embedding = None
+                if memory.get('content'):
+                    embedding = self.embedder.encode(memory['content']).tolist()
+                
+                memory_data = {
+                    'memory_type': MemoryType.EPISODIC.value,
+                    'content': memory.get('content', ''),
+                    'embedding': embedding,
+                    'emotional_valence': self._get_emotional_valence(memory),
+                    'importance': memory.get('importance', 5) / 10.0,
+                    'context': memory,
+                    'associations': []
+                }
+                
+                await self.db_manager.store_memory(memory_data)
+        else:
+            # In-memory storage
+            for memory in important_memories:
+                if memory not in self.long_term_memory:
+                    self.long_term_memory.append(memory)
                 
         # Create associations between related memories
         await self.create_associations(recent_thoughts)
@@ -187,6 +328,20 @@ class MemoryManager:
         }
         
         return intensity_map.get(emotional_tone, 0.5)
+    
+    def _get_emotional_valence(self, thought: Dict) -> float:
+        """Calculate emotional valence (-1 to 1) of a thought"""
+        emotional_tone = thought.get('emotional_tone', 'neutral')
+        
+        # Mapping of emotions to valence
+        valence_map = {
+            'joy': 0.8, 'excitement': 0.7, 'love': 0.9,
+            'calm': 0.3, 'neutral': 0.0,
+            'fear': -0.6, 'anger': -0.7, 'sadness': -0.8,
+            'surprise': 0.1, 'disgust': -0.6
+        }
+        
+        return valence_map.get(emotional_tone, 0.0)
         
     async def create_associations(self, thoughts: List[Dict]):
         """Create associative links between related memories"""
@@ -206,17 +361,58 @@ class MemoryManager:
                 
     async def update_context(self, key: str, value: Any):
         """Update active context"""
-        self.working_memory['active_context'][key] = value
+        if self.use_database and self.db_manager:
+            try:
+                # Store in Redis with context prefix
+                await self.db_manager.set_working_memory(
+                    f"context:{key}",
+                    json.dumps(value) if not isinstance(value, str) else value,
+                    ttl=86400  # 24 hours
+                )
+            except Exception as e:
+                logger.error(f"Failed to update context in database: {e}")
+        else:
+            # Use in-memory storage
+            self.working_memory['active_context'][key] = value
         
     async def get_context(self, key: str) -> Any:
         """Get value from active context"""
-        return self.working_memory['active_context'].get(key)
+        if self.use_database and self.db_manager:
+            try:
+                # Get from Redis
+                value = await self.db_manager.get_working_memory(f"context:{key}")
+                if value:
+                    try:
+                        return json.loads(value)
+                    except json.JSONDecodeError:
+                        return value
+            except Exception as e:
+                logger.error(f"Failed to get context from database: {e}")
+        
+        # Use in-memory storage
+        return self.working_memory.get('active_context', {}).get(key)
         
     async def clear_working_memory(self):
         """Clear working memory (useful for resets)"""
-        self.working_memory['recent_thoughts'] = []
-        self.working_memory['short_term'] = {}
+        if self.use_database and self.db_manager:
+            try:
+                # Clear Redis keys with our prefixes
+                # Note: This is a simplified version - in production you'd want
+                # to use SCAN to avoid blocking
+                logger.warning("Database working memory clearing not fully implemented")
+            except Exception as e:
+                logger.error(f"Failed to clear database working memory: {e}")
+        else:
+            # Clear in-memory storage
+            self.working_memory['recent_thoughts'] = []
+            self.working_memory['short_term'] = {}
+        
         logger.info("Working memory cleared")
+    
+    async def close(self):
+        """Close database connections gracefully"""
+        if self.use_database and self.db_manager:
+            await self.db_manager.close()
 
 
 class SimpleVectorStore:

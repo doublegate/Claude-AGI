@@ -204,6 +204,7 @@ configs/local.yaml
 configs/*.local.yaml
 
 # Test output
+archive/test_output/
 test_results/
 htmlcov/
 .coverage.*

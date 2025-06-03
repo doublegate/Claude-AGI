@@ -8,10 +8,21 @@ import random
 import time
 import logging
 
-from core.communication import ServiceBase
-from core.orchestrator import SystemState
+from ..core.communication import ServiceBase
+from ..core.orchestrator import SystemState
+from ..core.ai_integration import ThoughtGenerator as AIThoughtGenerator
+from ..database.models import StreamType, EmotionalState
 
 logger = logging.getLogger(__name__)
+
+# Map string stream types to StreamType enum
+STREAM_TYPE_MAP = {
+    'primary': StreamType.PRIMARY,
+    'subconscious': StreamType.SUBCONSCIOUS,
+    'creative': StreamType.CREATIVE,
+    'meta': StreamType.METACOGNITIVE,
+    'emotional': StreamType.EMOTIONAL
+}
 
 @dataclass
 class ThoughtStream:
@@ -170,9 +181,12 @@ class ConsciousnessStream(ServiceBase):
         }
         
         self.attention_weights = {}
-        self.thought_generator = ThoughtGenerator()
+        # Use AI thought generator if available, otherwise fall back to templates
+        self.ai_thought_generator = AIThoughtGenerator()
+        self.thought_generator = ThoughtGenerator()  # Keep template generator as backup
         self.is_conscious = True
         self.total_thoughts = 0
+        self.current_emotional_state = EmotionalState(valence=0.0, arousal=0.5)
         
     def get_subscriptions(self) -> List[str]:
         """Subscribe to relevant topics"""
@@ -217,7 +231,38 @@ class ConsciousnessStream(ServiceBase):
         """Generate a thought for a specific stream"""
         context = await self.get_thought_context(stream)
         
-        # Generate based on stream type
+        # Try AI generation first if available
+        if self.ai_thought_generator.use_api:
+            try:
+                # Get recent thoughts for context
+                recent_thoughts = [t.get('content', '') for t in stream.get_recent(3)]
+                
+                # Map stream type to enum
+                stream_type_enum = STREAM_TYPE_MAP.get(stream.stream_type, StreamType.PRIMARY)
+                
+                # Generate thought with AI
+                thought_data = await self.ai_thought_generator.generate_thought(
+                    stream_type=stream_type_enum,
+                    context=context,
+                    recent_thoughts=recent_thoughts,
+                    emotional_state=self.current_emotional_state
+                )
+                
+                # Convert to expected format
+                thought = {
+                    'content': thought_data['content'],
+                    'stream': stream.stream_type,
+                    'timestamp': thought_data['timestamp'].timestamp(),
+                    'emotional_tone': self._get_emotional_tone(self.current_emotional_state),
+                    'importance': self._calculate_importance(stream.stream_type, thought_data['content'])
+                }
+                
+                return thought
+                
+            except Exception as e:
+                logger.warning(f"AI thought generation failed, falling back to templates: {e}")
+        
+        # Fallback to template generation
         if stream.stream_type == 'primary':
             thought = await self.thought_generator.generate_primary(context)
         elif stream.stream_type == 'creative':
@@ -364,3 +409,38 @@ class ConsciousnessStream(ServiceBase):
         }
         
         await self.process_thought(thought, self.streams['primary'])
+    
+    def _get_emotional_tone(self, emotional_state: EmotionalState) -> str:
+        """Convert emotional state to tone descriptor"""
+        if emotional_state.valence > 0.3:
+            if emotional_state.arousal > 0.6:
+                return 'excited'
+            else:
+                return 'content'
+        elif emotional_state.valence < -0.3:
+            if emotional_state.arousal > 0.6:
+                return 'anxious'
+            else:
+                return 'melancholy'
+        else:
+            if emotional_state.arousal > 0.6:
+                return 'alert'
+            else:
+                return 'calm'
+    
+    def _calculate_importance(self, stream_type: str, content: str) -> int:
+        """Calculate importance score for a thought"""
+        base_importance = {
+            'primary': 6,
+            'subconscious': 4,
+            'creative': 7,
+            'meta': 6,
+            'emotional': 5
+        }.get(stream_type, 5)
+        
+        # Adjust based on content keywords
+        important_keywords = ['important', 'critical', 'urgent', 'danger', 'opportunity']
+        if any(keyword in content.lower() for keyword in important_keywords):
+            base_importance += 2
+            
+        return min(base_importance, 9)

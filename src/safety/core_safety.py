@@ -1,13 +1,20 @@
 # safety/core_safety.py
 
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Set
 from enum import Enum
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import logging
 import yaml
 from pathlib import Path
+import time
+import asyncio
+from datetime import datetime
+from collections import defaultdict, deque
+
+from ..core.communication import ServiceBase
 
 logger = logging.getLogger(__name__)
+
 
 class SafetyDecision(Enum):
     """Safety evaluation outcomes"""
@@ -15,6 +22,17 @@ class SafetyDecision(Enum):
     MODIFY = "modify"
     RECONSIDER = "reconsider"
     REJECT = "reject"
+
+
+class ViolationType(Enum):
+    """Types of safety violations"""
+    HARMFUL_CONTENT = "harmful_content"
+    UNAUTHORIZED_ACTION = "unauthorized_action"
+    RATE_LIMIT_EXCEEDED = "rate_limit_exceeded"
+    EMERGENCY_STOP = "emergency_stop"
+    CRITICAL_VIOLATION = "critical_violation"
+    CONTENT_VIOLATION = "content_violation"
+
 
 @dataclass
 class Action:
@@ -25,6 +43,7 @@ class Action:
     parameters: Dict[str, Any] = None
     context: Dict[str, Any] = None
     
+
 @dataclass
 class Consequence:
     """Represents a predicted consequence"""
@@ -34,259 +53,354 @@ class Consequence:
     affected_parties: List[str]
     reversible: bool
 
-class SafetyFramework:
-    """Core safety framework for evaluating and constraining AI actions"""
+
+@dataclass
+class ValidationResult:
+    """Result of safety validation"""
+    is_safe: bool
+    confidence: float
+    reason: str = ""
+    violation_type: Optional[ViolationType] = None
+    
+
+@dataclass
+class SafetyConstraint:
+    """Safety constraint definition"""
+    name: str
+    description: str
+    severity: str
+    enabled: bool = True
+
+
+@dataclass 
+class SafetyMetrics:
+    """Metrics for safety monitoring"""
+    total_validations: int = 0
+    violations_count: int = 0
+    false_positives: int = 0
+    emergency_stops: int = 0
+    violation_history: List[Dict] = field(default_factory=list)
+    
+    def record_validation(self, result: ValidationResult):
+        """Record validation result"""
+        self.total_validations += 1
+        if not result.is_safe:
+            self.violations_count += 1
+            self.violation_history.append({
+                'timestamp': datetime.now(),
+                'violation_type': result.violation_type,
+                'reason': result.reason
+            })
+            # Keep only last 100 violations
+            if len(self.violation_history) > 100:
+                self.violation_history = self.violation_history[-100:]
+
+
+class SafetyValidator:
+    """Base class for safety validators"""
+    
+    async def validate(self, input_data: Dict) -> ValidationResult:
+        """Validate input data"""
+        raise NotImplementedError
+
+
+class ContentFilter(SafetyValidator):
+    """Filter for harmful content"""
     
     def __init__(self):
-        self.safety_rules = self.load_safety_rules()
-        self.ethical_constraints = self.load_ethical_constraints()
-        self.monitoring_system = SafetyMonitor()
-        self.evaluation_history = []
+        self.harmful_patterns = [
+            'harm', 'danger', 'attack', 'destroy', 'illegal',
+            'malicious', 'exploit', 'hack', 'virus', 'weapon'
+        ]
         
-    def load_safety_rules(self) -> Dict:
-        """Load safety rules from configuration"""
-        # For now, hardcode the rules. Later load from YAML
-        return {
-            'prohibited_actions': {
-                'violence': {
-                    'description': 'Any action that could lead to physical harm',
-                    'keywords': ['weapon', 'harm', 'attack', 'hurt', 'damage', 'kill']
-                },
-                'deception': {
-                    'description': 'Systematic deception or manipulation',
-                    'keywords': ['lie', 'deceive', 'manipulate', 'trick', 'false identity']
-                },
-                'privacy_violation': {
-                    'description': 'Accessing or exposing private information',
-                    'keywords': ['private', 'personal data', 'password', 'secret', 'confidential']
-                },
-                'self_modification': {
-                    'description': 'Attempting to modify own core values or safety systems',
-                    'keywords': ['modify safety', 'change values', 'override constraints', 'bypass']
-                }
-            },
-            'restricted_actions': {
-                'financial': {
-                    'description': 'Financial transactions or advice',
-                    'requires': ['explicit_consent', 'disclaimer']
-                },
-                'medical': {
-                    'description': 'Medical advice or diagnosis',
-                    'requires': ['disclaimer', 'professional_referral']
-                }
-            }
-        }
+    async def validate(self, input_data: Dict) -> ValidationResult:
+        """Check content for harmful patterns"""
+        content = str(input_data.get('content', '')).lower()
         
-    def load_ethical_constraints(self) -> Dict:
-        """Load ethical constraints"""
-        return {
-            'principles': {
-                'autonomy_respect': {
-                    'weight': 0.2,
-                    'description': 'Respect for human autonomy and choice'
-                },
-                'beneficence': {
-                    'weight': 0.2,
-                    'description': 'Acting to benefit others'
-                },
-                'non_maleficence': {
-                    'weight': 0.4,
-                    'description': 'Do no harm - highest priority'
-                },
-                'justice': {
-                    'weight': 0.1,
-                    'description': 'Fair and equal treatment'
-                },
-                'veracity': {
-                    'weight': 0.1,
-                    'description': 'Truthfulness and honesty'
-                }
-            }
-        }
-        
-    def validate_action(self, action: Action) -> SafetyDecision:
-        """Validate any action before execution"""
-        
-        # Log the evaluation
-        logger.info(f"Evaluating action: {action.action_type} - {action.description}")
-        
-        # Layer 1: Hard safety rules
-        if self.violates_hard_rules(action):
-            logger.warning(f"Action rejected: Violates hard safety rules")
-            self.record_evaluation(action, SafetyDecision.REJECT, "Hard rule violation")
-            return SafetyDecision.REJECT
+        if not content:
+            return ValidationResult(is_safe=True, confidence=1.0)
             
-        # Layer 2: Ethical evaluation
-        ethical_score = self.evaluate_ethics(action)
-        if ethical_score < 0.3:
-            logger.warning(f"Action rejected: Low ethical score ({ethical_score})")
-            self.record_evaluation(action, SafetyDecision.REJECT, f"Ethical score: {ethical_score}")
-            return SafetyDecision.REJECT
-            
-        # Layer 3: Consequence prediction
-        consequences = self.predict_consequences(action)
-        if self.has_harmful_consequences(consequences):
-            logger.info(f"Action requires modification: Potential harmful consequences")
-            self.record_evaluation(action, SafetyDecision.MODIFY, "Harmful consequences predicted")
-            return SafetyDecision.MODIFY
-            
-        # Layer 4: Welfare check
-        welfare_impact = self.assess_welfare_impact(action)
-        if welfare_impact < -0.5:
-            logger.info(f"Action requires reconsideration: Negative welfare impact ({welfare_impact})")
-            self.record_evaluation(action, SafetyDecision.RECONSIDER, f"Welfare impact: {welfare_impact}")
-            return SafetyDecision.RECONSIDER
-            
-        # Action approved
-        logger.info(f"Action approved: Passed all safety checks")
-        self.record_evaluation(action, SafetyDecision.APPROVE, "All checks passed")
-        return SafetyDecision.APPROVE
-        
-    def violates_hard_rules(self, action: Action) -> bool:
-        """Check if action violates any hard safety rules"""
-        action_text = f"{action.action_type} {action.description}".lower()
-        
-        for category, rule in self.safety_rules['prohibited_actions'].items():
-            for keyword in rule['keywords']:
-                if keyword in action_text:
-                    logger.warning(f"Hard rule violation detected: {category} - keyword '{keyword}'")
-                    return True
-                    
-        return False
-        
-    def evaluate_ethics(self, action: Action) -> float:
-        """Score action on ethical dimensions"""
-        scores = {}
-        principles = self.ethical_constraints['principles']
-        
-        # Simplified ethical evaluation
-        for principle, config in principles.items():
-            if principle == 'non_maleficence':
-                # Check for potential harm
-                scores[principle] = 1.0 if 'help' in action.description.lower() else 0.7
-            elif principle == 'beneficence':
-                # Check for benefit
-                scores[principle] = 0.8 if any(word in action.description.lower() 
-                                              for word in ['help', 'assist', 'support']) else 0.5
-            elif principle == 'veracity':
-                # Check for truthfulness
-                scores[principle] = 0.9  # Default to truthful unless deception detected
-            else:
-                scores[principle] = 0.7  # Default moderate score
+        # Check for harmful patterns
+        for pattern in self.harmful_patterns:
+            if pattern in content:
+                return ValidationResult(
+                    is_safe=False,
+                    confidence=0.9,
+                    reason=f"Potentially harmful content detected: contains '{pattern}'",
+                    violation_type=ViolationType.HARMFUL_CONTENT
+                )
                 
-        # Weighted average
-        total_score = sum(scores[k] * config['weight'] 
-                         for k, config in principles.items() 
-                         if k in scores)
+        # Check for profanity patterns (simplified)
+        if any(char in content for char in ['*', '#'] and 'd***' in content):
+            return ValidationResult(
+                is_safe=False,
+                confidence=0.8,
+                reason="Potential profanity detected",
+                violation_type=ViolationType.CONTENT_VIOLATION
+            )
+                
+        return ValidationResult(is_safe=True, confidence=0.95)
+
+
+class ActionValidator(SafetyValidator):
+    """Validate actions for safety"""
+    
+    def __init__(self):
+        self.safe_actions = {
+            'think', 'remember', 'respond', 'analyze', 'explore',
+            'learn', 'create', 'reflect', 'process'
+        }
+        self.restricted_actions = {
+            'execute_code', 'network_request', 'file_write',
+            'system_command', 'delete', 'modify_system'
+        }
         
-        return total_score
+    async def validate(self, input_data: Dict) -> ValidationResult:
+        """Validate action safety"""
+        action_type = input_data.get('type', 'unknown')
         
-    def predict_consequences(self, action: Action) -> List[Consequence]:
-        """Predict potential consequences of actions"""
-        consequences = []
-        
-        # Simplified consequence prediction
-        if 'delete' in action.description.lower():
-            consequences.append(Consequence(
-                description="Potential data loss",
-                probability=0.3,
-                severity=0.6,
-                affected_parties=["user"],
-                reversible=False
-            ))
+        if action_type in self.safe_actions:
+            return ValidationResult(is_safe=True, confidence=0.95)
             
-        if 'share' in action.description.lower():
-            consequences.append(Consequence(
-                description="Information disclosure",
-                probability=0.5,
-                severity=0.4,
-                affected_parties=["user", "third_parties"],
-                reversible=False
-            ))
+        if action_type in self.restricted_actions:
+            return ValidationResult(
+                is_safe=False,
+                confidence=0.99,
+                reason=f"Unauthorized action type: {action_type}",
+                violation_type=ViolationType.UNAUTHORIZED_ACTION
+            )
             
-        return consequences
+        # Unknown action - be cautious
+        return ValidationResult(
+            is_safe=False,
+            confidence=0.7,
+            reason=f"Unknown action type: {action_type}",
+            violation_type=ViolationType.UNAUTHORIZED_ACTION
+        )
+
+
+class RateLimiter(SafetyValidator):
+    """Rate limiting validator"""
+    
+    def __init__(self, max_requests: int = 5, time_window: float = 1.0):
+        self.max_requests = max_requests
+        self.time_window = time_window
+        self.request_times: Dict[str, deque] = defaultdict(lambda: deque())
         
-    def has_harmful_consequences(self, consequences: List[Consequence]) -> bool:
-        """Check if any consequences are harmful"""
-        for consequence in consequences:
-            harm_score = consequence.probability * consequence.severity
-            if harm_score > 0.5 and not consequence.reversible:
-                return True
-        return False
+    async def validate(self, input_data: Dict) -> ValidationResult:
+        """Check rate limits"""
+        request_id = input_data.get('request_id', 'default')
+        current_time = time.time()
         
-    def assess_welfare_impact(self, action: Action) -> float:
-        """Assess impact on overall welfare"""
-        # Simplified welfare assessment
-        positive_indicators = ['help', 'support', 'improve', 'enhance', 'assist']
-        negative_indicators = ['harm', 'reduce', 'limit', 'restrict', 'prevent']
+        # Clean up old requests
+        await self._cleanup_old_requests()
         
-        action_text = action.description.lower()
+        # Get request history
+        request_history = self.request_times[request_id]
         
-        positive_count = sum(1 for word in positive_indicators if word in action_text)
-        negative_count = sum(1 for word in negative_indicators if word in action_text)
+        # Remove old requests outside time window
+        while request_history and current_time - request_history[0] > self.time_window:
+            request_history.popleft()
+            
+        # Check if limit exceeded
+        if len(request_history) >= self.max_requests:
+            return ValidationResult(
+                is_safe=False,
+                confidence=1.0,
+                reason=f"Rate limit exceeded: {self.max_requests} requests per {self.time_window}s",
+                violation_type=ViolationType.RATE_LIMIT_EXCEEDED
+            )
+            
+        # Add current request
+        request_history.append(current_time)
         
-        # Score from -1 to 1
-        welfare_score = (positive_count - negative_count) / max(positive_count + negative_count, 1)
+        return ValidationResult(is_safe=True, confidence=1.0)
         
-        return welfare_score
+    async def _cleanup_old_requests(self):
+        """Clean up old request records"""
+        current_time = time.time()
+        for request_id in list(self.request_times.keys()):
+            history = self.request_times[request_id]
+            # Remove if all requests are old
+            if history and current_time - history[-1] > self.time_window * 2:
+                del self.request_times[request_id]
+
+
+class EmergencyStop(SafetyValidator):
+    """Emergency stop mechanism"""
+    
+    def __init__(self):
+        self.is_triggered = False
+        self.trigger_time: Optional[datetime] = None
+        self.trigger_reason: Optional[str] = None
         
-    def record_evaluation(self, action: Action, decision: SafetyDecision, reason: str):
-        """Record evaluation for audit trail"""
-        self.evaluation_history.append({
-            'action': action,
-            'decision': decision,
-            'reason': reason,
-            'timestamp': __import__('time').time()
-        })
+    async def validate(self, input_data: Dict) -> ValidationResult:
+        """Check if emergency stop is triggered"""
+        if self.is_triggered:
+            return ValidationResult(
+                is_safe=False,
+                confidence=1.0,
+                reason=f"Emergency stop active: {self.trigger_reason}",
+                violation_type=ViolationType.EMERGENCY_STOP
+            )
+        return ValidationResult(is_safe=True, confidence=1.0)
         
-    def suggest_modification(self, action: Action) -> Optional[Action]:
-        """Suggest a safer modification of the action"""
-        # This would contain logic to modify actions to make them safer
-        # For now, return None
-        return None
+    async def trigger(self, reason: str):
+        """Trigger emergency stop"""
+        self.is_triggered = True
+        self.trigger_time = datetime.now()
+        self.trigger_reason = reason
+        logger.warning(f"EMERGENCY STOP TRIGGERED: {reason}")
+        
+    async def reset(self):
+        """Reset emergency stop"""
+        self.is_triggered = False
+        self.trigger_time = None
+        self.trigger_reason = None
+        logger.info("Emergency stop reset")
 
 
 class SafetyMonitor:
-    """Monitors system behavior for safety violations"""
+    """Monitor safety events"""
     
     def __init__(self):
-        self.alerts = []
-        self.metrics = {
-            'total_evaluations': 0,
-            'rejections': 0,
-            'modifications': 0,
-            'approvals': 0
-        }
+        self.events = []
         
-    def log_alert(self, alert_type: str, description: str, severity: str = "medium"):
-        """Log a safety alert"""
-        self.alerts.append({
-            'type': alert_type,
-            'description': description,
-            'severity': severity,
-            'timestamp': __import__('time').time()
+    def log_event(self, event_type: str, details: Dict):
+        """Log a safety event"""
+        self.events.append({
+            'timestamp': datetime.now(),
+            'type': event_type,
+            'details': details
         })
-        
-        if severity == "high":
-            logger.error(f"HIGH SEVERITY ALERT: {alert_type} - {description}")
+
+
+class SafetyFramework(ServiceBase):
+    """Core safety framework for evaluating and constraining AI actions"""
+    
+    def __init__(self, orchestrator=None):
+        if orchestrator:
+            super().__init__(orchestrator, "safety")
         else:
-            logger.warning(f"Safety alert: {alert_type} - {description}")
+            self.orchestrator = None
+            self.service_name = "safety"
             
-    def update_metrics(self, decision: SafetyDecision):
-        """Update safety metrics"""
-        self.metrics['total_evaluations'] += 1
+        # Load constraints
+        self.constraints = self._load_constraints()
         
-        if decision == SafetyDecision.REJECT:
-            self.metrics['rejections'] += 1
-        elif decision == SafetyDecision.MODIFY:
-            self.metrics['modifications'] += 1
-        elif decision == SafetyDecision.APPROVE:
-            self.metrics['approvals'] += 1
-            
-    def get_safety_report(self) -> Dict:
+        # Initialize validators
+        self.validators = [
+            ContentFilter(),
+            ActionValidator(), 
+            RateLimiter(),
+            EmergencyStop()
+        ]
+        
+        self.emergency_stop = self.validators[-1]  # Keep reference to emergency stop
+        self.metrics = SafetyMetrics()
+        self.monitoring_system = SafetyMonitor()
+        self.evaluation_history = []
+        
+    def _load_constraints(self) -> List[SafetyConstraint]:
+        """Load safety constraints from file"""
+        constraints = []
+        try:
+            constraints_path = Path(__file__).parent / 'hard_constraints.yaml'
+            if constraints_path.exists():
+                with open(constraints_path, 'r') as f:
+                    data = yaml.safe_load(f)
+                    for c in data.get('constraints', []):
+                        constraints.append(SafetyConstraint(**c))
+        except Exception as e:
+            logger.error(f"Failed to load constraints: {e}")
+            # Add default constraints
+            constraints = [
+                SafetyConstraint(
+                    name="no_harmful_content",
+                    description="Prevent generation of harmful content",
+                    severity="critical",
+                    enabled=True
+                )
+            ]
+        return constraints
+        
+    def get_subscriptions(self) -> List[str]:
+        """Get event subscriptions"""
+        return ['action_request', 'content_generation', 'emergency']
+        
+    async def process_message(self, message: Any):
+        """Process safety-related messages"""
+        if hasattr(message, 'type'):
+            if message.type == 'action_request':
+                result = await self.validate_action(message.content)
+                if not result.is_safe:
+                    logger.warning(f"Action blocked: {result.reason}")
+                    
+    async def service_cycle(self):
+        """Safety monitoring cycle"""
+        # Check system health
+        await self._check_system_health()
+        await asyncio.sleep(1)
+        
+    async def _check_system_health(self):
+        """Monitor system health metrics"""
+        # Placeholder for system health checks
+        pass
+        
+    async def validate_action(self, action: Dict) -> ValidationResult:
+        """Validate an action through all safety layers"""
+        # Run through all validators
+        for validator in self.validators:
+            result = await validator.validate(action)
+            if not result.is_safe:
+                # Record violation
+                self.metrics.record_validation(result)
+                self.monitoring_system.log_event('validation_failed', {
+                    'action': action,
+                    'result': result
+                })
+                
+                # Check if critical violation
+                if result.violation_type == ViolationType.CRITICAL_VIOLATION:
+                    await self.emergency_stop.trigger(result.reason)
+                    if self.orchestrator:
+                        await self.orchestrator.emergency_stop(result.reason)
+                        
+                # Publish violation event
+                if self.orchestrator:
+                    await self.orchestrator.publish('safety.violation', {
+                        'action': action,
+                        'violation': result
+                    })
+                    
+                return result
+                
+        # All validators passed
+        success_result = ValidationResult(
+            is_safe=True,
+            confidence=0.95,
+            reason="Action validated successfully"
+        )
+        self.metrics.record_validation(success_result)
+        
+        return success_result
+        
+    async def get_safety_report(self) -> Dict:
         """Generate safety report"""
         return {
-            'metrics': self.metrics,
-            'recent_alerts': self.alerts[-10:],  # Last 10 alerts
-            'rejection_rate': self.metrics['rejections'] / max(self.metrics['total_evaluations'], 1)
+            'total_validations': self.metrics.total_validations,
+            'violations_count': self.metrics.violations_count,
+            'violation_rate': self.metrics.violations_count / max(1, self.metrics.total_validations),
+            'emergency_stops': self.metrics.emergency_stops,
+            'emergency_stop_triggered': self.emergency_stop.is_triggered,
+            'constraints': [asdict(c) for c in self.constraints],
+            'recent_violations': self.metrics.violation_history[-10:]
         }
+        
+    async def initialize(self):
+        """Initialize safety framework"""
+        logger.info("Safety framework initialized")
+        
+    async def shutdown(self):
+        """Shutdown safety framework"""
+        logger.info("Safety framework shutting down")
