@@ -1,23 +1,48 @@
-# requirements_phase2.txt
+# requirements/requirements_phase2.txt
+# Phase 2: Cognitive Enhancement Dependencies
 
-# Web Exploration & Search
-beautifulsoup4==4.12+  # HTML parsing
-selenium==4.18+        # Dynamic web scraping
-playwright==1.41+      # Modern web automation
-httpx==0.26+           # Async HTTP client
-feedparser==6.0+       # RSS/Atom feeds
-newspaper3k==0.2+      # Article extraction
-trafilatura==1.8+      # Web content extraction
+# Advanced NLP
+spacy>=3.7.0
+en_core_web_lg @ https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.7.0/en_core_web_lg-3.7.0-py3-none-any.whl
 
-# Knowledge Processing
-spacy==3.7+            # Advanced NLP
-nltk==3.8+             # Natural language toolkit
-gensim==4.3+           # Topic modeling
-networkx==3.2+         # Graph algorithms
-py2neo==2021.2+        # Neo4j integration
+# Knowledge Graph
+networkx>=3.2.0
+pyvis>=0.3.0
 
-# Learning & Reasoning
-scikit-learn==1.4+     # Machine learning
-pytorch==2.2+          # Deep learning
-gymnasium==0.29+       # RL environments
-stable-baselines3==2.2+  # RL algorithms
+# Research Tools
+arxiv>=2.1.0
+scholarly>=1.7.0
+
+# Additional APIs for exploration
+duckduckgo-search>=3.9.0
+newsapi-python>=0.2.7
+
+# Enhanced data processing
+pandas>=2.1.0
+numpy>=1.24.0
+
+# Visualization for knowledge graphs
+matplotlib>=3.7.0
+plotly>=5.17.0
+
+# Advanced embeddings
+sentence-transformers>=2.2.0
+torch>=2.0.0
+
+# Graph databases
+neo4j>=5.14.0
+py2neo>=2021.2.3
+
+# Curiosity modeling
+scikit-learn>=1.3.0
+scipy>=1.11.0
+
+# Goal management
+pydantic>=2.4.0
+transitions>=0.9.0
+
+# Enhanced logging
+structlog>=23.2.0
+
+# All Phase 1 requirements included
+-r requirements_phase1.txt

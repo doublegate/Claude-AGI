@@ -1,0 +1,71 @@
+# deployment/kubernetes/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: claude-operator
+  namespace: claude-system
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "list", "watch", "update", "patch"]
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: claude-admin
+  namespace: claude-system
+rules:
+- apiGroups: ["*"]
+  resources: ["*"]
+  verbs: ["*"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: claude-operator-binding
+  namespace: claude-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: claude-operator
+subjects:
+- kind: ServiceAccount
+  name: claude-operator
+  namespace: claude-system
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: claude-admin-binding
+  namespace: claude-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: claude-admin
+subjects:
+- kind: ServiceAccount
+  name: claude-admin
+  namespace: claude-system
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: claude-operator
+  namespace: claude-system
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: claude-admin
+  namespace: claude-system

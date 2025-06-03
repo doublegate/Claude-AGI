@@ -98,3 +98,15 @@ development:
   hot_reload: true
   test_mode: false
   mock_external_apis: false
+
+# Phase 2 Configuration
+learning:
+  enabled: true
+  curiosity_threshold: 0.7
+  learning_rate: 0.01
+  goal_generation_interval: 3600  # 1 hour
+  
+knowledge:
+  graph_size_limit: 100000
+  confidence_threshold: 0.6
+  source_diversity_weight: 0.3

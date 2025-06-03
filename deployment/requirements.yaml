@@ -1,0 +1,74 @@
+# deployment/requirements.yaml
+# Hardware and infrastructure requirements for Claude-AGI
+
+# Development Environment Requirements
+development:
+  cpu: 
+    cores: 16
+    type: "Intel Xeon or AMD EPYC"
+  ram: 
+    size: 64GB
+    type: "DDR4-3200 or better"
+  storage:
+    system: 500GB NVMe SSD
+    data: 2TB NVMe SSD
+  gpu: 
+    optional: true
+    recommended: "NVIDIA RTX 4090 or better"
+  network:
+    bandwidth: "1 Gbps"
+    latency: "<10ms to Anthropic API"
+
+# Production Environment Requirements
+production:
+  cpu:
+    cores: 64
+    type: "AMD EPYC 7763 or Intel Xeon Platinum"
+  ram:
+    size: 256GB
+    type: "DDR4-3200 ECC"
+  storage:
+    system: 2TB NVMe SSD RAID 1
+    data: 10TB NVMe SSD RAID 10
+    backup: 50TB HDD RAID 6
+  gpu:
+    count: 4
+    type: "NVIDIA A100 80GB"
+  network:
+    bandwidth: "10 Gbps redundant"
+    latency: "<5ms to Anthropic API"
+
+# Kubernetes Cluster Requirements
+kubernetes:
+  control_plane:
+    nodes: 3
+    cpu_per_node: 8
+    ram_per_node: 32GB
+    storage_per_node: 500GB
+  worker_nodes:
+    count: 5
+    cpu_per_node: 32
+    ram_per_node: 128GB
+    storage_per_node: 2TB
+    gpu_per_node: 2
+  
+# External Dependencies
+dependencies:
+  postgresql:
+    version: "15+"
+    storage: 1TB
+    replicas: 3
+    backup_retention: 30 days
+  redis:
+    version: "7+"
+    memory: 32GB
+    replicas: 3
+    persistence: true
+  monitoring:
+    prometheus:
+      retention: 15 days
+      storage: 500GB
+    grafana:
+      version: "10+"
+    alertmanager:
+      replicas: 2

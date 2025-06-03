@@ -1,0 +1,110 @@
+# deployment/kubernetes/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: claude-config
+  namespace: claude-system
+data:
+  production.yaml: |
+    environment: production
+    
+    system:
+      max_memory_gb: 128
+      max_cpu_cores: 32
+      gpu_available: true
+    
+    services:
+      orchestrator:
+        enabled: true
+        message_queue_size: 10000
+        idle_cycle_interval: 0.5
+        
+      consciousness:
+        enabled: true
+        streams:
+          primary:
+            enabled: true
+            thought_interval: 1.5
+            priority: 1.0
+          subconscious:
+            enabled: true
+            thought_interval: 2.0
+            priority: 0.5
+          creative:
+            enabled: true
+            thought_interval: 3.0
+            priority: 0.7
+          meta:
+            enabled: true
+            thought_interval: 4.0
+            priority: 0.8
+            
+      memory:
+        enabled: true
+        working_memory_size: 10000
+        consolidation_interval: 600
+        
+      exploration:
+        enabled: true
+        max_requests_per_minute: 30
+        search_timeout: 30
+        
+      safety:
+        enabled: true
+        strict_mode: true
+        logging_level: WARNING
+    
+    database:
+      postgres:
+        host: postgres-service
+        port: 5432
+        database: claude_agi
+        pool_size: 50
+        
+      redis:
+        host: redis-service
+        port: 6379
+        db: 0
+        max_connections: 100
+    
+    api:
+      anthropic:
+        model: claude-3-opus-20240229
+        max_tokens: 4096
+        temperature: 0.7
+        
+      web:
+        user_agent: "Claude-AGI/1.0.0 (Production)"
+        timeout: 60
+        retry_count: 5
+    
+    logging:
+      level: INFO
+      format: json
+      file: /logs/claude-agi.log
+      console: false
+      
+    safety:
+      enable_hard_constraints: true
+      enable_ethical_evaluation: true
+      enable_consequence_prediction: true
+      action_logging: true
+      alert_threshold: high
+    
+    development:
+      debug_mode: false
+      hot_reload: false
+      test_mode: false
+      mock_external_apis: false
+    
+    # Phase 2 Configuration
+    learning:
+      enabled: true
+      curiosity_threshold: 0.7
+      learning_rate: 0.01
+      goal_generation_interval: 3600
+      
+    knowledge:
+      graph_size_limit: 1000000
+      confidence_threshold: 0.6
+      source_diversity_weight: 0.3

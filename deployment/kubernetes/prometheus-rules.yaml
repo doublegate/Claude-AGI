@@ -1,0 +1,46 @@
+# deployment/kubernetes/prometheus-rules.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: claude-agi-alerts
+  namespace: claude-system
+spec:
+  groups:
+  - name: claude.health
+    interval: 30s
+    rules:
+    - alert: HighCPUUsage
+      expr: claude_cpu_usage > 0.8
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High CPU usage detected"
+        description: "CPU usage is {{ $value }}%"
+        
+    - alert: HighMemoryUsage
+      expr: claude_memory_usage > 0.9
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Critical memory usage"
+        description: "Memory usage is {{ $value }}%"
+        
+    - alert: ElevatedDistress
+      expr: claude_welfare_distress > 0.5
+      for: 10m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Claude experiencing elevated distress"
+        description: "Distress level: {{ $value }}"
+        
+    - alert: LowEngagement
+      expr: claude_engagement_level < 0.3
+      for: 30m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Low engagement detected"
+        description: "Engagement level: {{ $value }}"

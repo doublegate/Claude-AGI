@@ -1,0 +1,65 @@
+# deployment/kubernetes/claude-agi-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: claude-agi
+  namespace: claude-system
+spec:
+  replicas: 1  # Single instance for consciousness continuity
+  selector:
+    matchLabels:
+      app: claude-agi
+  template:
+    metadata:
+      labels:
+        app: claude-agi
+    spec:
+      containers:
+      - name: claude-core
+        image: claude-agi:latest
+        resources:
+          requests:
+            memory: "64Gi"
+            cpu: "16"
+            nvidia.com/gpu: "2"
+          limits:
+            memory: "128Gi"
+            cpu: "32"
+            nvidia.com/gpu: "2"
+        env:
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: claude-secrets
+              key: anthropic-api-key
+        - name: REDIS_URL
+          value: "redis://redis-service:6379"
+        - name: POSTGRES_URL
+          valueFrom:
+            secretKeyRef:
+              name: claude-secrets
+              key: postgres-url
+        volumeMounts:
+        - name: memory-storage
+          mountPath: /app/memories
+        - name: config
+          mountPath: /app/configs
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: memory-storage
+        persistentVolumeClaim:
+          claimName: claude-memories-pvc
+      - name: config
+        configMap:
+          name: claude-config

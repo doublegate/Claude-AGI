@@ -81,12 +81,29 @@ python scripts/claude-consciousness-tui.py
 
 The project follows an 18-month phased development plan:
 
-1. **Phase 1 (Months 1-3)**: Foundation - Memory systems, consciousness streams, basic TUI
+1. **Phase 1 (Months 1-3)**: Foundation - Memory systems, consciousness streams, basic TUI ✅
 2. **Phase 2 (Months 4-6)**: Cognitive Enhancement - Learning systems, web exploration
 3. **Phase 3 (Months 7-9)**: Emotional & Social Intelligence
 4. **Phase 4 (Months 10-12)**: Creative Capabilities
 5. **Phase 5 (Months 13-15)**: Meta-Cognitive Advancement
 6. **Phase 6 (Months 16-18)**: AGI Integration
+
+## 🚀 Running the Consciousness TUI
+
+The interactive Terminal User Interface (TUI) demonstrates Claude's continuous consciousness:
+
+```bash
+# Method 1: Direct execution
+python scripts/claude-consciousness-tui.py
+
+# Method 2: With environment validation
+python scripts/run_tui.py
+
+# Method 3: With dependency checking
+./start_tui.sh
+```
+
+See [Running the TUI Guide](docs/RUNNING_THE_TUI.md) for detailed instructions.
 
 ## 🧪 Testing
 
@@ -106,6 +123,8 @@ pytest tests/safety -v --safety-critical
 pytest
 ```
 
+CI/CD pipeline runs automatically on push/PR via GitHub Actions.
+
 ## 🤝 Contributing
 
 We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details on:
@@ -116,10 +135,16 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 ## 📄 Documentation
 
-### Active Documentation
+### Getting Started
+- [Getting Started Guide](docs/GETTING_STARTED.md) - Quick start instructions
+- [Running the TUI](docs/RUNNING_THE_TUI.md) - Consciousness TUI guide
+- [Architecture Overview](docs/ARCHITECTURE_OVERVIEW.md) - System architecture
+
+### Project Documentation
 - [Project Structure](docs/PROJECT_STRUCTURE.md) - Complete directory layout
 - [Implementation Status](docs/IMPLEMENTATION_STATUS.md) - Code implementation tracking
 - [Master TODO List](to-dos/MASTER_TODO.md) - Development task tracking
+- [Phase 1 to 2 Transition](to-dos/PHASE_1_TO_2_TRANSITION.md) - Transition planning
 
 ### Reference Documentation
 - [Technical Implementation](ref_docs/claude-agi-technical-implementation.md)
@@ -155,12 +180,19 @@ Currently in **Phase 1**: Building foundational memory systems and consciousness
 - ✅ Web exploration engine with curiosity modeling
 - ✅ Docker containerization and deployment setup
 - ✅ Testing framework with unit tests
+- ✅ Kubernetes deployment manifests (complete set)
+- ✅ CI/CD pipeline with GitHub Actions
+- ✅ Deployment automation scripts
+- ✅ Database migration schemas for Phase 2
+- ✅ Environment variable security for API keys
+- ✅ Multiple TUI launch methods with .env support
 
 ### Next Steps
 - 🔄 Integrate Anthropic API for actual thought generation
 - 🔄 Connect to PostgreSQL and Redis for persistent storage
-- 🔄 Implement remaining Phase 1 TUI features
+- 🔄 Deploy to Kubernetes cluster
 - 🔄 Complete integration and behavioral tests
+- 🔄 Begin Phase 2: Learning and Knowledge Systems
 
 ## 📞 Contact
 

@@ -39,6 +39,14 @@ Usage:
     - Press Escape to exit gracefully
 """
 
+import sys
+import os
+
+# Add the project root to Python path
+script_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(script_dir)
+sys.path.insert(0, project_root)
+
 import curses
 import threading
 import queue
@@ -50,6 +58,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 import anthropic
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+env_path = os.path.join(project_root, '.env')
+load_dotenv(env_path)
 
 """
 Threading Architecture:
@@ -683,8 +696,14 @@ def main():
     Creates the TUI instance and runs it within curses wrapper.
     The wrapper handles terminal setup/cleanup automatically.
     """
-    # IMPORTANT: Replace with your actual Anthropic API key
-    API_KEY = "your-api-key-here"  # Replace with your API key
+    # Get API key from environment variable (loaded from .env file)
+    API_KEY = os.getenv('ANTHROPIC_API_KEY')
+    
+    if not API_KEY:
+        print("Error: ANTHROPIC_API_KEY not found in environment variables.")
+        print("Please ensure your .env file contains: ANTHROPIC_API_KEY=your-key-here")
+        print("Or set it directly: export ANTHROPIC_API_KEY='your-key-here'")
+        return
     
     # Create consciousness interface
     tui = ConsciousnessTUI(API_KEY)

@@ -14,6 +14,12 @@ import os
 from pathlib import Path
 import yaml
 from typing import Optional
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+project_root = Path(__file__).parent.parent
+env_path = project_root / '.env'
+load_dotenv(env_path)
 
 # Setup logging
 logging.basicConfig(
