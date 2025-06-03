@@ -1,0 +1,15 @@
+# requirements_advanced.txt
+
+# Causal Reasoning
+dowhy==0.11+           # Causal inference
+pgmpy==0.1+            # Probabilistic graphical models
+causalnex==0.12+       # Causal networks
+
+# Meta-Learning
+learn2learn==0.2+      # Meta-learning algorithms
+higher==0.2+           # Higher-order optimization
+
+# Optimization
+optuna==3.5+           # Hyperparameter optimization
+ray==2.9+              # Distributed computing
+dask==2024.2+          # Parallel computing

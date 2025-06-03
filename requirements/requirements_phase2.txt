@@ -1,0 +1,23 @@
+# requirements_phase2.txt
+
+# Web Exploration & Search
+beautifulsoup4==4.12+  # HTML parsing
+selenium==4.18+        # Dynamic web scraping
+playwright==1.41+      # Modern web automation
+httpx==0.26+           # Async HTTP client
+feedparser==6.0+       # RSS/Atom feeds
+newspaper3k==0.2+      # Article extraction
+trafilatura==1.8+      # Web content extraction
+
+# Knowledge Processing
+spacy==3.7+            # Advanced NLP
+nltk==3.8+             # Natural language toolkit
+gensim==4.3+           # Topic modeling
+networkx==3.2+         # Graph algorithms
+py2neo==2021.2+        # Neo4j integration
+
+# Learning & Reasoning
+scikit-learn==1.4+     # Machine learning
+pytorch==2.2+          # Deep learning
+gymnasium==0.29+       # RL environments
+stable-baselines3==2.2+  # RL algorithms

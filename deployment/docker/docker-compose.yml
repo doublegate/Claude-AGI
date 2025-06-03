@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  claude-agi:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile
+    container_name: claude-agi-main
+    environment:
+      - CLAUDE_AGI_ENV=development
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=claude_agi
+      - POSTGRES_USER=claude_agi
+      - POSTGRES_PASSWORD=development_password
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    volumes:
+      - ../../src:/app/src:ro
+      - ../../configs:/app/configs:ro
+      - claude-memories:/app/memories
+      - claude-logs:/app/logs
+    ports:
+      - "8000:8000"  # REST API
+      - "8001:8001"  # WebSocket
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - claude-network
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: claude-agi-postgres
+    environment:
+      - POSTGRES_DB=claude_agi
+      - POSTGRES_USER=claude_agi
+      - POSTGRES_PASSWORD=development_password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - claude-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: claude-agi-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - claude-network
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: claude-agi-prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    ports:
+      - "9090:9090"
+    networks:
+      - claude-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: claude-agi-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+    ports:
+      - "3000:3000"
+    networks:
+      - claude-network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  redis-data:
+  claude-memories:
+  claude-logs:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  claude-network:
+    driver: bridge

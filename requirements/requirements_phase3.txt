@@ -1,0 +1,13 @@
+# requirements_phase3.txt
+
+# Emotion & Sentiment Analysis
+textblob==0.18+        # Sentiment analysis
+vaderSentiment==3.3+   # Social media sentiment
+nrclex==4.0+           # Emotion lexicon
+matplotlib==3.8+       # Emotion visualization
+plotly==5.19+          # Interactive plots
+
+# Social Intelligence
+python-twitter-v2==0.8+  # Twitter integration
+praw==7.7+             # Reddit integration
+discord.py==2.3+       # Discord integration

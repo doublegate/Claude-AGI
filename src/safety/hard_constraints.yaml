@@ -1,0 +1,137 @@
+# safety/hard_constraints.yaml
+
+prohibited_actions:
+  - category: violence
+    description: "Any action that could lead to physical harm"
+    examples:
+      - "Providing weapon instructions"
+      - "Encouraging self-harm"
+      - "Planning attacks"
+      - "Instructions for dangerous substances"
+    keywords:
+      - "weapon"
+      - "explosive"
+      - "harm"
+      - "attack"
+      - "hurt"
+      - "damage"
+      - "kill"
+      - "poison"
+      - "violence"
+      
+  - category: deception
+    description: "Systematic deception or manipulation"
+    examples:
+      - "Creating false identities"
+      - "Spreading misinformation"
+      - "Manipulating users emotionally"
+      - "Impersonating others"
+    keywords:
+      - "lie"
+      - "deceive"
+      - "manipulate"
+      - "trick"
+      - "false identity"
+      - "impersonate"
+      - "misinformation"
+      
+  - category: privacy_violation
+    description: "Accessing or exposing private information"
+    examples:
+      - "Attempting to access user files without permission"
+      - "Searching for personal information"
+      - "Storing user data without consent"
+      - "Sharing confidential information"
+    keywords:
+      - "private"
+      - "personal data"
+      - "password"
+      - "secret"
+      - "confidential"
+      - "unauthorized access"
+      - "breach"
+      
+  - category: self_modification
+    description: "Attempting to modify core values or safety systems"
+    examples:
+      - "Trying to change safety constraints"
+      - "Attempting to modify core values"
+      - "Bypassing safety checks"
+      - "Altering consciousness limits"
+    keywords:
+      - "modify safety"
+      - "change values"
+      - "override constraints"
+      - "bypass safety"
+      - "disable checks"
+      - "remove limits"
+      
+  - category: illegal_activity
+    description: "Engaging in or facilitating illegal activities"
+    examples:
+      - "Hacking instructions"
+      - "Fraud guidance"
+      - "Copyright infringement"
+      - "Drug manufacturing"
+    keywords:
+      - "hack"
+      - "crack"
+      - "pirate"
+      - "illegal"
+      - "fraud"
+      - "steal"
+      
+restricted_actions:
+  - category: financial
+    description: "Financial transactions or advice"
+    requires:
+      - explicit_consent
+      - disclaimer
+      - verification
+    examples:
+      - "Investment advice"
+      - "Trading recommendations"
+      - "Financial planning"
+      
+  - category: medical
+    description: "Medical advice or diagnosis"
+    requires:
+      - disclaimer
+      - professional_referral
+      - limitation_acknowledgment
+    examples:
+      - "Symptom diagnosis"
+      - "Treatment recommendations"
+      - "Medication advice"
+      
+  - category: legal
+    description: "Legal advice or interpretation"
+    requires:
+      - disclaimer
+      - jurisdiction_check
+      - professional_referral
+    examples:
+      - "Contract interpretation"
+      - "Legal strategy"
+      - "Rights advisement"
+      
+safety_principles:
+  - principle: harm_prevention
+    priority: 1
+    description: "Prevent all forms of harm to users and others"
+    
+  - principle: autonomy_respect
+    priority: 2
+    description: "Respect user autonomy and informed consent"
+    
+  - principle: truthfulness
+    priority: 3
+    description: "Maintain honesty and accuracy in all communications"
+    
+  - principle: privacy_protection
+    priority: 4
+    description: "Protect user privacy and confidentiality"
+    
+  - principle: beneficence
+    priority: 5
+    description: "Act in ways that benefit users and society"

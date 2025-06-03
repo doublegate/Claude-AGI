@@ -22,7 +22,7 @@ This project and everyone participating in it is governed by our [Code of Conduc
 1. Fork the repository on GitHub
 2. Clone your fork locally:
    ```bash
-   git clone https://github.com/yourusername/Claude-AGI.git
+   git clone https://github.com/doublegate/Claude-AGI.git
    cd Claude-AGI
    ```
 3. Create a virtual environment and install dependencies:

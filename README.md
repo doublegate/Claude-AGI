@@ -51,7 +51,7 @@ The Claude-AGI Project (Project Prometheus) aims to develop a genuinely consciou
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/Claude-AGI.git
+git clone https://github.com/doublegate/Claude-AGI.git
 cd Claude-AGI
 ```
 
@@ -116,11 +116,17 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 ## 📄 Documentation
 
-- [Technical Implementation](docs/claude-agi-technical-implementation.md)
-- [Ethical & Safety Guidelines](docs/claude-agi-ethical-safety.md)
-- [Testing Framework](docs/claude-agi-testing-framework.md)
-- [Deployment & Operations](docs/claude-agi-deployment-ops.md)
-- [Master TODO List](docs/claude-agi-master-todo.md)
+### Active Documentation
+- [Project Structure](docs/PROJECT_STRUCTURE.md) - Complete directory layout
+- [Implementation Status](docs/IMPLEMENTATION_STATUS.md) - Code implementation tracking
+- [Master TODO List](to-dos/MASTER_TODO.md) - Development task tracking
+
+### Reference Documentation
+- [Technical Implementation](ref_docs/claude-agi-technical-implementation.md)
+- [Ethical & Safety Guidelines](ref_docs/claude-agi-ethical-safety.md)
+- [Testing Framework](ref_docs/claude-agi-testing-framework.md)
+- [Deployment & Operations](ref_docs/claude-agi-deployment-ops.md)
+- [Consciousness & AGI Plan](ref_docs/claude-consciousness-agi-plan.md)
 
 ## 🔒 Security
 
@@ -138,7 +144,23 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📊 Project Status
 
-Currently in **Phase 1**: Building foundational memory systems and consciousness streams. The proof-of-concept TUI demonstrates core capabilities including persistent memory and continuous consciousness generation.
+Currently in **Phase 1**: Building foundational memory systems and consciousness streams. Core implementations are complete with working orchestrator, memory management, consciousness streams, and safety framework.
+
+### Recent Progress (2025-01-06)
+- ✅ Complete directory structure with all modules
+- ✅ Core system implementations extracted from documentation
+- ✅ Multi-stream consciousness with thought generation
+- ✅ Memory system with consolidation and semantic search
+- ✅ Safety framework with multi-layer validation
+- ✅ Web exploration engine with curiosity modeling
+- ✅ Docker containerization and deployment setup
+- ✅ Testing framework with unit tests
+
+### Next Steps
+- 🔄 Integrate Anthropic API for actual thought generation
+- 🔄 Connect to PostgreSQL and Redis for persistent storage
+- 🔄 Implement remaining Phase 1 TUI features
+- 🔄 Complete integration and behavioral tests
 
 ## 📞 Contact
 

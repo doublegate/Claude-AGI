@@ -1,0 +1,36 @@
+# requirements_phase1.txt
+
+# Core Async & Threading
+asyncio==3.11+          # Async orchestration
+threading               # Multi-thread management
+multiprocessing==3.11+  # CPU-intensive tasks
+concurrent.futures      # Thread/Process pools
+
+# Memory & State Management
+redis==5.0+            # In-memory data store
+sqlalchemy==2.0+       # ORM for persistent storage
+alembic==1.13+         # Database migrations
+pickle                 # Object serialization
+msgpack==1.0+          # Efficient serialization
+
+# AI/ML Libraries
+anthropic==0.18+       # Claude API
+openai==1.12+          # Embedding generation
+transformers==4.38+    # NLP processing
+sentence-transformers==2.5+  # Semantic search
+faiss-cpu==1.7+        # Vector similarity search
+numpy==1.26+           # Numerical operations
+scipy==1.12+           # Scientific computing
+
+# TUI & Interface
+windows-curses==2.3+   # Windows support
+blessed==1.20+         # Enhanced terminal UI
+rich==13.7+            # Rich text formatting
+prompt_toolkit==3.0+   # Advanced input handling
+
+# Utilities
+pydantic==2.6+         # Data validation
+python-dotenv==1.0+    # Environment management
+loguru==0.7+           # Advanced logging
+schedule==1.2+         # Task scheduling
+watchdog==4.0+         # File system monitoring

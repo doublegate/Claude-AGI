@@ -187,3 +187,36 @@ grafana_data/
 
 # CLAUDE.local.md (project-specific memory)
 CLAUDE.local.md
+
+# Reference information (transient)
+ref_info/
+
+# Phase-specific files
+phase_*.log
+*.phase_backup
+
+# Development databases
+*.db.dev
+*.sqlite.dev
+
+# Local configuration overrides
+configs/local.yaml
+configs/*.local.yaml
+
+# Test output
+test_results/
+htmlcov/
+.coverage.*
+
+# Benchmarking results
+benchmarks/results/
+
+# Local memory state backups
+memory_backups/
+
+# Generated documentation
+docs/_build/
+docs/api/
+
+# VS Code workspace
+*.code-workspace
