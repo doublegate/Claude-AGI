@@ -208,14 +208,22 @@ class ConsciousnessTUI:
         
         # Calculate window dimensions based on terminal size
         self.height, self.width = stdscr.getmaxyx()
+        
+        # Ensure minimum terminal size
+        if self.height < 10 or self.width < 40:
+            raise Exception(f"Terminal too small! Need at least 40x10, got {self.width}x{self.height}")
+        
         self.split_line = self.height // 2  # Split screen in half
         
         # Create windows with specific sizes and positions
         # Window format: (height, width, start_y, start_x)
-        self.consciousness_win = curses.newwin(self.split_line - 1, self.width, 0, 0)
-        self.divider_win = curses.newwin(1, self.width, self.split_line - 1, 0)
-        self.chat_win = curses.newwin(self.split_line - 2, self.width, self.split_line, 0)
-        self.input_win = curses.newwin(1, self.width, self.height - 1, 0)
+        # Use width-1 to avoid edge issues
+        window_width = max(1, self.width - 1)
+        
+        self.consciousness_win = curses.newwin(max(1, self.split_line - 1), window_width, 0, 0)
+        self.divider_win = curses.newwin(1, window_width, self.split_line - 1, 0)
+        self.chat_win = curses.newwin(max(1, self.split_line - 2), window_width, self.split_line, 0)
+        self.input_win = curses.newwin(1, window_width, self.height - 1, 0)
         
         # Enable scrolling for content windows
         # This allows text to scroll up when it reaches the bottom
@@ -233,12 +241,68 @@ class ConsciousnessTUI:
         Creates a visual separator with labeled sections to help users
         understand which window shows what content.
         """
-        # Fill line with horizontal line character
-        self.divider_win.addstr(0, 0, "─" * self.width, curses.color_pair(3))
-        # Add section labels
-        self.divider_win.addstr(0, 2, "[ Claude's Consciousness Stream ]", curses.color_pair(3))
-        self.divider_win.addstr(0, self.width - 35, "[ Conversation ]", curses.color_pair(3))
-        self.divider_win.refresh()
+        try:
+            # Clear the divider window first
+            self.divider_win.clear()
+            
+            # Use simple ASCII character instead of Unicode
+            divider_char = "-"
+            
+            # Fill line with horizontal line character
+            # Make sure we don't exceed window bounds
+            divider_line = divider_char * (self.width - 1)
+            self.divider_win.addstr(0, 0, divider_line, curses.color_pair(3))
+            
+            # Add section labels with bounds checking
+            label1 = "[ Claude's Consciousness Stream ]"
+            label2 = "[ Conversation ]"
+            
+            # Only add labels if there's enough space
+            if self.width > len(label1) + 4:
+                self.divider_win.addstr(0, 2, label1, curses.color_pair(3))
+            
+            if self.width > len(label2) + 40:
+                label2_pos = max(self.width - 35, len(label1) + 6)
+                if label2_pos + len(label2) < self.width:
+                    self.divider_win.addstr(0, label2_pos, label2, curses.color_pair(3))
+                    
+            self.divider_win.refresh()
+        except curses.error:
+            # Ignore errors if terminal is too small
+            pass
+    
+    def safe_addstr(self, win, y, x, text, attr=0):
+        """
+        Safely add string to window with bounds checking
+        
+        Args:
+            win: Curses window object
+            y: Y coordinate
+            x: X coordinate  
+            text: Text to display
+            attr: Optional attributes (color pair, etc)
+        """
+        try:
+            # Get window dimensions
+            max_y, max_x = win.getmaxyx()
+            
+            # Check if position is within bounds
+            if y >= max_y or x >= max_x or y < 0 or x < 0:
+                return
+                
+            # Truncate text if it would exceed window width
+            available_width = max_x - x - 1
+            if available_width <= 0:
+                return
+                
+            if len(text) > available_width:
+                text = text[:available_width]
+            
+            # Add the string
+            win.addstr(y, x, text, attr)
+        except curses.error:
+            # Silently ignore any curses errors
+            pass
     
     def refresh_all(self):
         """

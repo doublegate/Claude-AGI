@@ -11,14 +11,17 @@ from dotenv import load_dotenv
 # Get the directory of this script
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
+# Get the project root directory (parent of scripts/)
+project_root = os.path.dirname(script_dir)
+
 # Change to the project root directory
-os.chdir(script_dir)
+os.chdir(project_root)
 
 # Set up the Python path
-os.environ['PYTHONPATH'] = script_dir
+os.environ['PYTHONPATH'] = project_root
 
 # Load environment variables from .env file
-env_path = os.path.join(script_dir, '.env')
+env_path = os.path.join(project_root, '.env')
 if os.path.exists(env_path):
     load_dotenv(env_path)
     print(f"Loaded environment from: {env_path}")
@@ -46,8 +49,8 @@ else:
     print(f"API key loaded: {key_preview}")
     print()
 
-# Run the TUI script
-tui_script = os.path.join(script_dir, 'scripts', 'claude-consciousness-tui.py')
+# Run the TUI script (it's in the same directory as this script)
+tui_script = os.path.join(script_dir, 'claude-consciousness-tui.py')
 
 if not os.path.exists(tui_script):
     print(f"Error: TUI script not found at {tui_script}")
