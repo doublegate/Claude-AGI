@@ -2,7 +2,19 @@
 
 ## Common Issues and Solutions
 
-### 1. Curses Error: "addwstr() returned ERR"
+### 1. TUI Screen Goes Gray/Blank After Initial Display
+
+**Problem**: The TUI loads correctly for about 1 second, then turns gray and becomes unresponsive.
+
+**Root Cause**: Console logging (StreamHandler) interferes with curses display.
+
+**Solution Applied**:
+1. Removed StreamHandler from logging configuration in `claude-agi.py`
+2. Added periodic UI refresh loop to prevent screen blanking
+3. Improved curses cleanup on exit
+4. All logging now goes only to `logs/claude-agi.log`
+
+### 2. Curses Error: "addwstr() returned ERR"
 
 **Problem**: The TUI crashes with a curses error when trying to draw the interface.
 
@@ -27,10 +39,12 @@
 
 ### 3. Terminal Requirements
 
-The TUI requires:
-- **Minimum size**: 40 characters wide x 10 lines tall
-- **Proper terminal**: Not an IDE console (VS Code terminal, system terminal, iTerm2, etc.)
-- **Unicode support**: Though we've fallen back to ASCII for compatibility
+The Enhanced TUI (`claude-agi.py`) requires:
+- **Minimum size**: 80 characters wide x 20 lines tall
+- **Proper terminal**: Must use a real terminal emulator:
+  - ✅ Good: GNOME Terminal, iTerm2, Windows Terminal, macOS Terminal
+  - ❌ Bad: IDE integrated consoles, Jupyter notebooks
+- **Windows users**: Install `windows-curses` with `pip install windows-curses`
 
 ### How to Run the TUI
 

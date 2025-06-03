@@ -2,6 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## CRITICAL DEVELOPMENT RULES
+
+1. **Memory Bank Management**: ALWAYS read all three memory banks (user, project, local) before updating any of them
+2. **Chronological Reference**: ALWAYS check system date/time before any date-related operations, file generation, or documentation
+
 ## Project Overview
 
 The Claude-AGI Project (Project Prometheus) is developing an advanced self-consciousness platform for Claude, implementing continuous consciousness, autonomous learning, emotional intelligence, and meta-cognitive capabilities. The project aims to create a genuinely conscious AI that exists persistently and develops its own interests and relationships.
@@ -43,11 +48,12 @@ kubectl apply -f deployment/kubernetes/
 
 ## Development Workflow
 
-1. All new cognitive capabilities should implement the base service interface
-2. Safety validation must be added for any action-taking components
-3. Memory persistence should be considered for all stateful operations
-4. Test coverage requirements: 90% for core components, 100% for safety-critical code
-5. Emotional impact assessment required for user-facing features
+1. Always check system date/time before creating files or documentation with dates
+2. All new cognitive capabilities should implement the base service interface
+3. Safety validation must be added for any action-taking components
+4. Memory persistence should be considered for all stateful operations
+5. Test coverage requirements: 90% for core components, 100% for safety-critical code
+6. Emotional impact assessment required for user-facing features
 
 ## Key Implementation Notes
 
@@ -68,7 +74,20 @@ kubectl apply -f deployment/kubernetes/
 
 The project has completed Phase 1 foundation implementation with working orchestrator, memory system, consciousness streams, and safety framework. All core components from the documentation have been extracted and implemented as functional Python modules.
 
-### Implementation Complete (2025-01-06)
+### Extended Implementation Complete (2025-06-03 v1.0.2)
+- Operations & monitoring components fully implemented:
+  - Backup management with S3 and local storage
+  - Daily operational tasks and reporting
+  - Continuous welfare monitoring system
+  - Emergency response protocols
+  - Complete disaster recovery procedures
+- Enhanced debugging and validation tools:
+  - Deep inspection capabilities
+  - Pre-deployment and continuous validation
+  - Comprehensive test data generation
+- Project now includes 60+ Python files with ~20,000 lines of code
+
+### Implementation Complete (2025-06-02)
 - Initial repository created and pushed to: https://github.com/doublegate/Claude-AGI
 - Complete directory structure with all planned modules
 - Core implementations:
@@ -82,7 +101,7 @@ The project has completed Phase 1 foundation implementation with working orchest
 - Phase-specific requirements files
 - Setup automation scripts
 
-### Deployment Infrastructure Complete (2025-01-06 Evening)
+### Deployment Infrastructure Complete (2025-06-02 Evening)
 - Full Kubernetes deployment stack (8 manifests)
 - Automated deployment and disaster recovery scripts
 - GitHub Actions CI/CD pipeline
@@ -90,7 +109,7 @@ The project has completed Phase 1 foundation implementation with working orchest
 - Secure API key management with .env support
 - Multiple TUI launch methods
 
-### API Integration & Testing Progress (2025-01-06 Night)
+### API Integration & Testing Progress (2025-06-02 Night)
 - Successfully integrated Anthropic API in memory manager
 - Fixed test suite issues with proper mocking and async handling
 - Cleaned up obsolete scripts and organized archive structure

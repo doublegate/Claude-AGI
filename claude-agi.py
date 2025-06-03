@@ -53,13 +53,14 @@ load_dotenv()
 import yaml
 import logging
 
-# Configure logging
+# Configure logging - disable console output when using TUI
+# StreamHandler interferes with curses
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('logs/claude-agi.log'),
-        logging.StreamHandler()
+        logging.FileHandler('logs/claude-agi.log')
+        # Removed StreamHandler to prevent curses interference
     ]
 )
 logger = logging.getLogger(__name__)
@@ -670,6 +671,18 @@ class ClaudeAGI:
         self.status_win.refresh()
         self.input_win.refresh()
         
+    async def ui_refresh_loop(self):
+        """Periodic UI refresh to prevent screen blanking"""
+        while self.running:
+            try:
+                # Refresh all panes to ensure screen stays updated
+                self._draw_all_panes()
+                self.refresh_all()
+                await asyncio.sleep(0.5)  # Refresh every 500ms
+            except Exception as e:
+                logger.error(f"UI refresh error: {e}")
+                await asyncio.sleep(1)
+    
     async def consciousness_loop(self):
         """Main consciousness generation loop"""
         while self.running:
@@ -1344,6 +1357,10 @@ class ClaudeAGI:
             logger.info("Starting input handler...")
             input_task = asyncio.create_task(self.input_handler())
             
+            # Start UI refresh loop
+            logger.info("Starting UI refresh loop...")
+            ui_refresh_task = asyncio.create_task(self.ui_refresh_loop())
+            
             # Initial system messages
             self.add_system_line("Claude-AGI System v1.0 Initialized", 3)
             self.add_system_line("Type /help for commands, Tab to switch panes", 3)
@@ -1354,6 +1371,7 @@ class ClaudeAGI:
                 orchestrator_task,
                 consciousness_task, 
                 input_task,
+                ui_refresh_task,
                 return_exceptions=True
             )
             
@@ -1373,6 +1391,7 @@ class ClaudeAGI:
                 
     def run(self, stdscr):
         """Main run method called by curses wrapper"""
+        loop = None
         try:
             self.init_ui(stdscr)
             
@@ -1386,8 +1405,12 @@ class ClaudeAGI:
         except Exception as e:
             logger.error(f"Fatal error: {e}", exc_info=True)
         finally:
-            # Ensure clean shutdown
-            loop.close()
+            # Ensure clean shutdown and proper terminal restoration
+            if loop:
+                loop.close()
+            curses.echo()
+            curses.nocbreak()
+            curses.endwin()
             
 
 def main():

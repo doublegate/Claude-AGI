@@ -146,6 +146,7 @@ cython_debug/
 .DS_Store
 
 # Project specific
+crumbs_llms/prev_analysis/
 logs/
 data/
 *.db

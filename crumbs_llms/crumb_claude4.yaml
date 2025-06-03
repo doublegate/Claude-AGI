@@ -1,0 +1,252 @@
+# Digital Breadcrumb: Claude-AGI Project Analysis
+# File: crumbs_llms/crumb_claude4.yaml
+# Purpose: Track analysis history, technical decisions, and development context
+# Format: YAML for human readability and programmatic parsing
+
+metadata:
+  breadcrumb_version: "1.0.0"
+  llm_identifier: "claude-opus-4-20250514"
+  project_name: "Claude-AGI"
+  project_repo: "https://github.com/doublegate/Claude-AGI"
+  last_updated: "2025-06-03T10:30:00Z"
+  analyst: "Claude"
+  
+project_snapshot:
+  description: "Advanced self-consciousness platform implementing continuous consciousness, autonomous learning, and meta-cognitive capabilities for Claude AI"
+  phase: "Phase 1"
+  phase_status: "100% Complete (with critical issues)"
+  architecture:
+    type: "Multi-stream consciousness with persistent memory"
+    components:
+      - consciousness_orchestrator: "Central coordinator managing cognitive streams"
+      - memory_systems:
+          redis: "Working memory"
+          postgresql: "Episodic memory"
+          faiss: "Semantic similarity search"
+      - cognitive_streams:
+          - primary
+          - subconscious
+          - emotional
+          - creative
+          - metacognitive
+  
+analysis_history:
+  - date: "2025-06-03"
+    session_id: "wf-dea08578-50a8-437e-afb4-e7dbb725d8db"
+    type: "comprehensive_analysis"
+    findings:
+      critical_issues:
+        - id: "TUI-001"
+          severity: "critical"
+          description: "TUI panels show for ~1 second then turn gray/blank"
+          root_cause: "Async event loop blocking main UI thread"
+          status: "unresolved"
+          recommended_fix: |
+            Implement non-blocking async patterns:
+            - Use asyncio.create_task() for background operations
+            - Separate UI thread from async operations
+            - Implement reactive UI patterns with proper state management
+        
+        - id: "TEST-001"
+          severity: "high"
+          description: "Test suite instability: 75 passed, 58 failed, 27 errors"
+          root_causes:
+            - "Race conditions in async tests"
+            - "Memory timeouts"
+            - "Non-deterministic behavior"
+          status: "unresolved"
+          
+        - id: "MEM-001"
+          severity: "high"
+          description: "Memory system synchronization issues"
+          impact: "Data inconsistency between Redis, PostgreSQL, and FAISS"
+          status: "unresolved"
+          
+        - id: "SEC-001"
+          severity: "critical"
+          description: "Security vulnerabilities"
+          issues:
+            - "Prompt injection vulnerabilities"
+            - "API key exposure risks"
+            - "Memory poisoning potential"
+          status: "unresolved"
+          
+        - id: "ARCH-001"
+          severity: "medium"
+          description: "Architectural anti-patterns"
+          patterns_identified:
+            - "God objects with too many responsibilities"
+            - "Circular dependencies"
+            - "Missing abstraction layers"
+            - "Event loop blocking"
+          status: "unresolved"
+
+technical_context:
+  python_version: "3.11+"
+  key_dependencies:
+    - asyncio: "Core async framework"
+    - anthropic: "Claude API client"
+    - redis: "In-memory data store"
+    - asyncpg: "PostgreSQL async driver"
+    - faiss: "Vector similarity search"
+    - textual: "TUI framework (suspected issue source)"
+    - transformers: "NLP models"
+    
+  async_patterns:
+    current_issues:
+      - "Blocking operations in UI thread"
+      - "Improper event loop management"
+      - "Missing backpressure handling"
+      - "Inadequate error propagation"
+    recommended_patterns:
+      - "Non-blocking UI updates with asyncio.create_task()"
+      - "Separate event loops for UI and backend"
+      - "Proper exception handling in async contexts"
+      - "Use of async context managers"
+
+development_roadmap:
+  immediate_priorities:
+    week_1_2:
+      - fix_tui_bug:
+          approach: "Implement non-blocking UI patterns"
+          test_strategy: "Cross-terminal compatibility testing"
+      - stabilize_tests:
+          approach: "Add isolation fixtures and retry logic"
+      - security_patches:
+          approach: "Multi-layer input validation"
+          
+    week_3_4:
+      - async_overhaul:
+          tasks:
+            - "Event loop management refactor"
+            - "Task lifecycle management"
+            - "Backpressure implementation"
+      - memory_integration:
+          tasks:
+            - "Consistency protocol design"
+            - "Transaction support"
+            - "Query optimization"
+            
+    month_2_3:
+      - production_readiness:
+          - "Performance optimization"
+          - "Kubernetes deployment"
+          - "Comprehensive documentation"
+          
+  phase_2_blockers:
+    - "Test suite must achieve >95% pass rate"
+    - "Performance baselines must be met"
+    - "Security vulnerabilities must be resolved"
+    - "Architecture refactoring must be complete"
+
+code_snippets:
+  tui_fix_pattern: |
+    # Recommended pattern for TUI fix
+    async def on_mount(self):
+        # Non-blocking background task
+        asyncio.create_task(self.long_running_consciousness_operation())
+        
+    class ConsciousnessPanel(Widget):
+        data = reactive("")
+        
+        def watch_data(self) -> None:
+            self.query_one(Label).update(f"State: {self.data}")
+            
+  test_isolation_pattern: |
+    # Test isolation fixture
+    @pytest.fixture
+    async def isolated_consciousness():
+        consciousness = ConsciousnessOrchestrator()
+        await consciousness.initialize()
+        yield consciousness
+        await consciousness.cleanup()
+
+performance_metrics:
+  current:
+    memory_retrieval: "~15ms (target: <50ms)"
+    thought_generation: "0.4/sec (target: 0.3-0.5/sec)"
+    safety_validation: "~8ms (target: <10ms)"
+    coherence_24h: "97% (target: >95%)"
+  optimization_targets:
+    - "Memory retrieval to <10ms"
+    - "Parallel thought processing"
+    - "Connection pooling optimization"
+    - "FAISS index optimization"
+
+security_considerations:
+  vulnerabilities_identified:
+    - prompt_injection:
+        severity: "critical"
+        mitigation: "Multi-layer validation, output sanitization"
+    - api_key_exposure:
+        severity: "high"
+        mitigation: "Environment variables, secure key management"
+    - memory_poisoning:
+        severity: "medium"
+        mitigation: "Input validation, memory isolation"
+  recommended_tools:
+    - "bandit: Python security linter"
+    - "safety: Dependency vulnerability scanner"
+    - "SAST integration in CI/CD"
+
+deployment_notes:
+  current_state:
+    - "Docker configuration present"
+    - "Kubernetes manifests prepared"
+    - "CI/CD via GitHub Actions"
+  requirements_for_production:
+    - "StatefulSet for persistent components"
+    - "Service mesh (Istio) integration"
+    - "Prometheus/Grafana monitoring"
+    - "Backup and disaster recovery"
+
+debugging_tips:
+  tui_troubleshooting:
+    - "Run with: python -u claude-agi.py 2>tui_errors.log"
+    - "Check terminal compatibility (some terminals have TUI issues)"
+    - "Monitor thread states during execution"
+    - "Use aiomonitor for async debugging"
+  async_debugging:
+    - "Enable asyncio debug mode"
+    - "Use asyncio.create_task() with names"
+    - "Implement proper exception handlers"
+    - "Monitor event loop health"
+
+next_session_context:
+  priorities:
+    1: "Fix TUI rendering bug"
+    2: "Implement test isolation"
+    3: "Security vulnerability patches"
+  expected_questions:
+    - "How to implement non-blocking TUI updates?"
+    - "Best practices for async test isolation?"
+    - "Memory system consistency protocols?"
+  useful_references:
+    - "Textual async patterns documentation"
+    - "AsyncIO debugging guide"
+    - "PostgreSQL async best practices"
+
+ai_assistant_notes:
+  user_preferences:
+    - "Prefers Rust, but working in Python"
+    - "Interested in hardware emulation"
+    - "Wants 100% accuracy and cycle-precise timing"
+    - "Expects full source code comments"
+    - "Values coherency between multi-file projects"
+  communication_style:
+    - "Provide extensive technical detail"
+    - "Include code examples"
+    - "Reference specific files and line numbers"
+    - "Explain architectural decisions"
+
+version_control:
+  breadcrumb_updates:
+    - version: "1.0.0"
+      date: "2025-06-03"
+      changes: "Initial comprehensive analysis breadcrumb"
+  update_protocol: |
+    1. Increment version for each session
+    2. Add new findings to analysis_history
+    3. Update technical_context with new discoveries
+    4. Revise roadmap based on progress
+    5. Archive old breadcrumbs with timestamp

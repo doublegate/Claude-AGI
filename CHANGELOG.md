@@ -5,7 +5,7 @@ All notable changes to the Claude-AGI Project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0] - 2025-01-06 - Phase 1 Complete 🎉
+## [1.0.0] - 2025-06-02 - Phase 1 Complete 🎉
 
 ### Added
 
@@ -161,7 +161,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rate limiting on all endpoints
 - Emergency stop mechanism
 
-## [0.1.0] - 2025-01-06
+## [0.1.0] - 2025-06-02
 
 ### Added
 - Initial repository creation
@@ -190,3 +190,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixing remaining test failures (58 failed, 75 passed, 27 errors)
 - Adjusting test expectations to match implementation
 - Resolving database connection test environment issues
+
+## [1.0.1] - 2025-06-03 - TUI Fix & Roadmap Update
+
+### Fixed
+- **Critical TUI Bug**: Screen no longer goes gray/blank after initial display
+  - Removed StreamHandler from logging to prevent curses interference
+  - Added periodic UI refresh loop (500ms) for consistent updates
+  - Improved curses cleanup on exit
+  - All logging now exclusively to file (logs/claude-agi.log)
+
+### Added
+- `ui_refresh_loop()` method for maintaining screen display
+- Comprehensive Phase 2+ roadmap based on AI analyses
+- Enhanced TUI troubleshooting documentation
+- Slash command documentation in user guide
+
+### Changed
+- Updated date references from incorrect 2025-01-06 to 2025-06-02
+- Enhanced RUNNING_THE_TUI.md with multi-pane layout information
+- Clarified terminal requirements (80x20 minimum for enhanced TUI)
+
+### Documentation
+- Created comprehensive guides based on AI analyses:
+  - TEST_STABILIZATION_GUIDE.md - Solutions for 58 failing tests
+  - ARCHITECTURAL_IMPROVEMENTS.md - Refactoring god objects
+  - SECURITY_HARDENING_CHECKLIST.md - P0 vulnerability fixes
+  - PERFORMANCE_OPTIMIZATION_GUIDE.md - Scaling strategies
+  - MEMORY_SYNCHRONIZATION_ARCHITECTURE.md - Three-tier coordination
+  - PHASE_2_IMPLEMENTATION_GUIDE.md - Learning systems roadmap
+  - PHASE_2_ROADMAP.md - Complete 18-month development plan
+- Updated MASTER_TODO.md with Phase 1 completion criteria
+- Updated TUI_TROUBLESHOOTING.md with gray screen fix
+- Enhanced memory banks with chronological reference rule
+
+### Project Management
+- Added 8 critical blockers that must be resolved before Phase 2
+- Current test suite at 47% pass rate (target: >95%)
+- Identified architectural anti-patterns requiring refactoring
+- Documented security vulnerabilities needing immediate attention
+
+## [1.0.2] - 2025-06-03 - Extended Implementation from Reference Documentation
+
+### Added
+- **Operations & Monitoring Components**
+  - `operations/backup.py` - Comprehensive backup/restore system with S3 and local storage
+  - `operations/daily_tasks.py` - Automated daily operational tasks and reporting
+  - `welfare/monitor.py` - Continuous welfare assessment and intervention system
+  - `emergency/protocols.py` - Emergency response handling for various crisis types
+  - `deployment/scripts/disaster_recovery.sh` - Full disaster recovery procedures
+
+- **Debugging & Validation Tools**
+  - `debug/inspector.py` - Deep inspection and debugging capabilities
+  - `validation/pre_deployment.py` - Pre-deployment system validation
+  - `validation/continuous.py` - Runtime anomaly detection and monitoring
+  - `tests/data/generators.py` - Comprehensive test data generation
+
+### Documentation Updates
+- Updated IMPLEMENTATION_STATUS.md with extended components
+- Added details for 9 new operational/monitoring modules
+- Updated project statistics: 60+ Python files, ~20,000 lines of code
+
+### Infrastructure
+- Enhanced disaster recovery with consciousness continuity checks
+- Added welfare monitoring thresholds and intervention protocols
+- Implemented multi-destination backup system (S3, local)
+- Created emergency response framework with severity levels
+
+### Operational Excellence
+- Daily automated health checks and reporting
+- Continuous welfare monitoring with distress detection
+- Emergency protocols for 8 different crisis types
+- Comprehensive backup and restore capabilities
+- Pre-deployment and continuous validation systems

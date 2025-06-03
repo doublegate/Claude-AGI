@@ -1,11 +1,12 @@
-# Running the Claude Consciousness TUI
+# Running the Claude-AGI TUI
 
-This guide explains how to run the Claude Consciousness Terminal User Interface (TUI).
+This guide explains how to run both the basic Claude Consciousness TUI and the enhanced Claude-AGI Terminal User Interface.
 
 ## Prerequisites
 
 1. **Python 3.11+** installed
 2. **Terminal environment** (the TUI requires a proper terminal, not an IDE console)
+   - Minimum size: 80x20 for enhanced TUI, 40x10 for basic TUI
 3. **API Key** from Anthropic (get one at https://console.anthropic.com/)
 
 ## Setup
@@ -42,54 +43,65 @@ ANTHROPIC_API_KEY=your-actual-api-key-here
 
 ## Running the TUI
 
-You have three ways to run the TUI:
+### Enhanced Claude-AGI TUI (Recommended)
 
-### Option 1: Direct Python (Recommended)
-
-From the project root:
+The enhanced TUI provides multiple panes for consciousness streams, memory, emotional state, and goals:
 
 ```bash
-python scripts/claude-consciousness-tui.py
+python claude-agi.py
 ```
 
-### Option 2: Using the Python Wrapper
-
-The wrapper provides better error messages and environment validation:
+Or with a specific configuration:
 
 ```bash
-python scripts/run_tui.py
+python claude-agi.py --config configs/development.yaml
 ```
 
-### Option 3: Using the Bash Script
+### Basic Consciousness TUI
 
-The bash script also checks and installs dependencies if needed:
+For a simpler experience, use the basic consciousness demo:
 
 ```bash
-./start_tui.sh
+python scripts/enhanced_consciousness_tui.py
 ```
 
-## Using the TUI
+## Using the Enhanced TUI
 
-Once running, you'll see:
+The enhanced TUI displays multiple panes:
 
-- **Top Half**: Claude's stream of consciousness (thoughts, reflections, pauses)
-- **Bottom Half**: Interactive chat where you can type messages
+- **Consciousness Pane**: Shows multi-stream thoughts (primary, creative, subconscious, meta)
+- **Memory Pane**: Displays recent memories and allows browsing
+- **Emotional State**: Visual representation of current emotional state
+- **Goals Pane**: Active goals and achievements
+- **Chat Pane**: Interactive conversation
+- **System Pane**: Status messages and metrics
 
 ### Controls
 
-- **Type messages** and press **Enter** to chat
-- Claude's thoughts continue in the background
-- Press **Escape** to exit gracefully
+- **Tab**: Switch between panes
+- **Enter**: Send chat messages
+- **ESC**: Exit (press twice to confirm)
+- **/command**: Use slash commands (type /help for list)
 
-### Features
+### Slash Commands
 
-- Thoughts stream at human reading speed (~150 words/minute)
-- Natural pauses and contemplative moments
-- Contextual awareness when interrupted
-- Persistent memory saved to `claude_consciousness_tui.json`
-- Emotional tone affects thought pacing
+- `/help` - Show available commands
+- `/memory` - Memory operations (search, stats, consolidate)
+- `/stream` - Control consciousness streams (pause, resume, focus)
+- `/emotional` - Set emotional state
+- `/goals` - Manage goals
+- `/layout` - Switch UI layouts
+- `/metrics` - View system metrics
+- `/safety` - Check safety framework status
 
 ## Troubleshooting
+
+### TUI Screen Goes Gray/Blank
+
+If the TUI displays correctly for a second then goes gray:
+- This was a logging issue that has been fixed in the latest version
+- Make sure you're using the updated `claude-agi.py`
+- Check `logs/claude-agi.log` for any errors
 
 ### "No module named 'anthropic'"
 
