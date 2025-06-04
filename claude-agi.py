@@ -60,11 +60,15 @@ import logging
 
 # Configure logging - disable console output when using TUI
 # StreamHandler interferes with curses
+# Ensure logs directory exists
+log_dir = Path('logs')
+log_dir.mkdir(exist_ok=True)
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('logs/claude-agi.log')
+        logging.FileHandler(log_dir / 'claude-agi.log')
         # Removed StreamHandler to prevent curses interference
     ]
 )
