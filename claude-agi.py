@@ -453,7 +453,7 @@ class ClaudeAGI:
                 long_term_count = len(self.memory_manager.long_term_memory)
                 
             stats_text = f"Working: {working_count} | Long-term: {long_term_count}"
-            self.safe_addstr(win, y, 2, stats_text, curses.color_pair(3))
+            self.safe_addstr(win, y, 2, stats_text[:width-4], curses.color_pair(3))
             y += 2
         
         # Categories
@@ -467,7 +467,7 @@ class ClaudeAGI:
         for category, color in categories:
             if y >= height - 1:
                 break
-            self.safe_addstr(win, y, 2, f"▶ {category}", color)
+            self.safe_addstr(win, y, 2, f"▶ {category}"[:width-4], color)
             y += 1
             
             # Show a few items under each category
@@ -480,7 +480,11 @@ class ClaudeAGI:
                         for mem in recent_thoughts[-3:]:
                             if y >= height - 1:
                                 break
-                            content = mem.get('content', '')[:width-8]
+                            content = mem.get('content', '')
+                            # Properly truncate long content with available width
+                            max_content_width = width - 8  # Account for bullet and margins
+                            if len(content) > max_content_width:
+                                content = content[:max_content_width-3] + "..."
                             self.safe_addstr(win, y, 4, f"• {content}", curses.color_pair(8))
                             y += 1
                 except Exception as e:
@@ -786,7 +790,7 @@ class ClaudeAGI:
                     curses.doupdate()
                 
                 # Slower refresh rate to reduce flickering
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(1.0)  # Increased to 1 second to reduce flicker
             except Exception as e:
                 logger.error(f"UI refresh error: {e}")
                 needs_full_redraw = True  # Redraw everything on error
@@ -948,20 +952,42 @@ class ClaudeAGI:
                 import textwrap
                 # Keep the prefix intact for wrapped lines
                 if text.startswith(('💭', '🎨', '🌊', '🔍', '•')):
-                    prefix = text.split(' ', 1)[0]
-                    if ' ' in text:
-                        rest = text.split(' ', 1)[1]
+                    # Find the first space after the prefix and tag
+                    parts = text.split(' ', 2)  # Split into at most 3 parts
+                    if len(parts) >= 3 and parts[1].startswith('[') and parts[1].endswith(']'):
+                        # We have emoji, tag, and content
+                        prefix = f"{parts[0]} {parts[1]}"
+                        rest = parts[2]
+                    elif len(parts) >= 2:
+                        # Just emoji and content
+                        prefix = parts[0]
+                        rest = ' '.join(parts[1:])
                     else:
-                        rest = text[len(prefix):]
-                    lines = textwrap.wrap(rest, max_width - len(prefix) - 1)
-                    if lines:
-                        # First line with prefix
-                        self.panes[PaneType.CONSCIOUSNESS].lines.append((f"{prefix} {lines[0]}", color))
-                        # Subsequent lines with indent (using spaces, not dots)
-                        for line in lines[1:]:
-                            self.panes[PaneType.CONSCIOUSNESS].lines.append((f"   {line}", color))
+                        # Just the emoji
+                        prefix = text
+                        rest = ""
+                    
+                    if rest:
+                        # Calculate available width for text after prefix
+                        prefix_len = len(prefix) + 1  # +1 for space
+                        available_width = max_width - prefix_len
+                        if available_width > 10:  # Only wrap if we have reasonable space
+                            lines = textwrap.wrap(rest, available_width, break_long_words=False)
+                            if lines:
+                                # First line with prefix
+                                self.panes[PaneType.CONSCIOUSNESS].lines.append((f"{prefix} {lines[0]}", color))
+                                # Subsequent lines with indent (matching prefix length)
+                                indent = ' ' * prefix_len
+                                for line in lines[1:]:
+                                    self.panes[PaneType.CONSCIOUSNESS].lines.append((f"{indent}{line}", color))
+                        else:
+                            # Not enough space, truncate
+                            self.panes[PaneType.CONSCIOUSNESS].lines.append((text[:max_width-3] + "...", color))
+                    else:
+                        self.panes[PaneType.CONSCIOUSNESS].lines.append((prefix, color))
                 else:
-                    lines = textwrap.wrap(text, max_width)
+                    # No special prefix, normal wrap
+                    lines = textwrap.wrap(text, max_width, break_long_words=False)
                     for line in lines:
                         self.panes[PaneType.CONSCIOUSNESS].lines.append((line, color))
             else:
@@ -977,7 +1003,7 @@ class ClaudeAGI:
             max_width = self.panes[PaneType.CHAT].window.getmaxyx()[1] - 4
             if len(text) > max_width:
                 import textwrap
-                lines = textwrap.wrap(text, max_width)
+                lines = textwrap.wrap(text, max_width, break_long_words=False)
                 for line in lines:
                     self.panes[PaneType.CHAT].lines.append((line, color))
             else:
@@ -1462,7 +1488,7 @@ class ClaudeAGI:
                 ch = self.stdscr.getch()
                 
                 if ch == -1:  # No input
-                    await asyncio.sleep(0.0001)  # Ultra-short delay for max responsiveness
+                    await asyncio.sleep(0.01)  # Short delay but not too aggressive
                     continue
                     
                 # Handle special keys
@@ -1560,12 +1586,13 @@ class ClaudeAGI:
                     else:
                         self.input_buffer += chr(ch)
                         
-                # Always update display after input to ensure responsiveness
-                self._draw_status()
-                self._draw_input()
-                self.status_win.noutrefresh()
-                self.input_win.noutrefresh()
-                curses.doupdate()
+                # Only update display if we actually processed input
+                if ch != -1:
+                    self._draw_status()
+                    self._draw_input()
+                    self.status_win.noutrefresh()
+                    self.input_win.noutrefresh()
+                    curses.doupdate()
                 
             except Exception as e:
                 logger.error(f"Input handler error: {e}", exc_info=True)
@@ -1688,11 +1715,27 @@ class ClaudeAGI:
             
             # Clean up curses properly
             try:
-                # Reset terminal state
-                self.stdscr.keypad(False)
-                curses.echo()
-                curses.nocbreak()
-                curses.endwin()
+                # Reset terminal state only if stdscr is valid
+                if hasattr(self, 'stdscr') and self.stdscr:
+                    try:
+                        self.stdscr.keypad(False)
+                    except:
+                        pass
+                    
+                # Reset terminal modes
+                try:
+                    curses.echo()
+                    curses.nocbreak()
+                except:
+                    pass
+                
+                # Finally call endwin() - but only if not already ended
+                try:
+                    if not curses.isendwin():
+                        curses.endwin()
+                except:
+                    # Force reset if normal endwin fails
+                    pass  # Let curses.wrapper handle final cleanup
             except Exception as e:
                 # Ignore errors during cleanup
                 logger.debug(f"Curses cleanup error (expected): {e}")

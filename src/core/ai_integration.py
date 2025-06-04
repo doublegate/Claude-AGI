@@ -317,8 +317,17 @@ class ThoughtGenerator:
         """Clean up resources"""
         if self.client:
             try:
-                # Close the client properly
-                await self.client.close()
+                # Check if client has a close method
+                if hasattr(self.client, 'close'):
+                    close_method = getattr(self.client, 'close')
+                    # Check if it's a coroutine
+                    if asyncio.iscoroutinefunction(close_method):
+                        await close_method()
+                    else:
+                        close_method()
+                # For newer versions of anthropic that might use httpx
+                elif hasattr(self.client, '_client') and hasattr(self.client._client, 'aclose'):
+                    await self.client._client.aclose()
             except Exception as e:
                 logger.debug(f"Error closing Anthropic client: {e}")
             finally:
