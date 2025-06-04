@@ -32,6 +32,7 @@ import queue
 import time
 import json
 import argparse
+import textwrap
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple, Any
@@ -510,13 +511,32 @@ class ClaudeAGI:
             ("Goals & Achievements", curses.color_pair(2))
         ]
         
+        # Calculate space for each section dynamically
+        remaining_height = height - y - 2  # Account for border
+        # Make sure we have enough space
+        if remaining_height < len(categories) * 3:
+            # Not enough space, just show what we can
+            section_height = 3
+        else:
+            section_height = max(4, remaining_height // len(categories))  # At least 4 lines per section
+        
         for category, color in categories:
             if y >= height - 2:
                 break
             
+            section_start_y = y
+            
+            # Clear section area first to prevent overlap
+            for clear_y in range(y, min(y + section_height, height - 1)):
+                self.safe_addstr(win, clear_y, 2, " " * (width - 4), curses.color_pair(8))
+            
             # Category header with expansion indicator
             self.safe_addstr(win, y, 2, f"▼ {category}", color | curses.A_BOLD)
             y += 1
+            
+            # Reserve at least one line for content
+            content_lines = section_height - 2  # Header + spacing
+            lines_used = 0
             
             # Show items under each category
             if category == "Recent Thoughts" and hasattr(self, 'memory_manager') and self.memory_manager:
@@ -524,9 +544,8 @@ class ClaudeAGI:
                     if hasattr(self.memory_manager, 'working_memory'):
                         recent_thoughts = self.memory_manager.working_memory.get('recent_thoughts', [])
                         # Show last 3 thoughts with proper formatting
-                        displayed = 0
                         for mem in recent_thoughts[-3:]:
-                            if y >= height - 2 or displayed >= 3:
+                            if lines_used >= content_lines or y >= section_start_y + section_height - 1:
                                 break
                             content = mem.get('content', '')
                             stream = mem.get('stream', 'unknown')
@@ -535,23 +554,40 @@ class ClaudeAGI:
                             prefix = f"  • [{stream[:3].upper()}] "
                             available_width = width - len(prefix) - 4
                             
-                            # Word wrap if needed
+                            # Word wrap with proper truncation
                             if len(content) > available_width:
-                                # First line
-                                self.safe_addstr(win, y, 2, prefix + content[:available_width-1] + "…", curses.color_pair(8))
-                                y += 1
-                                displayed += 1
+                                # Wrap text properly
+                                wrapped = textwrap.wrap(content, available_width, break_long_words=False)
+                                for i, line in enumerate(wrapped[:2]):  # Max 2 lines per thought
+                                    if lines_used >= content_lines or y >= section_start_y + section_height - 1:
+                                        break
+                                    if i == 0:
+                                        self.safe_addstr(win, y, 2, prefix + line, curses.color_pair(8))
+                                    else:
+                                        self.safe_addstr(win, y, 2, " " * len(prefix) + line, curses.color_pair(8))
+                                    y += 1
+                                    lines_used += 1
                             else:
                                 self.safe_addstr(win, y, 2, prefix + content, curses.color_pair(8))
                                 y += 1
-                                displayed += 1
+                                lines_used += 1
                 except Exception as e:
                     logger.error(f"Error displaying memories: {e}")
+                    self.safe_addstr(win, y, 4, "• Error loading memories", curses.color_pair(5))
+                    y += 1
+                    lines_used += 1
+                    
+                # Fill empty space if no thoughts
+                if lines_used == 0:
+                    self.safe_addstr(win, y, 4, "• No recent thoughts recorded", curses.color_pair(8))
+                    y += 1
+                    lines_used += 1
             
             elif category == "Important Memories" and hasattr(self, 'memory_manager') and self.memory_manager:
                 # Show a placeholder or actual important memories
                 self.safe_addstr(win, y, 4, "• No important memories flagged yet", curses.color_pair(8))
                 y += 1
+                lines_used += 1
             
             elif category == "Emotional Memories":
                 # Show emotional context
@@ -560,22 +596,31 @@ class ClaudeAGI:
                     emotion_text = f"• Latest: V:{recent_emotion.valence:+.2f} A:{recent_emotion.arousal:.2f}"
                     self.safe_addstr(win, y, 4, emotion_text, curses.color_pair(8))
                     y += 1
+                    lines_used += 1
                 else:
                     self.safe_addstr(win, y, 4, "• No emotional data recorded", curses.color_pair(8))
                     y += 1
+                    lines_used += 1
             
             elif category == "Goals & Achievements":
                 if self.completed_goals:
                     last_goal = self.completed_goals[-1]
-                    goal_text = f"• ✓ {last_goal.description[:width-12]}"
+                    # Properly truncate goal text
+                    max_goal_width = width - 12
+                    goal_desc = last_goal.description
+                    if len(goal_desc) > max_goal_width:
+                        goal_desc = goal_desc[:max_goal_width-3] + "..."
+                    goal_text = f"• ✓ {goal_desc}"
                     self.safe_addstr(win, y, 4, goal_text, curses.color_pair(8))
                     y += 1
+                    lines_used += 1
                 else:
                     self.safe_addstr(win, y, 4, "• No completed goals yet", curses.color_pair(8))
                     y += 1
+                    lines_used += 1
             
-            # Add spacing between categories
-            y += 1
+            # Move to next section position
+            y = section_start_y + section_height
                 
     def _draw_emotional_content(self, pane: Pane):
         """Draw enhanced emotional state visualization"""
@@ -1071,7 +1116,6 @@ class ClaudeAGI:
             # Word wrap long lines
             max_width = self.panes[PaneType.CONSCIOUSNESS].window.getmaxyx()[1] - 4
             if len(text) > max_width:
-                import textwrap
                 # Keep the prefix intact for wrapped lines
                 if text.startswith(('💭', '🎨', '🌊', '🔍', '•')):
                     # Find the first space after the prefix and tag
@@ -1129,7 +1173,6 @@ class ClaudeAGI:
             # Word wrap long lines
             max_width = self.panes[PaneType.CHAT].window.getmaxyx()[1] - 4
             if len(text) > max_width:
-                import textwrap
                 # Check if this is a speaker line
                 if text.startswith(("You: ", "Claude: ", "[System] ")):
                     # Find speaker prefix
@@ -1497,6 +1540,25 @@ class ClaudeAGI:
         """Handle quit command"""
         self.add_system_line("Shutting down Claude-AGI...", 3)
         self.running = False
+        
+        # Cancel all running tasks to ensure clean shutdown
+        try:
+            # Cancel UI refresh task
+            if hasattr(self, 'ui_refresh_task') and self.ui_refresh_task:
+                self.ui_refresh_task.cancel()
+            
+            # Cancel all consciousness tasks
+            for task in self.consciousness_tasks.values():
+                if task and not task.done():
+                    task.cancel()
+            
+            # Clear task references
+            self.consciousness_tasks.clear()
+            
+            # Give tasks a moment to cancel
+            await asyncio.sleep(0.1)
+        except Exception as e:
+            logger.debug(f"Error during quit cleanup: {e}")
         
     async def show_help(self, args: List[str] = None):
         """Show help information"""
@@ -2095,13 +2157,58 @@ def main():
         # Run with curses wrapper for terminal UI
         curses.wrapper(agi.run)
         
+    except KeyboardInterrupt:
+        logger.info("Received keyboard interrupt")
+        print("\nShutting down...")
+    except curses.error as e:
+        error_str = str(e)
+        # Ignore common curses cleanup errors
+        if not any(x in error_str for x in ['cbreak()', 'nocbreak()', 'endwin()', 'ERR']):
+            logger.error(f"Curses error: {e}")
+            print(f"\nDisplay error: {e}")
     except Exception as e:
-        logger.error(f"Failed to start Claude-AGI: {e}", exc_info=True)
-        print(f"\nError: {e}")
-        print("\nCheck logs/claude-agi.log for details")
-        sys.exit(1)
+        error_str = str(e)
+        # Check if it's a curses-related error wrapped in another exception
+        if 'curses' in error_str and any(x in error_str for x in ['cbreak()', 'nocbreak()', 'endwin()']):
+            # Silently ignore curses cleanup errors
+            pass
+        else:
+            logger.error(f"Failed to start Claude-AGI: {e}", exc_info=True)
+            print(f"\nError: {e}")
+            print("\nCheck logs/claude-agi.log for details")
+            sys.exit(1)
     finally:
-        print("\nClaude-AGI shutdown complete")
+        # Clean shutdown procedures
+        try:
+            if 'agi' in locals():
+                # Shutdown orchestrator
+                if hasattr(agi, 'orchestrator') and agi.orchestrator:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    loop.run_until_complete(agi.orchestrator.shutdown())
+                    loop.close()
+                
+                # Close thought generator to prevent auth warnings
+                if hasattr(agi, 'thought_generator') and agi.thought_generator:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    loop.run_until_complete(agi.thought_generator.close())
+                    loop.close()
+        except:
+            pass
+        
+        # Force terminal reset to clean state
+        try:
+            # Use stty sane which is more reliable than reset
+            os.system('stty sane 2>/dev/null')
+            # Clear the screen
+            os.system('clear 2>/dev/null')
+        except:
+            pass
+        
+        # Only print shutdown message if we didn't exit due to an error
+        if 'e' not in locals() or 'curses' in str(locals().get('e', '')):
+            print("\nClaude-AGI shutdown complete")
         
 
 if __name__ == "__main__":
