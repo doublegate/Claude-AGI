@@ -24,7 +24,7 @@ The Claude-AGI Project (Project Prometheus) aims to develop a genuinely consciou
 
 ### System Status
 - **Phase 1**: ✅ Complete (Core implementation done, test suite fully operational)
-- **TUI**: ✅ Professional (v1.0.10) - Clean exit handling, error suppression, perfect formatting
+- **TUI**: ✅ Professional (v1.1.0) - Clean exit handling, error suppression, perfect formatting
 - **Extended Implementation**: ✅ Complete (v1.0.2) - Operations, welfare, and emergency systems added
 - **Test Suite**: ✅ All 153 tests passing (100% pass rate, 49.61% coverage)
 - **API Integration**: ✅ Working with Anthropic Claude API
