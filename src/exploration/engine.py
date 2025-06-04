@@ -8,9 +8,9 @@ import random
 import json
 from urllib.parse import urlparse, quote_plus
 
-from core.communication import ServiceBase
-from core.orchestrator import SystemState
-from safety.core_safety import SafetyFramework, Action
+from ..core.communication import ServiceBase
+from ..core.orchestrator import SystemState
+from ..safety.core_safety import SafetyFramework, Action
 
 logger = logging.getLogger(__name__)
 
