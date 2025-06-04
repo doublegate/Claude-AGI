@@ -77,9 +77,9 @@ class AGIOrchestrator:
     async def _initialize_services(self):
         """Initialize all cognitive services"""
         # Import services here to avoid circular imports
-        from ..memory.manager import MemoryManager
-        from ..consciousness.stream import ConsciousnessStream
-        from ..safety.core_safety import SafetyFramework
+        from src.memory.manager import MemoryManager
+        from src.consciousness.stream import ConsciousnessStream
+        from src.safety.core_safety import SafetyFramework
         
         # Initialize core services
         memory_manager = MemoryManager()

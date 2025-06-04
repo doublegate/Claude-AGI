@@ -67,6 +67,13 @@
 - [x] 🟢 **All CI/CD jobs passing** - Unit, integration, safety, and performance tests
 - [x] 🟢 **GitHub Actions workflow** - Fully operational continuous integration
 
+### TUI Performance & Functionality Fixes (2025-06-03)
+- [x] 🟢 **Input responsiveness fixed** - Reduced polling delay to 0.01s
+- [x] 🟢 **Memory display fixed** - Thoughts now properly stored and displayed
+- [x] 🟢 **Goal creation fixed** - Changed goal_id to id field
+- [x] 🟢 **Clean shutdown** - /quit command exits properly
+- [x] 🟢 **Message handler added** - MemoryManager properly connected to orchestrator
+
 ---
 
 ## Pre-Development Phase (Months 0-1)
@@ -150,11 +157,16 @@ Based on comprehensive AI analyses (Claude 4 Opus, GPT-4o, Grok 3):
 
 #### 2. TUI Functionality
 - [x] 🟢 **TUI gray screen bug fixed** (v1.0.1)
+- [x] 🟢 **TUI performance issues fixed** (v1.0.5)
+  - [x] Input responsiveness improved
+  - [x] Memory display working
+  - [x] Goal management functional
+  - [x] Clean shutdown working
 - [ ] 🟡 **TUI fully functional across platforms**
   - [ ] Test on Windows with windows-curses
   - [ ] Test on macOS Terminal
   - [ ] Test on Linux (multiple terminals)
-  - [ ] Verify all slash commands work
+  - [x] Verify all slash commands work
 
 #### 3. Security Hardening
 - [ ] 🔴 🛡️ **Critical vulnerabilities patched**

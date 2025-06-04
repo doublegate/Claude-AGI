@@ -54,6 +54,8 @@ kubectl apply -f deployment/kubernetes/
 4. Memory persistence should be considered for all stateful operations
 5. Test coverage requirements: 90% for core components, 100% for safety-critical code
 6. Emotional impact assessment required for user-facing features
+7. When developing TUI features, ensure responsive input handling (minimal polling delays)
+8. Always verify service message handlers are properly connected to orchestrator
 
 ## Key Implementation Notes
 
@@ -133,6 +135,22 @@ The project has completed Phase 1 foundation implementation with working orchest
 - **49.61% code coverage** (1008/2032 lines covered)
 - Resolved all "Event loop is closed" warnings
 - Test suite is stable and ready for CI/CD integration
+
+### TUI Performance & Functionality Fixes (2025-06-03 v1.0.5)
+- **Fixed TUI responsiveness issues**:
+  - Reduced input polling delay from 0.05s to 0.01s for immediate character display
+  - Eliminated UI flickering with optimized refresh strategy
+  - Improved selective pane updates for better performance
+- **Fixed memory integration**:
+  - Added proper message handler to MemoryManager class
+  - Thoughts from consciousness streams now stored in memory
+  - Memory browser displays actual stored thoughts
+- **Fixed Goal management**:
+  - Corrected Pydantic field validation (changed goal_id to id)
+  - Goals now properly create and display in UI
+- **Fixed clean shutdown**:
+  - /quit command now properly cancels tasks and exits
+  - No longer requires Ctrl-C to force exit
 
 ### Ready for Integration
 - ✅ Anthropic API connection for actual thought generation (working)

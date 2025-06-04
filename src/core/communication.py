@@ -52,7 +52,7 @@ class ServiceBase(ABC):
         
     async def send_to_service(self, target: str, message_type: str, data: Any, priority: int = 5):
         """Send direct message to another service"""
-        from core.orchestrator import Message
+        from src.core.orchestrator import Message
         
         message = Message(
             source=self.service_name,

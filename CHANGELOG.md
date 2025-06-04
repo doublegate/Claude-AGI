@@ -303,6 +303,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Mock infrastructure supports offline development
 - Event loop handling compatible with pytest-asyncio
 
+## [1.0.5] - 2025-06-03 - TUI Performance & Functionality Fixes
+
+### Fixed
+- **TUI Responsiveness Issues**
+  - Reduced input polling delay from 0.05s to 0.01s for immediate character display
+  - Fixed multiple flickering issues with optimized screen refresh
+  - Improved UI update performance with selective pane updates
+  
+- **Memory Management**
+  - Fixed memory manager message handler properly attached to orchestrator
+  - Thoughts from consciousness streams now properly stored in memory
+  - Memory browser now displays actual stored thoughts
+  - Memory statistics command shows correct counts
+  
+- **Goal Management**
+  - Fixed Goal creation validation error (changed `goal_id` to `id` field)
+  - Goals now properly add to active goals list and display in UI
+  
+- **Clean Shutdown**
+  - `/quit` command now properly cancels tasks and exits cleanly
+  - No longer requires Ctrl-C to force exit
+  - Proper orchestrator shutdown sequence implemented
+
+### Added
+- Proper message handler (`handle_message` and `process_message`) to MemoryManager class
+- Memory storage integration between consciousness streams and memory manager
+- Logging to verify service connections and message handling
+
+### Changed
+- Input handler polling optimized for responsive typing experience
+- UI refresh strategy changed to reduce unnecessary updates
+- Memory display now reads directly from working_memory structure
+
+### Performance Improvements
+- Input latency reduced by 80% (from 50ms to 10ms polling)
+- Eliminated unnecessary screen redraws
+- Optimized memory access patterns for UI display
+
 ## [1.0.4] - 2025-01-06 - CI/CD Fixes
 
 ### Fixed

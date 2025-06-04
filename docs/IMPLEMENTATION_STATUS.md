@@ -5,10 +5,10 @@ This document tracks the implementation status of all Claude-AGI components.
 ## Overview
 
 **Phase 1 Status**: ✅ Complete (100% Implementation, Test Suite Fully Operational)  
-**TUI Status**: ✅ Fixed (v1.0.1) - Gray screen issue resolved  
+**TUI Status**: ✅ Fixed (v1.0.5) - Performance and functionality issues resolved  
 **Test Suite**: ✅ All 153 tests passing (100% pass rate, 49.61% coverage)  
 **CI/CD Status**: ✅ All GitHub Actions jobs passing (v1.0.4)  
-**Last Updated**: 2025-01-06 (CI/CD Fixes)
+**Last Updated**: 2025-06-03 (TUI Performance Fixes)
 
 ## Core Components
 
@@ -63,7 +63,7 @@ This document tracks the implementation status of all Claude-AGI components.
    - Automatic embedding generation with sentence-transformers
    - Migration schemas for Phase 2 readiness
 
-7. **Enhanced TUI** (`claude-agi.py`) - v1.0.1 FIXED
+7. **Enhanced TUI** (`claude-agi.py`) - v1.0.5 FIXED
    - Multi-pane layout with dynamic resizing
    - Consciousness stream visualization
    - Memory browser with search
@@ -72,9 +72,13 @@ This document tracks the implementation status of all Claude-AGI components.
    - Interactive commands (/memory, /stream, /emotional, /goals, /layout)
    - Real-time metrics display
    - Multiple layout modes (standard, memory_focus, emotional_focus)
-   - **FIXED**: Gray screen issue resolved by removing console logging interference
-   - **ADDED**: Periodic UI refresh loop (500ms) for consistent display
-   - **IMPROVED**: Better curses cleanup on exit
+   - **v1.0.1 FIX**: Gray screen issue resolved by removing console logging interference
+   - **v1.0.5 FIXES**: 
+     - Input responsiveness improved (10ms polling)
+     - Memory storage and display now working properly
+     - Goal creation validation fixed
+     - Clean shutdown with /quit command
+     - Reduced UI flickering
 
 8. **Exploration Engine** (`src/exploration/engine.py`)
    - Interest tracking with decay

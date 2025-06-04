@@ -21,6 +21,7 @@ class MemoryManager:
         self.db_manager: Optional[DatabaseManager] = None
         self.embedder: Optional[SentenceTransformer] = None
         self.use_database = False  # Flag to enable database integration
+        self.message_queue = asyncio.Queue()  # For receiving messages
         
     @classmethod
     async def create(cls):
@@ -413,6 +414,27 @@ class MemoryManager:
         """Close database connections gracefully"""
         if self.use_database and self.db_manager:
             await self.db_manager.close()
+            
+    async def handle_message(self, message):
+        """Handle incoming messages from orchestrator"""
+        message_type = message.type
+        
+        if message_type == 'store_thought':
+            await self.store_thought(message.content)
+        elif message_type == 'recall':
+            # Handle memory recall requests
+            query = message.content.get('query', '')
+            memories = await self.recall_similar(query)
+            # Send response back through orchestrator
+            # For now, just log it
+            logger.info(f"Recalled {len(memories)} memories for query: {query}")
+        elif message_type == 'consolidate':
+            await self.consolidate_memories()
+        else:
+            logger.debug(f"Memory manager received unknown message type: {message_type}")
+    
+    # Alias for orchestrator compatibility
+    process_message = handle_message
 
 
 class SimpleVectorStore:

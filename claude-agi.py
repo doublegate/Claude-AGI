@@ -21,6 +21,10 @@ Options:
 
 import sys
 import os
+
+# Add src directory to Python path
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src'))
+
 import asyncio
 import curses
 import threading
@@ -105,10 +109,12 @@ class ClaudeAGI:
         
         # Initialize AGI components
         self.orchestrator = AGIOrchestrator(self.config)
-        self.memory_manager = self.orchestrator.services.get('memory')
-        self.consciousness = self.orchestrator.services.get('consciousness')
-        self.safety = self.orchestrator.services.get('safety')
+        self.memory_manager = None  # Will be set after initialization
+        self.consciousness = None  # Will be set after initialization
+        self.safety = None  # Will be set after initialization
         self.thought_generator = ThoughtGenerator()
+        self.thought_queue = asyncio.Queue()  # Queue for receiving thoughts
+        self.total_thoughts = 0
         
         # UI State
         self.running = True
@@ -148,6 +154,10 @@ class ClaudeAGI:
             'goals_completed': 0,
             'uptime_start': datetime.now()
         }
+        
+        # Update flags
+        self.consciousness_needs_update = False
+        self.chat_needs_update = False
         
         logger.info("Claude-AGI initialization complete")
         
@@ -216,7 +226,8 @@ class ClaudeAGI:
         )
         
         # Memory browser (right top)
-        memory_win = curses.newwin(top_height - 1, self.width - consciousness_width - 1, 
+        memory_width = self.width - consciousness_width
+        memory_win = curses.newwin(top_height - 1, memory_width, 
                                    0, consciousness_width)
         memory_win.scrollok(True)
         self.panes[PaneType.MEMORY] = Pane(
@@ -241,7 +252,7 @@ class ClaudeAGI:
         )
         
         # Goals tracker (right middle)
-        goals_win = curses.newwin(middle_height - 1, self.width - consciousness_width - 1,
+        goals_win = curses.newwin(middle_height - 1, memory_width,
                                   middle_y, consciousness_width)
         goals_win.scrollok(True)
         self.panes[PaneType.GOALS] = Pane(
@@ -363,9 +374,16 @@ class ClaudeAGI:
         for pane_type, pane in self.panes.items():
             if pane.visible:
                 self._draw_pane(pane)
+                pane.window.noutrefresh()  # Queue for update
                 
         # Draw status line
         self._draw_status()
+        self.status_win.noutrefresh()
+        self._draw_input()
+        self.input_win.noutrefresh()
+        
+        # Update physical screen once
+        curses.doupdate()
         
     def _draw_pane(self, pane: Pane):
         """Draw a single pane with border and title"""
@@ -425,8 +443,16 @@ class ClaudeAGI:
         
         # Memory statistics
         if self.memory_manager:
-            stats_text = f"Working: {len(getattr(self.memory_manager, 'working_memory', []))} | "
-            stats_text += f"Long-term: {len(getattr(self.memory_manager, 'long_term_memory', []))}"
+            working_count = 0
+            long_term_count = 0
+            
+            # Get counts based on memory structure
+            if hasattr(self.memory_manager, 'working_memory') and isinstance(self.memory_manager.working_memory, dict):
+                working_count = len(self.memory_manager.working_memory.get('recent_thoughts', []))
+            if hasattr(self.memory_manager, 'long_term_memory'):
+                long_term_count = len(self.memory_manager.long_term_memory)
+                
+            stats_text = f"Working: {working_count} | Long-term: {long_term_count}"
             self.safe_addstr(win, y, 2, stats_text, curses.color_pair(3))
             y += 2
         
@@ -445,17 +471,20 @@ class ClaudeAGI:
             y += 1
             
             # Show a few items under each category
-            if category == "Recent Thoughts" and hasattr(self, 'memory_manager'):
+            if category == "Recent Thoughts" and hasattr(self, 'memory_manager') and self.memory_manager:
                 try:
-                    memories = asyncio.run(self.memory_manager.recall_recent(3))
-                    for mem in memories:
-                        if y >= height - 1:
-                            break
-                        content = mem.get('content', '')[:width-8]
-                        self.safe_addstr(win, y, 4, f"• {content}", curses.color_pair(8))
-                        y += 1
-                except:
-                    pass
+                    # Get memories from working memory directly - avoid async in draw
+                    if hasattr(self.memory_manager, 'working_memory'):
+                        recent_thoughts = self.memory_manager.working_memory.get('recent_thoughts', [])
+                        # Show last 3 thoughts
+                        for mem in recent_thoughts[-3:]:
+                            if y >= height - 1:
+                                break
+                            content = mem.get('content', '')[:width-8]
+                            self.safe_addstr(win, y, 4, f"• {content}", curses.color_pair(8))
+                            y += 1
+                except Exception as e:
+                    logger.error(f"Error displaying memories: {e}")
             y += 1
                 
     def _draw_emotional_content(self, pane: Pane):
@@ -619,7 +648,6 @@ class ClaudeAGI:
             status += f"Layout: {self.layout_mode}"
             
         self.safe_addstr(self.status_win, 0, 0, status[:self.width-1], curses.color_pair(6))
-        self.status_win.refresh()
         
     def _draw_input(self):
         """Draw input line with mode indicator"""
@@ -643,7 +671,6 @@ class ClaudeAGI:
         cursor_x = len(prompt) + len(self.input_buffer)
         if cursor_x < self.width - 1:
             self.input_win.move(0, cursor_x)
-        self.input_win.refresh()
         
     def safe_addstr(self, win, y, x, text, attr=0):
         """Safely add string to window, handling boundaries"""
@@ -661,73 +688,141 @@ class ClaudeAGI:
             pass
             
     def refresh_all(self):
-        """Refresh all windows"""
+        """Refresh all windows using double buffering"""
         for pane in self.panes.values():
             if pane.visible:
                 try:
-                    pane.window.refresh()
+                    pane.window.noutrefresh()
                 except curses.error:
                     pass
-        self.status_win.refresh()
-        self.input_win.refresh()
+        self.status_win.noutrefresh()
+        self.input_win.noutrefresh()
+        # Single update to physical screen
+        curses.doupdate()
         
     async def ui_refresh_loop(self):
-        """Periodic UI refresh to prevent screen blanking"""
+        """Periodic UI refresh for dynamic content only"""
+        last_uptime = None
+        last_thought_count = 0
+        needs_full_redraw = True  # Initial full draw
+        
         while self.running:
             try:
-                # Refresh all panes to ensure screen stays updated
-                self._draw_all_panes()
-                self.refresh_all()
-                await asyncio.sleep(0.5)  # Refresh every 500ms
+                # Perform full redraw if needed
+                if needs_full_redraw:
+                    self._draw_all_panes()
+                    needs_full_redraw = False
+                
+                # Update specific panes if needed - with error handling
+                try:
+                    if self.consciousness_needs_update and PaneType.CONSCIOUSNESS in self.panes:
+                        self._draw_pane(self.panes[PaneType.CONSCIOUSNESS])
+                        self.panes[PaneType.CONSCIOUSNESS].window.noutrefresh()
+                        self.consciousness_needs_update = False
+                    
+                    if self.chat_needs_update and PaneType.CHAT in self.panes:
+                        self._draw_pane(self.panes[PaneType.CHAT])
+                        self.panes[PaneType.CHAT].window.noutrefresh()
+                        self.chat_needs_update = False
+                except Exception as e:
+                    logger.error(f"Error updating panes: {e}")
+                    needs_full_redraw = True
+                
+                # Only update status bar if time has changed
+                current_uptime = datetime.now() - self.metrics['uptime_start']
+                current_minutes = int(current_uptime.total_seconds() // 60)
+                
+                if last_uptime is None or current_minutes != last_uptime:
+                    last_uptime = current_minutes
+                    self._draw_status()
+                    self.status_win.noutrefresh()
+                
+                # Only update metrics if thoughts changed
+                if self.total_thoughts != last_thought_count:
+                    last_thought_count = self.total_thoughts
+                    # Status bar includes thought count
+                    self._draw_status()
+                    self.status_win.noutrefresh()
+                
+                # Update input line continuously for smooth typing
+                self._draw_input()
+                self.input_win.noutrefresh()
+                
+                # Single screen update
+                curses.doupdate()
+                
+                # Shorter sleep for more responsive feel
+                await asyncio.sleep(0.5)
             except Exception as e:
                 logger.error(f"UI refresh error: {e}")
+                needs_full_redraw = True  # Redraw everything on error
                 await asyncio.sleep(1)
     
     async def consciousness_loop(self):
         """Main consciousness generation loop"""
+        stream_thought_counts = {}
+        
         while self.running:
             try:
-                # Let the orchestrator run its cycle
-                if self.orchestrator.state != SystemState.SLEEPING:
-                    # Process consciousness streams
-                    if self.consciousness and self.consciousness.is_conscious:
-                        await self.consciousness.service_cycle()
-                        
-                        # Collect thoughts from all streams
-                        for stream_id, stream in self.consciousness.streams.items():
-                            if stream.content_buffer:
-                                # Get latest thought
-                                latest = stream.content_buffer[-1]
-                                thought_text = latest.get('content', '')
-                                importance = latest.get('importance', 5)
+                # Check if consciousness service is running and get thoughts
+                if self.consciousness and hasattr(self.consciousness, 'streams'):
+                    # Collect thoughts from all streams
+                    for stream_id, stream in self.consciousness.streams.items():
+                        if hasattr(stream, 'content_buffer'):
+                            # Track thoughts per stream
+                            current_count = len(stream.content_buffer)
+                            last_count = stream_thought_counts.get(stream_id, 0)
+                            
+                            if current_count > last_count:
+                                # Get new thoughts since last check
+                                new_thoughts = list(stream.content_buffer)[last_count:current_count]
+                                stream_thought_counts[stream_id] = current_count
                                 
-                                # Format with stream indicator
-                                if stream_id == 'primary':
-                                    prefix = "💭"
-                                    color = 1
-                                elif stream_id == 'creative':
-                                    prefix = "🎨"
-                                    color = 4
-                                elif stream_id == 'subconscious':
-                                    prefix = "🌊"
-                                    color = 7
-                                elif stream_id == 'meta':
-                                    prefix = "🔍"
-                                    color = 3
-                                else:
-                                    prefix = "•"
-                                    color = 8
+                                for thought in new_thoughts:
+                                    thought_text = thought.get('content', '')
+                                    importance = thought.get('importance', 5)
                                     
-                                # Add to consciousness pane
-                                display_text = f"{prefix} [{stream_id[:3].upper()}] {thought_text}"
-                                self.add_consciousness_line(display_text, color)
-                                
-                                # Update metrics
-                                self.metrics['thoughts_generated'] += 1
-                                
-                                # Update emotional state
-                                tone = latest.get('emotional_tone', 'neutral')
-                                self._update_emotional_state(tone)
+                                    # Format with stream indicator
+                                    if stream_id == 'primary':
+                                        prefix = "💭"
+                                        color = 1
+                                    elif stream_id == 'creative':
+                                        prefix = "🎨"
+                                        color = 4
+                                    elif stream_id == 'subconscious':
+                                        prefix = "🌊"
+                                        color = 7
+                                    elif stream_id == 'meta':
+                                        prefix = "🔍"
+                                        color = 3
+                                    else:
+                                        prefix = "•"
+                                        color = 8
+                                        
+                                    # Add to consciousness pane
+                                    display_text = f"{prefix} [{stream_id[:3].upper()}] {thought_text}"
+                                    self.add_consciousness_line(display_text, color)
+                                    
+                                    # Update metrics
+                                    self.metrics['thoughts_generated'] += 1
+                                    self.total_thoughts += 1
+                                    
+                                    # Store thought in memory
+                                    if self.memory_manager and importance > 3:  # Only store meaningful thoughts
+                                        await self.memory_manager.store_thought({
+                                            'type': 'thought',
+                                            'content': thought_text,
+                                            'stream': stream_id,
+                                            'timestamp': datetime.now().isoformat(),
+                                            'importance': importance,
+                                            'emotional_tone': thought.get('emotional_tone', 'neutral'),
+                                            'stream_type': stream_id
+                                        })
+                                        self.metrics['memories_stored'] += 1
+                                    
+                                    # Update emotional state
+                                    tone = thought.get('emotional_tone', 'neutral')
+                                    self._update_emotional_state(tone)
                                 
                         # Process any cross-stream insights
                         await self._process_insights()
@@ -789,17 +884,42 @@ class ClaudeAGI:
             arousal=self.current_emotional_state.arousal
         ))
         
-        # Update displays
-        if PaneType.EMOTIONAL in self.panes:
+        # Update displays only if visible
+        if PaneType.EMOTIONAL in self.panes and self.panes[PaneType.EMOTIONAL].visible:
             self._draw_pane(self.panes[PaneType.EMOTIONAL])
-            self.panes[PaneType.EMOTIONAL].window.refresh()
+            self.panes[PaneType.EMOTIONAL].window.noutrefresh()
+            curses.doupdate()
             
     def add_consciousness_line(self, text: str, color: int = 1):
         """Add line to consciousness pane"""
         if PaneType.CONSCIOUSNESS in self.panes:
-            self.panes[PaneType.CONSCIOUSNESS].lines.append((text, color))
-            self._draw_pane(self.panes[PaneType.CONSCIOUSNESS])
-            self.panes[PaneType.CONSCIOUSNESS].window.refresh()
+            # Word wrap long lines
+            max_width = self.panes[PaneType.CONSCIOUSNESS].window.getmaxyx()[1] - 4
+            if len(text) > max_width:
+                import textwrap
+                # Keep the prefix intact for wrapped lines
+                if text.startswith(('💭', '🎨', '🌊', '🔍', '•')):
+                    prefix = text.split(' ', 1)[0]
+                    if ' ' in text:
+                        rest = text.split(' ', 1)[1]
+                    else:
+                        rest = text[len(prefix):]
+                    lines = textwrap.wrap(rest, max_width - len(prefix) - 1)
+                    if lines:
+                        # First line with prefix
+                        self.panes[PaneType.CONSCIOUSNESS].lines.append((f"{prefix} {lines[0]}", color))
+                        # Subsequent lines with indent (using spaces, not dots)
+                        for line in lines[1:]:
+                            self.panes[PaneType.CONSCIOUSNESS].lines.append((f"   {line}", color))
+                else:
+                    lines = textwrap.wrap(text, max_width)
+                    for line in lines:
+                        self.panes[PaneType.CONSCIOUSNESS].lines.append((line, color))
+            else:
+                self.panes[PaneType.CONSCIOUSNESS].lines.append((text, color))
+            
+            # Mark that consciousness pane needs update
+            self.consciousness_needs_update = True
             
     def add_chat_line(self, text: str, color: int = 2):
         """Add line to chat pane"""
@@ -813,9 +933,9 @@ class ClaudeAGI:
                     self.panes[PaneType.CHAT].lines.append((line, color))
             else:
                 self.panes[PaneType.CHAT].lines.append((text, color))
-                
-            self._draw_pane(self.panes[PaneType.CHAT])
-            self.panes[PaneType.CHAT].window.refresh()
+            
+            # Mark that chat pane needs update
+            self.chat_needs_update = True
             
     def add_system_line(self, text: str, color: int = 3):
         """Add system message to chat"""
@@ -868,11 +988,36 @@ class ClaudeAGI:
         elif subcmd == "stats":
             if self.memory_manager:
                 self.add_system_line("Memory Statistics:", 3)
-                self.add_chat_line(f"  Working memory: {len(getattr(self.memory_manager, 'working_memory', []))} items", 7)
-                self.add_chat_line(f"  Long-term memory: {len(getattr(self.memory_manager, 'long_term_memory', []))} items", 7)
-                if hasattr(self.memory_manager, 'semantic_index'):
-                    self.add_chat_line(f"  Semantic index: {self.memory_manager.semantic_index.ntotal} vectors", 7)
-                self.metrics['memories_stored'] = len(getattr(self.memory_manager, 'long_term_memory', []))
+                
+                # Get working memory count
+                working_count = 0
+                if hasattr(self.memory_manager, 'working_memory') and isinstance(self.memory_manager.working_memory, dict):
+                    working_count = len(self.memory_manager.working_memory.get('recent_thoughts', []))
+                
+                # Get long-term memory count
+                long_term_count = len(getattr(self.memory_manager, 'long_term_memory', []))
+                
+                self.add_chat_line(f"  Working memory: {working_count} items", 7)
+                self.add_chat_line(f"  Long-term memory: {long_term_count} items", 7)
+                
+                if hasattr(self.memory_manager, 'vector_store') and hasattr(self.memory_manager.vector_store, 'vectors'):
+                    self.add_chat_line(f"  Semantic index: {len(self.memory_manager.vector_store.vectors)} vectors", 7)
+                    
+                # Show last few memories
+                if working_count > 0:
+                    recent = self.memory_manager.working_memory.get('recent_thoughts', [])[-3:]
+                    self.add_chat_line("  Recent thoughts:", 7)
+                    for mem in recent:
+                        content = mem.get('content', '')[:60]
+                        self.add_chat_line(f"    - {content}...", 8)
+                    
+                self.metrics['memories_stored'] = working_count + long_term_count
+                
+                # Force update of memory pane
+                if PaneType.MEMORY in self.panes:
+                    self._draw_pane(self.panes[PaneType.MEMORY])
+                    self.panes[PaneType.MEMORY].window.noutrefresh()
+                    curses.doupdate()
                 
         elif subcmd == "consolidate":
             if self.memory_manager:
@@ -1110,7 +1255,17 @@ class ClaudeAGI:
         self.add_system_line("Shutting down Claude-AGI...", 3)
         self.running = False
         
-    def show_help(self, args: List[str] = None):
+        # Cancel all tracked tasks properly
+        if hasattr(self.orchestrator, 'tasks'):
+            for task in self.orchestrator.tasks:
+                if not task.done():
+                    task.cancel()
+        
+        # Shut down orchestrator
+        if self.orchestrator:
+            await self.orchestrator.shutdown()
+        
+    async def show_help(self, args: List[str] = None):
         """Show help information"""
         help_sections = {
             "commands": [
@@ -1180,11 +1335,12 @@ class ClaudeAGI:
         
         # Store in memory
         if self.memory_manager:
-            await self.memory_manager.store({
+            await self.memory_manager.store_thought({
                 'type': 'conversation',
                 'content': f"User said: {message}",
-                'timestamp': datetime.now(),
-                'importance': 6
+                'timestamp': datetime.now().isoformat(),
+                'importance': 6,
+                'stream_type': 'conversation'
             })
         
         # Notify consciousness of user input
@@ -1194,7 +1350,7 @@ class ClaudeAGI:
         # Generate response
         response = await self._generate_response(message)
         
-        # Display response with typing effect
+        # Display response
         self.add_chat_line(f"Claude: {response}", 4)
         
         # Add to conversation history
@@ -1206,11 +1362,12 @@ class ClaudeAGI:
         
         # Store response in memory
         if self.memory_manager:
-            await self.memory_manager.store({
+            await self.memory_manager.store_thought({
                 'type': 'conversation',
                 'content': f"I responded: {response}",
-                'timestamp': datetime.now(),
-                'importance': 5
+                'timestamp': datetime.now().isoformat(),
+                'importance': 5,
+                'stream_type': 'conversation'
             })
         
         self.in_conversation = False
@@ -1248,7 +1405,7 @@ class ClaudeAGI:
                 ch = self.stdscr.getch()
                 
                 if ch == -1:  # No input
-                    await asyncio.sleep(0.05)
+                    await asyncio.sleep(0.01)
                     continue
                     
                 # Handle special keys
@@ -1295,11 +1452,20 @@ class ClaudeAGI:
                             self.command_buffer = "/" if self.command_mode else ""
                             self.input_buffer = ""
                             
+                elif ch == curses.KEY_RESIZE:  # Terminal resized
+                    # Get new dimensions
+                    self.height, self.width = self.stdscr.getmaxyx()
+                    # Recreate panes with new dimensions
+                    self._create_panes()
+                    self._draw_all_panes()
+                    self.refresh_all()
+                    
                 elif ch == 12:  # Ctrl+L - Clear current pane
                     if self.current_focus in self.panes:
                         self.panes[self.current_focus].lines.clear()
                         self._draw_pane(self.panes[self.current_focus])
-                        self.panes[self.current_focus].window.refresh()
+                        self.panes[self.current_focus].window.noutrefresh()
+                        curses.doupdate()
                         
                 elif ch == ord('\n'):  # Enter
                     if self.command_mode and self.command_buffer:
@@ -1336,7 +1502,7 @@ class ClaudeAGI:
                 self._draw_input()
                 
             except Exception as e:
-                logger.error(f"Input handler error: {e}")
+                logger.error(f"Input handler error: {e}", exc_info=True)
                 await asyncio.sleep(0.1)
                 
     async def run_async(self):
@@ -1348,6 +1514,25 @@ class ClaudeAGI:
             
             # Wait for services to initialize
             await asyncio.sleep(1)
+            
+            # Get service references after initialization
+            self.memory_manager = self.orchestrator.services.get('memory')
+            self.consciousness = self.orchestrator.services.get('consciousness')
+            self.safety = self.orchestrator.services.get('safety')
+            
+            # Log service connections
+            if self.memory_manager:
+                logger.info("Memory manager connected successfully")
+                # Ensure memory manager can receive messages from orchestrator
+                if hasattr(self.memory_manager, 'handle_message'):
+                    logger.info("Memory manager message handler confirmed")
+            else:
+                logger.warning("Memory manager not found in services")
+                
+            if self.consciousness:
+                logger.info("Consciousness service connected successfully")
+            else:
+                logger.warning("Consciousness service not found")
             
             # Start consciousness loop
             logger.info("Starting consciousness loop...")
@@ -1365,6 +1550,12 @@ class ClaudeAGI:
             self.add_system_line("Claude-AGI System v1.0 Initialized", 3)
             self.add_system_line("Type /help for commands, Tab to switch panes", 3)
             self.add_consciousness_line("💭 [PRI] Consciousness streams activating...", 1)
+            
+            # Show safety status
+            if self.safety:
+                self.add_system_line("Safety framework initialized with constraints", 2)
+            else:
+                self.add_system_line("Safety framework initializing...", 3)
             
             # Run until stopped
             await asyncio.gather(
@@ -1405,12 +1596,9 @@ class ClaudeAGI:
         except Exception as e:
             logger.error(f"Fatal error: {e}", exc_info=True)
         finally:
-            # Ensure clean shutdown and proper terminal restoration
+            # Ensure clean shutdown
             if loop:
                 loop.close()
-            curses.echo()
-            curses.nocbreak()
-            curses.endwin()
             
 
 def main():
