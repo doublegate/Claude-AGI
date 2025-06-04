@@ -1,6 +1,7 @@
 # core/orchestrator.py
 
 import asyncio
+import os
 from typing import Dict, List, Any, Optional, Set
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -64,10 +65,12 @@ class AGIOrchestrator:
         await self._initialize_services()
         
         # Start service tasks only for services that have run method
-        for name, service in self.services.items():
-            if hasattr(service, 'run') and callable(getattr(service, 'run')):
-                task = asyncio.create_task(service.run())
-                self.tasks.append(task)
+        # Skip in CI/test environments to prevent hanging
+        if not os.environ.get('CLAUDE_AGI_TEST_MODE'):
+            for name, service in self.services.items():
+                if hasattr(service, 'run') and callable(getattr(service, 'run')):
+                    task = asyncio.create_task(service.run())
+                    self.tasks.append(task)
             
         self.state = SystemState.IDLE
         

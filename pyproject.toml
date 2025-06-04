@@ -134,6 +134,12 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 python_functions = "test_*"
 asyncio_mode = "auto"
+markers = [
+    "safety: mark test as safety-critical test",
+    "integration: mark test as integration test",
+    "performance: mark test as performance test",
+    "slow: mark test as slow running",
+]
 filterwarnings = [
     # Ignore deprecation warnings from third-party libraries
     # FAISS uses SWIG bindings which generate these warnings in Python 3.13

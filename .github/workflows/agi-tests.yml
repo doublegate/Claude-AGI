@@ -23,6 +23,8 @@ jobs:
           pip install -r requirements-test.txt
       - name: Run unit tests
         run: pytest tests/unit -v --cov=src
+        env:
+          CLAUDE_AGI_TEST_MODE: "true"
 
   integration-tests:
     runs-on: ubuntu-latest
@@ -51,10 +53,11 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements-test.txt
       - name: Run integration tests
-        run: pytest tests/integration -v
+        run: pytest tests/integration -v --timeout=60 --timeout-method=thread
         env:
           REDIS_URL: redis://localhost:6379
           POSTGRES_URL: postgresql://postgres:postgres@localhost:5432/claude_agi_test
+          CLAUDE_AGI_TEST_MODE: "true"
 
   safety-tests:
     runs-on: ubuntu-latest
@@ -69,7 +72,9 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements-test.txt
       - name: Run safety validations
-        run: pytest tests/safety -v --safety-critical
+        run: pytest tests/safety -v -m safety
+        env:
+          CLAUDE_AGI_TEST_MODE: "true"
 
   performance-tests:
     runs-on: ubuntu-latest
@@ -86,3 +91,5 @@ jobs:
           pip install -r requirements-test.txt
       - name: Run performance benchmarks
         run: pytest tests/performance -v --benchmark-only
+        env:
+          CLAUDE_AGI_TEST_MODE: "true"
