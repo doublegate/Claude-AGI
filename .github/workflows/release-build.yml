@@ -19,6 +19,9 @@ on:
         default: false
         type: boolean
 
+permissions:
+  contents: write
+
 jobs:
   # Build executables for multiple platforms
   build:
@@ -267,7 +270,7 @@ jobs:
         id: release_notes
         run: |
           VERSION="${{ github.event.inputs.version || github.ref_name }}"
-          
+
           # Extract changelog entry for this version
           if grep -q "## \[$VERSION\]" CHANGELOG.md; then
             NOTES=$(sed -n "/## \[$VERSION\]/,/## \[/p" CHANGELOG.md | head -n -1 | tail -n +2)
@@ -291,13 +294,13 @@ jobs:
 
           See the full [CHANGELOG.md](https://github.com/doublegate/Claude-AGI/blob/main/CHANGELOG.md) for detailed changes."
           fi
-          
+
           # Write to file for multi-line output
           echo "$NOTES" > release_notes.txt
           echo "notes_file=release_notes.txt" >> $GITHUB_OUTPUT
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.version || github.ref_name }}
           name: Claude-AGI ${{ github.event.inputs.version || github.ref_name }}
@@ -305,7 +308,8 @@ jobs:
           prerelease: ${{ github.event.inputs.prerelease == 'true' }}
           files: |
             release-assets/*
-          token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update latest release pointer
         if: ${{ !github.event.inputs.prerelease }}
@@ -313,5 +317,5 @@ jobs:
           echo "SUCCESS: Release ${{ github.event.inputs.version || github.ref_name }} published!"
           echo "Available executables:"
           echo "  - Linux (x86_64): claude-agi-linux-x86_64.tar.gz"
-          echo "  - Windows (x86_64): claude-agi-windows-x86_64.zip" 
+          echo "  - Windows (x86_64): claude-agi-windows-x86_64.zip"
           echo "  - macOS (x86_64): claude-agi-macos-x86_64.tar.gz"
