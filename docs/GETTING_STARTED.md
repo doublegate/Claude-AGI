@@ -75,14 +75,40 @@ docker-compose -f deployment/docker/docker-compose.yml up
 ### Running Tests
 
 ```bash
-# Run all tests
-pytest
+# Use the optimized test runner (recommended)
+python scripts/run_tests.py all          # All test suites
+python scripts/run_tests.py unit         # Unit tests only
+python scripts/run_tests.py integration  # Integration tests
+python scripts/run_tests.py safety       # Safety/adversarial tests
+python scripts/run_tests.py performance  # Performance benchmarks
+python scripts/run_tests.py coverage     # Comprehensive coverage
 
-# Run with coverage
-pytest --cov=src --cov-report=html
+# Or use the CI-matching local runner
+python scripts/ci-local.py all           # Matches GitHub Actions exactly
+python scripts/ci-local.py unit          # Individual test categories
 
-# Run specific test category
-pytest tests/unit -v
+# Traditional pytest (also works)
+pytest                                    # Run all tests
+pytest --cov=src --cov-report=html      # With coverage
+pytest tests/unit -v                     # Specific category
+```
+
+### CI/CD Integration
+
+The project uses an optimized CI/CD pipeline:
+
+```bash
+# Check CI status
+# All workflows run automatically on push/PR
+# View at: https://github.com/doublegate/Claude-AGI/actions
+
+# Manual test execution (via GitHub Actions)
+# Go to Actions tab → Manual Test Execution → Run workflow
+# Select test suite: all, unit, integration, safety, performance
+
+# Release builds (automatic on tags)
+git tag v1.x.x && git push --tags
+# Creates cross-platform executables for Linux, Windows, macOS
 ```
 
 ### Code Quality

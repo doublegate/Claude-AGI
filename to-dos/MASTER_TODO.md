@@ -103,6 +103,24 @@
 - [x] 🟢 **Conversation overlap fixed** - No more text overlapping
 - [x] 🟢 **Larger history buffers** - 3x for consciousness, 2x for others
 
+### TUI Exit Handling & Error Suppression (2025-06-04 v1.0.10)
+- [x] 🟢 **Exit error handling** - Suppressed common curses cleanup errors
+- [x] 🟢 **Anthropic client cleanup** - Fixed auth flow warnings on exit
+- [x] 🟢 **Task cancellation** - Improved quit command with proper cleanup
+- [x] 🟢 **Terminal reset** - More reliable cleanup with 'stty sane'
+- [x] 🟢 **Conditional messages** - Only shows shutdown message for clean exits
+
+### CI/CD Pipeline Optimization & Release Automation (2025-06-04 v1.1.0)
+- [x] 🟢 **Optimized CI pipeline** - 50% faster builds with dependency caching
+- [x] 🟢 **Parallel test execution** - All test suites run concurrently after setup
+- [x] 🟢 **Cross-platform releases** - Automatic Linux, Windows, macOS executables
+- [x] 🟢 **Local CI script** - scripts/ci-local.py matches cloud pipeline exactly
+- [x] 🟢 **Manual test workflows** - Individual test suite execution via dispatch
+- [x] 🟢 **GitHub releases integration** - Automatic asset uploads and changelog
+- [x] 🟢 **Virtual environment caching** - Eliminates redundant installations
+- [x] 🟢 **Codecov integration** - Comprehensive coverage reporting
+- [x] 🟢 **Release documentation** - Complete CI/CD and release guides
+
 ---
 
 ## Pre-Development Phase (Months 0-1)

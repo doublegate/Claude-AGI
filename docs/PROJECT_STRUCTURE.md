@@ -14,6 +14,9 @@ Claude-AGI/
 ├── docs/                   # Documentation
 ├── ref_docs/               # Reference documentation (original planning docs)
 ├── ref_info/               # Reference information (transient)
+├── to-dos/                 # Task tracking and completion status
+├── .github/                # GitHub Actions workflows and templates
+├── scripts/                # Development and operational scripts
 ├── data/                   # Data storage
 ├── logs/                   # Log files
 └── ...                     # Other directories
@@ -91,3 +94,27 @@ Claude-AGI/
 - **CLAUDE.local.md**: Local project memory (not in git)
 
 All Python packages include `__init__.py` files to make them proper Python modules.
+
+## CI/CD Infrastructure (`.github/`)
+
+- **workflows/**: GitHub Actions workflow definitions
+  - `ci-pipeline.yml`: Optimized CI with dependency caching and parallel execution
+  - `release-build.yml`: Cross-platform executable builds and GitHub releases
+  - `manual-tests.yml`: On-demand test execution with configurable options
+  - `agi-tests.yml.backup`: Previous workflow (backed up)
+
+## Scripts & Tools (`scripts/`)
+
+- **setup/**: System setup and initialization scripts
+- **ci-local.py**: Local CI runner matching cloud pipeline structure
+- **run_tests.py**: Test runner for all test categories
+- **enhanced_consciousness_tui.py**: Enhanced TUI implementation
+- **archive/**: Historical scripts and deprecated tools
+
+## Task Management (`to-dos/`)
+
+- **MASTER_TODO.md**: Complete project task list with status tracking
+- **PHASE_2_ROADMAP.md**: Detailed Phase 2 implementation plan
+- **TEST_SUITE_FIXES.md**: Test stabilization tasks (completed)
+- **SECURITY_HARDENING_CHECKLIST.md**: Security improvement tasks
+- **DEFERRED_TEST_IMPLEMENTATIONS.md**: Future test implementation tasks
