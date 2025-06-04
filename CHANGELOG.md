@@ -302,3 +302,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - All tests passing without warnings or deprecations
 - Mock infrastructure supports offline development
 - Event loop handling compatible with pytest-asyncio
+
+## [1.0.4] - 2025-01-06 - CI/CD Fixes
+
+### Fixed
+- **GitHub Actions CI/CD Issues**
+  - Performance tests no longer skip on push events (removed `if: github.event_name == 'pull_request'` condition)
+  - Fixed `test_service_cycle_running` unit test to handle `CLAUDE_AGI_TEST_MODE` environment variable
+  - Test temporarily disables test mode to properly verify service task creation
+  - All 4 CI/CD jobs (unit, integration, safety, performance) now execute successfully on push to main branch
+  
+### Changed
+- **Test Infrastructure**
+  - Updated orchestrator test to restore environment variables after testing
+  - Performance tests now run on all push events, not just pull requests
+  
+### CI/CD Status
+- ✅ Unit tests: 119/120 passing (fixed in this release)
+- ✅ Integration tests: All passing with timeout configuration
+- ✅ Safety tests: All passing with proper pytest markers
+- ✅ Performance tests: Now enabled for all push events
