@@ -24,7 +24,7 @@ The Claude-AGI Project (Project Prometheus) aims to develop a genuinely consciou
 
 ### System Status
 - **Phase 1**: ✅ Complete (Core implementation done, test suite fully operational)
-- **TUI**: ✅ Professional (v1.0.9) - Full scrolling, active pane indicators, perfect formatting
+- **TUI**: ✅ Professional (v1.0.10) - Clean exit handling, error suppression, perfect formatting
 - **Extended Implementation**: ✅ Complete (v1.0.2) - Operations, welfare, and emergency systems added
 - **Test Suite**: ✅ All 153 tests passing (100% pass rate, 49.61% coverage)
 - **API Integration**: ✅ Working with Anthropic Claude API
@@ -143,6 +143,33 @@ python scripts/claude-consciousness-tui.py
 
 See [Running the TUI Guide](docs/RUNNING_THE_TUI.md) for detailed instructions and troubleshooting.
 
+## 📦 Releases
+
+Claude-AGI provides pre-built executables for easy deployment without Python setup:
+
+### Download Executables
+
+**Latest Release**: [Download from GitHub Releases](https://github.com/doublegate/Claude-AGI/releases/latest)
+
+Available platforms:
+- **Linux** (x86_64): `claude-agi-linux-x86_64.tar.gz`
+- **Windows** (x86_64): `claude-agi-windows-x86_64.zip`
+- **macOS** (x86_64): `claude-agi-macos-x86_64.tar.gz`
+
+### Quick Start with Executables
+
+1. Download the appropriate executable for your platform
+2. Extract the archive: `tar -xzf claude-agi-*.tar.gz` (Linux/macOS) or unzip (Windows)
+3. Run: `./claude-agi --help` to see available options
+4. Start the TUI: `./claude-agi` (requires terminal 80x20 minimum)
+
+### Release Process
+
+- **Automatic Builds**: Triggered on version tags (e.g., `v1.0.10`)
+- **Manual Builds**: Available via GitHub Actions workflow dispatch
+- **Cross-Platform**: Built and tested on Ubuntu, Windows, and macOS
+- **Portable**: No Python installation required, includes all dependencies
+
 ## 🧪 Testing
 
 Run the comprehensive test suite with our test runner:
@@ -168,7 +195,30 @@ python scripts/run_tests.py coverage
 - Performance benchmarks meeting Phase 1 requirements
 - Code coverage: 49.61% achieved
 
-CI/CD pipeline runs automatically on push/PR via GitHub Actions.
+### CI/CD Pipeline
+
+The project uses an optimized consolidated CI/CD pipeline:
+
+- **Automated Testing**: Runs on every push/PR with cached dependencies for faster execution
+- **Individual Test Suites**: Can be triggered manually via GitHub Actions
+- **Release Builds**: Automatic executable builds for Linux, Windows, and macOS on version tags
+- **Manual Test Execution**: Workflow dispatch for running specific test categories
+
+**GitHub Actions Workflows:**
+- `ci-pipeline.yml` - Main CI/CD with optimized dependency caching
+- `release-build.yml` - Cross-platform executable builds and releases  
+- `manual-tests.yml` - On-demand test execution with configurable options
+
+**Local Testing:**
+```bash
+# Run the same tests as CI locally
+python scripts/ci-local.py all          # All test suites
+python scripts/ci-local.py unit         # Unit tests only
+python scripts/ci-local.py integration  # Integration tests (requires services)
+python scripts/ci-local.py safety       # Safety tests only
+python scripts/ci-local.py performance  # Performance benchmarks
+python scripts/ci-local.py coverage     # Comprehensive coverage report
+```
 
 ## 🤝 Contributing
 

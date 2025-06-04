@@ -456,6 +456,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Responsive input maintained
 - CPU usage minimal when idle
 
+## [1.0.10] - 2025-06-04 - Exit Handling & Error Suppression
+
+### Fixed
+- **Exit Error Handling**
+  - Suppressed common curses cleanup errors (cbreak, nocbreak, endwin)
+  - No more error messages when exiting with /quit
+  - Cleaner terminal restoration on exit
+  
+- **Anthropic Client Cleanup**
+  - Fixed auth flow warnings by properly closing thought_generator
+  - Added proper cleanup in both run() and main() methods
+  - Ensures all async resources are released
+  
+- **Task Cancellation**
+  - Improved quit_command to cancel all running tasks
+  - Added proper wait time for task cancellation
+  - Clears task references to prevent lingering operations
+  
+### Changed
+- Terminal reset now uses 'stty sane' for more reliable cleanup
+- Conditional shutdown message only shows for clean exits
+- Better exception filtering to avoid showing expected errors
+
 ## [1.0.9] - 2025-06-04 - TUI Professional Polish
 
 ### Added

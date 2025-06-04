@@ -1,0 +1,246 @@
+# .github/workflows/release-build.yml
+# Build and Release Claude-AGI Executables
+
+name: Release Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.0.10)'
+        required: true
+        default: 'v1.0.10'
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  # Build executables for multiple platforms
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            arch: x86_64
+            executable_ext: ""
+            setup_script: |
+              sudo apt-get update
+              sudo apt-get install -y libncurses5-dev libncursesw5-dev
+          - os: windows-latest
+            platform: windows
+            arch: x86_64
+            executable_ext: ".exe"
+            setup_script: |
+              pip install windows-curses
+          - os: macos-latest
+            platform: macos
+            arch: x86_64
+            executable_ext: ""
+            setup_script: |
+              # macOS has ncurses built-in
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Platform-specific setup
+        run: ${{ matrix.setup_script }}
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Create executable spec file
+        run: |
+          cat > claude-agi.spec << 'EOF'
+          # -*- mode: python ; coding: utf-8 -*-
+          
+          block_cipher = None
+          
+          a = Analysis(
+              ['claude-agi.py'],
+              pathex=[],
+              binaries=[],
+              datas=[
+                  ('configs/', 'configs/'),
+                  ('src/', 'src/'),
+                  ('logs/', 'logs/'),
+                  ('.env.example', '.'),
+                  ('README.md', '.'),
+                  ('CHANGELOG.md', '.'),
+              ],
+              hiddenimports=[
+                  'anthropic',
+                  'asyncio',
+                  'curses',
+                  'yaml',
+                  'pydantic',
+                  'redis',
+                  'psycopg2',
+                  'faiss',
+                  'sentence_transformers',
+                  'numpy',
+                  'sklearn',
+                  'dotenv',
+                  'tenacity',
+                  'logging',
+                  'dataclasses',
+                  'typing',
+                  'pathlib',
+                  'argparse',
+                  'datetime',
+                  'collections',
+                  'enum',
+              ],
+              hookspath=[],
+              hooksconfig={},
+              runtime_hooks=[],
+              excludes=[],
+              win_no_prefer_redirects=False,
+              win_private_assemblies=False,
+              cipher=block_cipher,
+              noarchive=False,
+          )
+          
+          pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+          
+          exe = EXE(
+              pyz,
+              a.scripts,
+              a.binaries,
+              a.zipfiles,
+              a.datas,
+              [],
+              name='claude-agi${{ matrix.executable_ext }}',
+              debug=False,
+              bootloader_ignore_signals=False,
+              strip=False,
+              upx=True,
+              upx_exclude=[],
+              runtime_tmpdir=None,
+              console=True,
+              disable_windowed_traceback=False,
+              argv_emulation=False,
+              target_arch=None,
+              codesign_identity=None,
+              entitlements_file=None,
+          )
+          EOF
+
+      - name: Build executable
+        run: |
+          pyinstaller claude-agi.spec
+
+      - name: Test executable (basic validation)
+        run: |
+          if [[ "${{ matrix.platform }}" == "windows" ]]; then
+            ./dist/claude-agi.exe --help
+          else
+            ./dist/claude-agi --help
+          fi
+
+      - name: Create archive
+        run: |
+          cd dist
+          if [[ "${{ matrix.platform }}" == "windows" ]]; then
+            7z a ../claude-agi-${{ matrix.platform }}-${{ matrix.arch }}.zip claude-agi.exe
+          else
+            tar -czf ../claude-agi-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz claude-agi
+          fi
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-agi-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            claude-agi-${{ matrix.platform }}-${{ matrix.arch }}.*
+            dist/claude-agi${{ matrix.executable_ext }}
+          retention-days: 7
+
+  # Create GitHub release with built executables
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-assets
+          find artifacts -name "claude-agi-*" -type f \( -name "*.zip" -o -name "*.tar.gz" \) -exec cp {} release-assets/ \;
+          ls -la release-assets/
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          VERSION="${{ github.event.inputs.version || github.ref_name }}"
+          
+          # Extract changelog entry for this version
+          if grep -q "## \[$VERSION\]" CHANGELOG.md; then
+            NOTES=$(sed -n "/## \[$VERSION\]/,/## \[/p" CHANGELOG.md | head -n -1 | tail -n +2)
+          else
+            NOTES="Release $VERSION
+
+          ## What's New
+          - Claude-AGI executable builds for Linux, Windows, and macOS
+          - Standalone deployment without Python installation required
+          - All Phase 1 features included in portable format
+
+          ## Installation
+          1. Download the appropriate executable for your platform
+          2. Extract the archive
+          3. Run \`claude-agi --help\` to get started
+
+          ## System Requirements
+          - Terminal with color support
+          - Minimum 80x20 terminal size
+          - For API features: ANTHROPIC_API_KEY environment variable
+
+          See the full [CHANGELOG.md](https://github.com/doublegate/Claude-AGI/blob/main/CHANGELOG.md) for detailed changes."
+          fi
+          
+          # Write to file for multi-line output
+          echo "$NOTES" > release_notes.txt
+          echo "notes_file=release_notes.txt" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.inputs.version || github.ref_name }}
+          name: Claude-AGI ${{ github.event.inputs.version || github.ref_name }}
+          body_path: ${{ steps.release_notes.outputs.notes_file }}
+          prerelease: ${{ github.event.inputs.prerelease == 'true' }}
+          files: |
+            release-assets/*
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update latest release pointer
+        if: ${{ !github.event.inputs.prerelease }}
+        run: |
+          echo "✅ Release ${{ github.event.inputs.version || github.ref_name }} published!"
+          echo "📦 Available executables:"
+          echo "  - Linux (x86_64): claude-agi-linux-x86_64.tar.gz"
+          echo "  - Windows (x86_64): claude-agi-windows-x86_64.zip" 
+          echo "  - macOS (x86_64): claude-agi-macos-x86_64.tar.gz"

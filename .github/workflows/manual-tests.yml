@@ -1,0 +1,91 @@
+# .github/workflows/manual-tests.yml
+# Manual test execution for individual test suites
+
+name: Manual Test Execution
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_suite:
+        description: 'Test suite to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - unit
+          - integration
+          - safety
+          - performance
+          - coverage
+      python_version:
+        description: 'Python version to use'
+        required: false
+        default: '3.11'
+        type: choice
+        options:
+          - '3.11'
+          - '3.10'
+          - '3.12'
+
+jobs:
+  manual-test:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: claude_agi_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ inputs.python_version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ inputs.python_version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-test.txt
+
+      - name: Run selected test suite
+        run: |
+          echo "Running test suite: ${{ inputs.test_suite }}"
+          python scripts/run_tests.py ${{ inputs.test_suite }}
+        env:
+          REDIS_URL: redis://localhost:6379
+          POSTGRES_URL: postgresql://postgres:postgres@localhost:5432/claude_agi_test
+          CLAUDE_AGI_TEST_MODE: "true"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ inputs.test_suite }}-python${{ inputs.python_version }}
+          path: |
+            coverage.xml
+            .coverage
+            test-results.xml
+          retention-days: 7
