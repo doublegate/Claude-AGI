@@ -456,6 +456,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Responsive input maintained
 - CPU usage minimal when idle
 
+## [1.0.9] - 2025-06-04 - TUI Professional Polish
+
+### Added
+- **Active Pane Indicators**
+  - Bold highlighted borders for active pane
+  - Title with ▶ arrows ◀ and reverse video
+  - Clear visual focus indication
+
+- **Full Scrolling Support**
+  - Arrow keys (Up/Down) for line scrolling
+  - Page Up/Down for page scrolling
+  - Home/End to jump to top/bottom
+  - Scroll position indicators
+  - Auto-scroll for new content
+  - Larger buffers (3x consciousness, 2x others)
+
+- **Memory Browser Improvements**
+  - Stream type indicators ([PRI], [CRE], etc.)
+  - Proper category spacing with bold headers
+  - Expansion indicators (▼) for categories
+  - Better visual hierarchy
+
+### Fixed
+- **Text Formatting**
+  - Proper width calculations respecting pane boundaries
+  - Fixed conversation pane text overlap
+  - Improved text wrapping with prefix preservation
+  - Status bar separated from content
+
+- **Exit Handling**
+  - Terminal reset on exit
+  - Better cleanup sequence
+  - Force terminal clear as fallback
+
+- **UI Polish**
+  - Force updates where needed
+  - Better terminal compatibility
+  - Improved visual feedback
+
+### Technical Improvements
+- Increased history buffers for all panes
+- Per-pane scroll position tracking
+- Better text truncation algorithm
+- Improved status bar layout
+
 ## [1.0.4] - 2025-01-06 - CI/CD Fixes
 
 ### Fixed

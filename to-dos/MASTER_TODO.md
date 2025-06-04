@@ -96,6 +96,13 @@
 - [x] 🟢 **Clean exit always** - Improved curses cleanup sequence
 - [x] 🟢 **Minimal CPU usage** - 95% reduction in screen redraws
 
+### TUI Professional Polish (2025-06-04 v1.0.9)
+- [x] 🟢 **Active pane indicators** - Bold borders and highlighted titles
+- [x] 🟢 **Full scrolling support** - Arrow keys, page up/down, home/end
+- [x] 🟢 **Memory browser spacing** - Proper category separation
+- [x] 🟢 **Conversation overlap fixed** - No more text overlapping
+- [x] 🟢 **Larger history buffers** - 3x for consciousness, 2x for others
+
 ---
 
 ## Pre-Development Phase (Months 0-1)
@@ -199,6 +206,11 @@ Based on comprehensive AI analyses (Claude 4 Opus, GPT-4o, Grok 3):
   - [x] Perfect text formatting
   - [x] Clean exit always
   - [x] Minimal CPU usage
+- [x] 🟢 **TUI professional** (v1.0.9)
+  - [x] Active pane indicators
+  - [x] Full scrolling support
+  - [x] Perfect layout spacing
+  - [x] No text overlap
 - [ ] 🟡 **TUI fully functional across platforms**
   - [ ] Test on Windows with windows-curses
   - [ ] Test on macOS Terminal

@@ -5,7 +5,7 @@ This document tracks the implementation status of all Claude-AGI components.
 ## Overview
 
 **Phase 1 Status**: ✅ Complete (100% Implementation, Test Suite Fully Operational)  
-**TUI Status**: ✅ Perfect Polish (v1.0.8) - Flicker-free, perfectly formatted UI  
+**TUI Status**: ✅ Professional (v1.0.9) - Full scrolling, active pane indicators, perfect formatting  
 **Test Suite**: ✅ All 153 tests passing (100% pass rate, 49.61% coverage)  
 **CI/CD Status**: ✅ All GitHub Actions jobs passing (v1.0.4)  
 **Last Updated**: 2025-06-04 (TUI Final Polish)
@@ -97,6 +97,12 @@ This document tracks the implementation status of all Claude-AGI components.
      - Word wrapping perfected in all panes
      - Clean exit without any errors
      - Minimal CPU usage when idle
+   - **v1.0.9 PROFESSIONAL**:
+     - Active pane indicators with highlighting
+     - Full scrolling support (arrows, page, home/end)
+     - Memory browser with proper category spacing
+     - Conversation pane overlap fixed
+     - Larger history buffers for all panes
 
 8. **Exploration Engine** (`src/exploration/engine.py`)
    - Interest tracking with decay

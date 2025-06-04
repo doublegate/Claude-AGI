@@ -78,7 +78,10 @@ The enhanced TUI displays multiple panes:
 
 ### Controls
 
-- **Tab**: Switch between panes
+- **Tab**: Switch between panes (active pane highlighted)
+- **Arrow Keys**: Scroll up/down in active pane
+- **Page Up/Down**: Scroll by page
+- **Home/End**: Jump to top/bottom
 - **Enter**: Send chat messages
 - **ESC**: Exit (press twice to confirm)
 - **/command**: Use slash commands (type /help for list)

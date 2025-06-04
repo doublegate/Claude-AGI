@@ -218,22 +218,30 @@ class ClaudeAGI:
         consciousness_width = self.width // 2
         consciousness_win = curses.newwin(top_height - 1, consciousness_width - 1, 0, 0)
         consciousness_win.scrollok(True)
+        consciousness_win.idlok(True)  # Enable line insertion/deletion
+        consciousness_win.keypad(True)  # Enable keypad for scrolling
         self.panes[PaneType.CONSCIOUSNESS] = Pane(
             type=PaneType.CONSCIOUSNESS,
             window=consciousness_win,
-            lines=deque(maxlen=self.max_lines),
+            lines=deque(maxlen=self.max_lines * 3),  # More history
             title="Consciousness Stream"
         )
+        
+        # Initialize scroll positions
+        if not hasattr(self, 'scroll_positions'):
+            self.scroll_positions = {}
         
         # Memory browser (right top)
         memory_width = self.width - consciousness_width
         memory_win = curses.newwin(top_height - 1, memory_width, 
                                    0, consciousness_width)
         memory_win.scrollok(True)
+        memory_win.idlok(True)
+        memory_win.keypad(True)
         self.panes[PaneType.MEMORY] = Pane(
             type=PaneType.MEMORY,
             window=memory_win,
-            lines=deque(maxlen=self.max_lines),
+            lines=deque(maxlen=self.max_lines * 2),  # More memory history
             title="Memory Browser"
         )
         
@@ -269,10 +277,12 @@ class ClaudeAGI:
         # Chat window (full width)
         chat_win = curses.newwin(bottom_height, self.width - 1, bottom_y, 0)
         chat_win.scrollok(True)
+        chat_win.idlok(True)
+        chat_win.keypad(True)
         self.panes[PaneType.CHAT] = Pane(
             type=PaneType.CHAT,
             window=chat_win,
-            lines=deque(maxlen=self.max_lines),
+            lines=deque(maxlen=self.max_lines * 2),  # More chat history
             title="Conversation"
         )
         
@@ -390,22 +400,31 @@ class ClaudeAGI:
         win = pane.window
         win.clear()
         
-        # Draw border
+        # Draw border with highlighting for active pane
         try:
+            if pane.type == self.current_focus:
+                win.attron(curses.color_pair(6) | curses.A_BOLD)
             win.border()
+            if pane.type == self.current_focus:
+                win.attroff(curses.color_pair(6) | curses.A_BOLD)
         except curses.error:
             pass
         
-        # Draw title
+        # Draw title with active indicator
         title = f" {pane.title} "
         if pane.type == self.current_focus:
-            title = f"[{pane.title}]"
-            win.attron(curses.A_BOLD)
+            title = f"▶ {pane.title} ◀"
+            title_attr = curses.color_pair(6) | curses.A_BOLD | curses.A_REVERSE
+        else:
+            title_attr = curses.color_pair(6)
         
-        self.safe_addstr(win, 0, 2, title, curses.color_pair(6))
+        self.safe_addstr(win, 0, 2, title, title_attr)
         
-        if pane.type == self.current_focus:
-            win.attroff(curses.A_BOLD)
+        # Show scroll indicator if needed
+        if pane.type in self.scroll_positions:
+            scroll_pos = self.scroll_positions.get(pane.type, 0)
+            if scroll_pos > 0:
+                self.safe_addstr(win, 0, win.getmaxyx()[1] - 10, f" ↑{scroll_pos} ", curses.color_pair(3))
         
         # Draw content based on pane type
         if pane.type == PaneType.CONSCIOUSNESS:
@@ -424,15 +443,39 @@ class ClaudeAGI:
         win = pane.window
         height, width = win.getmaxyx()
         
-        # Draw recent thoughts
+        # Get scroll position
+        scroll_pos = self.scroll_positions.get(PaneType.CONSCIOUSNESS, 0)
+        total_lines = len(pane.lines)
+        
+        # Calculate visible range
+        if total_lines > height - 2:
+            # Ensure scroll position is valid
+            max_scroll = total_lines - (height - 2)
+            scroll_pos = min(scroll_pos, max_scroll)
+            start_idx = total_lines - (height - 2) - scroll_pos
+            end_idx = total_lines - scroll_pos
+        else:
+            start_idx = 0
+            end_idx = total_lines
+        
+        # Draw visible thoughts
         y = 1
-        for line in list(pane.lines)[-(height-2):]:
+        for line in list(pane.lines)[start_idx:end_idx]:
             if y >= height - 1:
                 break
             text, color = line
-            # Truncate and draw
-            self.safe_addstr(win, y, 2, text[:width-4], curses.color_pair(color))
+            # Properly truncate to available width
+            available_width = width - 4
+            if len(text) > available_width:
+                text = text[:available_width-1] + "…"
+            self.safe_addstr(win, y, 2, text, curses.color_pair(color))
             y += 1
+        
+        # Show scroll indicators
+        if scroll_pos > 0:
+            self.safe_addstr(win, height-1, width-15, f"↓ {scroll_pos} more", curses.color_pair(3))
+        if start_idx > 0:
+            self.safe_addstr(win, 1, width-15, f"↑ {start_idx} above", curses.color_pair(3))
             
     def _draw_memory_content(self, pane: Pane):
         """Draw enhanced memory browser with categories and search"""
@@ -453,10 +496,13 @@ class ClaudeAGI:
                 long_term_count = len(self.memory_manager.long_term_memory)
                 
             stats_text = f"Working: {working_count} | Long-term: {long_term_count}"
-            self.safe_addstr(win, y, 2, stats_text[:width-4], curses.color_pair(3))
+            self.safe_addstr(win, y, 2, stats_text, curses.color_pair(3))
+            y += 1
+            # Add separator line
+            self.safe_addstr(win, y, 2, "─" * (width - 6), curses.color_pair(8))
             y += 2
         
-        # Categories
+        # Categories with proper spacing
         categories = [
             ("Recent Thoughts", curses.color_pair(7)),
             ("Important Memories", curses.color_pair(4)),
@@ -465,30 +511,70 @@ class ClaudeAGI:
         ]
         
         for category, color in categories:
-            if y >= height - 1:
+            if y >= height - 2:
                 break
-            self.safe_addstr(win, y, 2, f"▶ {category}"[:width-4], color)
+            
+            # Category header with expansion indicator
+            self.safe_addstr(win, y, 2, f"▼ {category}", color | curses.A_BOLD)
             y += 1
             
-            # Show a few items under each category
+            # Show items under each category
             if category == "Recent Thoughts" and hasattr(self, 'memory_manager') and self.memory_manager:
                 try:
-                    # Get memories from working memory directly - avoid async in draw
                     if hasattr(self.memory_manager, 'working_memory'):
                         recent_thoughts = self.memory_manager.working_memory.get('recent_thoughts', [])
-                        # Show last 3 thoughts
+                        # Show last 3 thoughts with proper formatting
+                        displayed = 0
                         for mem in recent_thoughts[-3:]:
-                            if y >= height - 1:
+                            if y >= height - 2 or displayed >= 3:
                                 break
                             content = mem.get('content', '')
-                            # Properly truncate long content with available width
-                            max_content_width = width - 8  # Account for bullet and margins
-                            if len(content) > max_content_width:
-                                content = content[:max_content_width-3] + "..."
-                            self.safe_addstr(win, y, 4, f"• {content}", curses.color_pair(8))
-                            y += 1
+                            stream = mem.get('stream', 'unknown')
+                            
+                            # Calculate available width for content
+                            prefix = f"  • [{stream[:3].upper()}] "
+                            available_width = width - len(prefix) - 4
+                            
+                            # Word wrap if needed
+                            if len(content) > available_width:
+                                # First line
+                                self.safe_addstr(win, y, 2, prefix + content[:available_width-1] + "…", curses.color_pair(8))
+                                y += 1
+                                displayed += 1
+                            else:
+                                self.safe_addstr(win, y, 2, prefix + content, curses.color_pair(8))
+                                y += 1
+                                displayed += 1
                 except Exception as e:
                     logger.error(f"Error displaying memories: {e}")
+            
+            elif category == "Important Memories" and hasattr(self, 'memory_manager') and self.memory_manager:
+                # Show a placeholder or actual important memories
+                self.safe_addstr(win, y, 4, "• No important memories flagged yet", curses.color_pair(8))
+                y += 1
+            
+            elif category == "Emotional Memories":
+                # Show emotional context
+                if len(self.emotional_history) > 0:
+                    recent_emotion = self.emotional_history[-1]
+                    emotion_text = f"• Latest: V:{recent_emotion.valence:+.2f} A:{recent_emotion.arousal:.2f}"
+                    self.safe_addstr(win, y, 4, emotion_text, curses.color_pair(8))
+                    y += 1
+                else:
+                    self.safe_addstr(win, y, 4, "• No emotional data recorded", curses.color_pair(8))
+                    y += 1
+            
+            elif category == "Goals & Achievements":
+                if self.completed_goals:
+                    last_goal = self.completed_goals[-1]
+                    goal_text = f"• ✓ {last_goal.description[:width-12]}"
+                    self.safe_addstr(win, y, 4, goal_text, curses.color_pair(8))
+                    y += 1
+                else:
+                    self.safe_addstr(win, y, 4, "• No completed goals yet", curses.color_pair(8))
+                    y += 1
+            
+            # Add spacing between categories
             y += 1
                 
     def _draw_emotional_content(self, pane: Pane):
@@ -624,13 +710,40 @@ class ClaudeAGI:
         win = pane.window
         height, width = win.getmaxyx()
         
+        # Get scroll position
+        scroll_pos = self.scroll_positions.get(PaneType.CHAT, 0)
+        total_lines = len(pane.lines)
+        
+        # Calculate visible range
+        if total_lines > height - 2:
+            max_scroll = total_lines - (height - 2)
+            scroll_pos = min(scroll_pos, max_scroll)
+            start_idx = total_lines - (height - 2) - scroll_pos
+            end_idx = total_lines - scroll_pos
+        else:
+            start_idx = 0
+            end_idx = total_lines
+        
+        # Draw visible chat lines
         y = 1
-        for line in list(pane.lines)[-(height-2):]:
+        for line in list(pane.lines)[start_idx:end_idx]:
             if y >= height - 1:
                 break
             text, color = line
-            self.safe_addstr(win, y, 2, text[:width-4], curses.color_pair(color))
+            
+            # Ensure proper line width without overlap
+            available_width = width - 4
+            if len(text) > available_width:
+                text = text[:available_width-1] + "…"
+            
+            self.safe_addstr(win, y, 2, text, curses.color_pair(color))
             y += 1
+        
+        # Show scroll indicators
+        if scroll_pos > 0:
+            self.safe_addstr(win, height-1, width-15, f"↓ {scroll_pos} more", curses.color_pair(3))
+        if start_idx > 0:
+            self.safe_addstr(win, 1, width-15, f"↑ {start_idx} above", curses.color_pair(3))
             
     def _draw_status(self):
         """Draw enhanced status line with metrics"""
@@ -641,17 +754,26 @@ class ClaudeAGI:
         hours = int(uptime.total_seconds() // 3600)
         minutes = int((uptime.total_seconds() % 3600) // 60)
         
-        # Build status message
+        # Build status message with proper spacing
         if self.command_mode:
             status = f" Command: {self.command_buffer}"
         else:
-            status = f" {self.status_message} | "
-            status += f"Thoughts: {self.metrics['thoughts_generated']} | "
-            status += f"Memories: {self.metrics['memories_stored']} | "
-            status += f"Uptime: {hours}h {minutes}m | "
-            status += f"Layout: {self.layout_mode}"
+            # Left side: status message
+            left_status = f" {self.status_message}"
             
-        self.safe_addstr(self.status_win, 0, 0, status[:self.width-1], curses.color_pair(6))
+            # Right side: metrics
+            right_status = f"T:{self.metrics['thoughts_generated']} M:{self.metrics['memories_stored']} Up:{hours}h{minutes}m [{self.layout_mode}] "
+            
+            # Calculate padding
+            padding_len = self.width - len(left_status) - len(right_status)
+            if padding_len > 0:
+                status = left_status + " " * padding_len + right_status
+            else:
+                # Truncate if too long
+                available = self.width - len(right_status) - 3
+                status = left_status[:available] + "..." + right_status
+            
+        self.safe_addstr(self.status_win, 0, 0, status[:self.width], curses.color_pair(6))
         
     def _draw_input(self):
         """Draw input line with mode indicator"""
@@ -996,6 +1118,11 @@ class ClaudeAGI:
             # Mark that consciousness pane needs update
             self.consciousness_needs_update = True
             
+            # Auto-scroll to bottom when new content added (if not manually scrolled)
+            if PaneType.CONSCIOUSNESS not in self.scroll_positions or self.scroll_positions[PaneType.CONSCIOUSNESS] == 0:
+                # Reset scroll to show latest
+                self.scroll_positions[PaneType.CONSCIOUSNESS] = 0
+            
     def add_chat_line(self, text: str, color: int = 2):
         """Add line to chat pane"""
         if PaneType.CHAT in self.panes:
@@ -1003,14 +1130,49 @@ class ClaudeAGI:
             max_width = self.panes[PaneType.CHAT].window.getmaxyx()[1] - 4
             if len(text) > max_width:
                 import textwrap
-                lines = textwrap.wrap(text, max_width, break_long_words=False)
-                for line in lines:
-                    self.panes[PaneType.CHAT].lines.append((line, color))
+                # Check if this is a speaker line
+                if text.startswith(("You: ", "Claude: ", "[System] ")):
+                    # Find speaker prefix
+                    if text.startswith("You: "):
+                        prefix = "You: "
+                        rest = text[5:]
+                    elif text.startswith("Claude: "):
+                        prefix = "Claude: "
+                        rest = text[8:]
+                    elif text.startswith("[System] "):
+                        prefix = "[System] "
+                        rest = text[9:]
+                    else:
+                        prefix = ""
+                        rest = text
+                    
+                    if prefix and rest:
+                        # Wrap with continuation indent
+                        indent = "  "  # Indent continuation lines
+                        available_width = max_width - len(indent)
+                        lines = textwrap.wrap(rest, available_width, break_long_words=False)
+                        if lines:
+                            # First line with speaker
+                            self.panes[PaneType.CHAT].lines.append((prefix + lines[0], color))
+                            # Continuation lines with indent
+                            for line in lines[1:]:
+                                self.panes[PaneType.CHAT].lines.append((indent + line, color))
+                    else:
+                        self.panes[PaneType.CHAT].lines.append((text[:max_width], color))
+                else:
+                    # Regular text wrap
+                    lines = textwrap.wrap(text, max_width, break_long_words=False)
+                    for line in lines:
+                        self.panes[PaneType.CHAT].lines.append((line, color))
             else:
                 self.panes[PaneType.CHAT].lines.append((text, color))
             
             # Mark that chat pane needs update
             self.chat_needs_update = True
+            
+            # Auto-scroll to bottom for chat
+            if PaneType.CHAT not in self.scroll_positions or self.scroll_positions[PaneType.CHAT] == 0:
+                self.scroll_positions[PaneType.CHAT] = 0
             
     def add_system_line(self, text: str, color: int = 3):
         """Add system message to chat"""
@@ -1361,10 +1523,14 @@ class ClaudeAGI:
             ],
             "keys": [
                 "Keyboard Shortcuts:",
-                "  Tab - Switch focus between panes",
+                "  Tab - Switch focus between panes (active pane highlighted)",
                 "  / - Enter command mode",
                 "  Esc - Exit command mode / Exit program",
-                "  Up/Down - Navigate command history",
+                "  Arrow Keys:",
+                "    Up/Down - Scroll current pane (when not typing)",
+                "    Up/Down - Navigate command history (when typing)",
+                "    PgUp/PgDn - Scroll by page",
+                "    Home/End - Go to top/bottom",
                 "  Ctrl+L - Clear current pane",
                 "  Ctrl+C - Emergency exit"
             ],
@@ -1428,7 +1594,14 @@ class ClaudeAGI:
         response = await self._generate_response(message)
         
         # Display response
+        # Add response with proper formatting to prevent overlap
         self.add_chat_line(f"Claude: {response}", 4)
+        
+        # Force immediate update to prevent overlap
+        if PaneType.CHAT in self.panes:
+            self._draw_pane(self.panes[PaneType.CHAT])
+            self.panes[PaneType.CHAT].window.noutrefresh()
+            curses.doupdate()
         
         # Add to conversation history
         self.conversation_history.append({
@@ -1511,6 +1684,78 @@ class ClaudeAGI:
                     self._draw_all_panes()
                     self.refresh_all()
                     
+                elif ch == curses.KEY_UP and not self.command_mode and not self.input_buffer:
+                    # Scroll up in current pane
+                    if self.current_focus in self.scroll_positions:
+                        current_pos = self.scroll_positions[self.current_focus]
+                        pane = self.panes[self.current_focus]
+                        max_scroll = len(pane.lines) - (pane.window.getmaxyx()[0] - 2)
+                        if current_pos < max_scroll:
+                            self.scroll_positions[self.current_focus] = current_pos + 1
+                            self._draw_pane(pane)
+                            pane.window.noutrefresh()
+                            curses.doupdate()
+                    elif self.current_focus not in self.scroll_positions and self.current_focus in self.panes:
+                        self.scroll_positions[self.current_focus] = 1
+                        pane = self.panes[self.current_focus]
+                        self._draw_pane(pane)
+                        pane.window.noutrefresh()
+                        curses.doupdate()
+                        
+                elif ch == curses.KEY_DOWN and not self.command_mode and not self.input_buffer:
+                    # Scroll down in current pane
+                    if self.current_focus in self.scroll_positions:
+                        current_pos = self.scroll_positions[self.current_focus]
+                        if current_pos > 0:
+                            self.scroll_positions[self.current_focus] = current_pos - 1
+                            pane = self.panes[self.current_focus]
+                            self._draw_pane(pane)
+                            pane.window.noutrefresh()
+                            curses.doupdate()
+                            
+                elif ch == curses.KEY_PPAGE:  # Page Up
+                    if self.current_focus in self.panes:
+                        pane = self.panes[self.current_focus]
+                        page_size = pane.window.getmaxyx()[0] - 3
+                        current_pos = self.scroll_positions.get(self.current_focus, 0)
+                        max_scroll = len(pane.lines) - (pane.window.getmaxyx()[0] - 2)
+                        new_pos = min(current_pos + page_size, max_scroll)
+                        if new_pos > current_pos:
+                            self.scroll_positions[self.current_focus] = new_pos
+                            self._draw_pane(pane)
+                            pane.window.noutrefresh()
+                            curses.doupdate()
+                            
+                elif ch == curses.KEY_NPAGE:  # Page Down
+                    if self.current_focus in self.scroll_positions:
+                        pane = self.panes[self.current_focus]
+                        page_size = pane.window.getmaxyx()[0] - 3
+                        current_pos = self.scroll_positions[self.current_focus]
+                        new_pos = max(current_pos - page_size, 0)
+                        if new_pos < current_pos:
+                            self.scroll_positions[self.current_focus] = new_pos
+                            self._draw_pane(pane)
+                            pane.window.noutrefresh()
+                            curses.doupdate()
+                            
+                elif ch == curses.KEY_HOME:  # Home - go to top
+                    if self.current_focus in self.panes:
+                        pane = self.panes[self.current_focus]
+                        max_scroll = len(pane.lines) - (pane.window.getmaxyx()[0] - 2)
+                        if max_scroll > 0:
+                            self.scroll_positions[self.current_focus] = max_scroll
+                            self._draw_pane(pane)
+                            pane.window.noutrefresh()
+                            curses.doupdate()
+                            
+                elif ch == curses.KEY_END:  # End - go to bottom
+                    if self.current_focus in self.scroll_positions:
+                        self.scroll_positions[self.current_focus] = 0
+                        pane = self.panes[self.current_focus]
+                        self._draw_pane(pane)
+                        pane.window.noutrefresh()
+                        curses.doupdate()
+                    
                 elif ch == ord('/') and not self.command_mode and not self.input_buffer:
                     self.command_mode = True
                     self.command_buffer = "/"
@@ -1521,7 +1766,7 @@ class ClaudeAGI:
                     self.input_win.noutrefresh()
                     curses.doupdate()
                     
-                elif ch == curses.KEY_UP:  # Command history
+                elif ch == curses.KEY_UP and (self.command_mode or self.input_buffer):  # Command history
                     if self.command_history and self.history_index < len(self.command_history) - 1:
                         self.history_index += 1
                         if self.command_mode:
@@ -1529,7 +1774,7 @@ class ClaudeAGI:
                         else:
                             self.input_buffer = self.command_history[-(self.history_index + 1)]
                             
-                elif ch == curses.KEY_DOWN:  # Command history
+                elif ch == curses.KEY_DOWN and (self.command_mode or self.input_buffer):  # Command history
                     if self.history_index > -1:
                         self.history_index -= 1
                         if self.history_index >= 0:
@@ -1573,6 +1818,11 @@ class ClaudeAGI:
                         
                         # Handle message asynchronously
                         asyncio.create_task(self.handle_user_message(user_text))
+                        
+                        # Force immediate update of input area
+                        self._draw_input()
+                        self.input_win.noutrefresh()
+                        curses.doupdate()
                         
                 elif ch == curses.KEY_BACKSPACE or ch == 127:
                     if self.command_mode and len(self.command_buffer) > 1:
@@ -1736,6 +1986,13 @@ class ClaudeAGI:
                 except:
                     # Force reset if normal endwin fails
                     pass  # Let curses.wrapper handle final cleanup
+                
+                # Clear any remaining curses state
+                try:
+                    import os
+                    os.system('reset')  # Reset terminal as last resort
+                except:
+                    pass
             except Exception as e:
                 # Ignore errors during cleanup
                 logger.debug(f"Curses cleanup error (expected): {e}")
