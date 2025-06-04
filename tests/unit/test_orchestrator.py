@@ -275,14 +275,26 @@ class TestAGIOrchestrator:
     @pytest.mark.asyncio
     async def test_service_cycle_running(self, orchestrator):
         """Test service cycle execution"""
-        await orchestrator.initialize()
+        import os
         
-        # Check that services have been started as tasks
-        assert len(orchestrator.tasks) > 0
+        # Temporarily disable test mode to test service task creation
+        original_test_mode = os.environ.get('CLAUDE_AGI_TEST_MODE')
+        if original_test_mode:
+            del os.environ['CLAUDE_AGI_TEST_MODE']
         
-        # Cancel tasks for cleanup
-        for task in orchestrator.tasks:
-            task.cancel()
+        try:
+            await orchestrator.initialize()
+            
+            # Check that services have been started as tasks
+            assert len(orchestrator.tasks) > 0
+            
+            # Cancel tasks for cleanup
+            for task in orchestrator.tasks:
+                task.cancel()
+        finally:
+            # Restore test mode
+            if original_test_mode:
+                os.environ['CLAUDE_AGI_TEST_MODE'] = original_test_mode
         
     @pytest.mark.asyncio
     async def test_state_based_behavior(self, orchestrator):
