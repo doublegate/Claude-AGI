@@ -166,9 +166,9 @@ jobs:
           exe_path = os.path.join('dist', exe_name)
           if os.path.exists(exe_path):
               size = os.path.getsize(exe_path)
-              print(f'✅ Executable created: {exe_path} ({size:,} bytes)')
+              print(f'SUCCESS: Executable created: {exe_path} ({size:,} bytes)')
           else:
-              print(f'❌ Executable not found: {exe_path}')
+              print(f'ERROR: Executable not found: {exe_path}')
               print('Files in dist:')
               if os.path.exists('dist'):
                   for f in os.listdir('dist'):
@@ -190,13 +190,13 @@ jobs:
           try:
               result = subprocess.run([exe_path, '--help'], capture_output=True, text=True, timeout=30)
               if result.returncode == 0:
-                  print('✅ Executable test passed')
+                  print('SUCCESS: Executable test passed')
                   print('Output preview:', result.stdout[:200] + '...' if len(result.stdout) > 200 else result.stdout)
               else:
-                  print(f'❌ Executable test failed with return code {result.returncode}')
+                  print(f'ERROR: Executable test failed with return code {result.returncode}')
                   print('stderr:', result.stderr)
           except Exception as e:
-              print(f'❌ Error testing executable: {e}')
+              print(f'ERROR: Error testing executable: {e}')
               exit(1)
           "
 
@@ -230,7 +230,7 @@ jobs:
               size = os.path.getsize(archive_name)
               print(f'Archive size: {size:,} bytes')
           else:
-              print(f'❌ Archive not created: {archive_name}')
+              print(f'ERROR: Archive not created: {archive_name}')
               exit(1)
           "
 
@@ -310,8 +310,8 @@ jobs:
       - name: Update latest release pointer
         if: ${{ !github.event.inputs.prerelease }}
         run: |
-          echo "✅ Release ${{ github.event.inputs.version || github.ref_name }} published!"
-          echo "📦 Available executables:"
+          echo "SUCCESS: Release ${{ github.event.inputs.version || github.ref_name }} published!"
+          echo "Available executables:"
           echo "  - Linux (x86_64): claude-agi-linux-x86_64.tar.gz"
           echo "  - Windows (x86_64): claude-agi-windows-x86_64.zip" 
           echo "  - macOS (x86_64): claude-agi-macos-x86_64.tar.gz"
