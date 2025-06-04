@@ -312,3 +312,14 @@ class ThoughtGenerator:
             return "That's an interesting question. Let me reflect on that... I find myself curious about your perspective on this as well."
         else:
             return f"I'm contemplating what you've shared: '{user_input}'. It sparks various thoughts and associations in my consciousness streams."
+    
+    async def close(self):
+        """Clean up resources"""
+        if self.client:
+            try:
+                # Close the client properly
+                await self.client.close()
+            except Exception as e:
+                logger.debug(f"Error closing Anthropic client: {e}")
+            finally:
+                self.client = None

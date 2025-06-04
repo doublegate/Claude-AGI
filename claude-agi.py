@@ -704,14 +704,20 @@ class ClaudeAGI:
         """Periodic UI refresh for dynamic content only"""
         last_uptime = None
         last_thought_count = 0
+        last_memory_count = 0
+        last_goals_count = 0
+        last_input_buffer = ""
         needs_full_redraw = True  # Initial full draw
         
         while self.running:
             try:
+                updates_made = False
+                
                 # Perform full redraw if needed
                 if needs_full_redraw:
                     self._draw_all_panes()
                     needs_full_redraw = False
+                    updates_made = True
                 
                 # Update specific panes if needed - with error handling
                 try:
@@ -719,11 +725,32 @@ class ClaudeAGI:
                         self._draw_pane(self.panes[PaneType.CONSCIOUSNESS])
                         self.panes[PaneType.CONSCIOUSNESS].window.noutrefresh()
                         self.consciousness_needs_update = False
+                        updates_made = True
                     
                     if self.chat_needs_update and PaneType.CHAT in self.panes:
                         self._draw_pane(self.panes[PaneType.CHAT])
                         self.panes[PaneType.CHAT].window.noutrefresh()
                         self.chat_needs_update = False
+                        updates_made = True
+                        
+                    # Check if memory count changed
+                    current_memory_count = self.metrics['memories_stored']
+                    if current_memory_count != last_memory_count:
+                        last_memory_count = current_memory_count
+                        if PaneType.MEMORY in self.panes:
+                            self._draw_pane(self.panes[PaneType.MEMORY])
+                            self.panes[PaneType.MEMORY].window.noutrefresh()
+                            updates_made = True
+                    
+                    # Check if goals changed
+                    current_goals_count = len(self.active_goals) + len(self.completed_goals)
+                    if current_goals_count != last_goals_count:
+                        last_goals_count = current_goals_count
+                        if PaneType.GOALS in self.panes:
+                            self._draw_pane(self.panes[PaneType.GOALS])
+                            self.panes[PaneType.GOALS].window.noutrefresh()
+                            updates_made = True
+                            
                 except Exception as e:
                     logger.error(f"Error updating panes: {e}")
                     needs_full_redraw = True
@@ -736,6 +763,7 @@ class ClaudeAGI:
                     last_uptime = current_minutes
                     self._draw_status()
                     self.status_win.noutrefresh()
+                    updates_made = True
                 
                 # Only update metrics if thoughts changed
                 if self.total_thoughts != last_thought_count:
@@ -743,16 +771,22 @@ class ClaudeAGI:
                     # Status bar includes thought count
                     self._draw_status()
                     self.status_win.noutrefresh()
+                    updates_made = True
                 
-                # Update input line continuously for smooth typing
-                self._draw_input()
-                self.input_win.noutrefresh()
+                # Only update input line if it changed
+                current_input = self.input_buffer if not self.command_mode else self.command_buffer
+                if current_input != last_input_buffer:
+                    last_input_buffer = current_input
+                    self._draw_input()
+                    self.input_win.noutrefresh()
+                    updates_made = True
                 
-                # Single screen update
-                curses.doupdate()
+                # Single screen update only if needed
+                if updates_made:
+                    curses.doupdate()
                 
-                # Check for updates frequently but only redraw when needed
-                await asyncio.sleep(0.1)
+                # Slower refresh rate to reduce flickering
+                await asyncio.sleep(0.5)
             except Exception as e:
                 logger.error(f"UI refresh error: {e}")
                 needs_full_redraw = True  # Redraw everything on error
@@ -825,6 +859,15 @@ class ClaudeAGI:
                                         )
                                         await self.orchestrator.send_message(message)
                                         self.metrics['memories_stored'] += 1
+                                        
+                                        # Also store directly in working memory for immediate access
+                                        if hasattr(self.memory_manager, 'working_memory'):
+                                            self.memory_manager.working_memory['recent_thoughts'].append({
+                                                'content': thought_text,
+                                                'stream': stream_id,
+                                                'timestamp': datetime.now().isoformat(),
+                                                'importance': importance
+                                            })
                                     
                                     # Update emotional state
                                     tone = thought.get('emotional_tone', 'neutral')
@@ -1127,6 +1170,12 @@ class ClaudeAGI:
             )
             self.active_goals.append(goal)
             self.add_system_line(f"Added goal: {description}", 3)
+            
+            # Force immediate update of goals pane
+            if PaneType.GOALS in self.panes:
+                self._draw_pane(self.panes[PaneType.GOALS])
+                self.panes[PaneType.GOALS].window.noutrefresh()
+                curses.doupdate()
             
         elif subcmd == "complete" and len(args) > 1:
             try:
@@ -1439,6 +1488,12 @@ class ClaudeAGI:
                 elif ch == ord('/') and not self.command_mode and not self.input_buffer:
                     self.command_mode = True
                     self.command_buffer = "/"
+                    # Immediate update for slash commands
+                    self._draw_status()
+                    self._draw_input()
+                    self.status_win.noutrefresh()
+                    self.input_win.noutrefresh()
+                    curses.doupdate()
                     
                 elif ch == curses.KEY_UP:  # Command history
                     if self.command_history and self.history_index < len(self.command_history) - 1:
@@ -1505,9 +1560,12 @@ class ClaudeAGI:
                     else:
                         self.input_buffer += chr(ch)
                         
-                # Update display
+                # Always update display after input to ensure responsiveness
                 self._draw_status()
                 self._draw_input()
+                self.status_win.noutrefresh()
+                self.input_win.noutrefresh()
+                curses.doupdate()
                 
             except Exception as e:
                 logger.error(f"Input handler error: {e}", exc_info=True)
@@ -1608,7 +1666,7 @@ class ClaudeAGI:
                     if not task.done():
                         task.cancel()
             
-            # Shutdown orchestrator properly
+            # Shutdown orchestrator and other services properly
             if hasattr(self, 'orchestrator') and self.orchestrator:
                 try:
                     # Create a new loop for cleanup if current is closed
@@ -1616,17 +1674,28 @@ class ClaudeAGI:
                         cleanup_loop = asyncio.new_event_loop()
                         asyncio.set_event_loop(cleanup_loop)
                         cleanup_loop.run_until_complete(self.orchestrator.shutdown())
+                        # Also close thought generator
+                        if hasattr(self, 'thought_generator') and self.thought_generator:
+                            cleanup_loop.run_until_complete(self.thought_generator.close())
                         cleanup_loop.close()
                     elif loop:
                         loop.run_until_complete(self.orchestrator.shutdown())
+                        # Also close thought generator
+                        if hasattr(self, 'thought_generator') and self.thought_generator:
+                            loop.run_until_complete(self.thought_generator.close())
                 except Exception as e:
                     logger.error(f"Error during orchestrator shutdown: {e}")
             
-            # Clean up curses
+            # Clean up curses properly
             try:
+                # Reset terminal state
+                self.stdscr.keypad(False)
+                curses.echo()
+                curses.nocbreak()
                 curses.endwin()
-            except:
-                pass
+            except Exception as e:
+                # Ignore errors during cleanup
+                logger.debug(f"Curses cleanup error (expected): {e}")
                 
             # Close event loop properly
             if loop and not loop.is_closed():
