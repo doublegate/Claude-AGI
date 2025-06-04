@@ -134,6 +134,17 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 python_functions = "test_*"
 asyncio_mode = "auto"
+filterwarnings = [
+    # Ignore deprecation warnings from third-party libraries
+    # FAISS uses SWIG bindings which generate these warnings in Python 3.13
+    # These are harmless and will be fixed upstream in future FAISS releases
+    "ignore::DeprecationWarning:faiss.*",
+    "ignore:builtin type SwigPyPacked has no __module__ attribute:DeprecationWarning",
+    "ignore:builtin type SwigPyObject has no __module__ attribute:DeprecationWarning", 
+    "ignore:builtin type swigvarlink has no __module__ attribute:DeprecationWarning",
+    # FAISS uses deprecated numpy internals - will be fixed in future releases
+    "ignore:numpy.core._multiarray_umath is deprecated:DeprecationWarning",
+]
 
 [tool.mypy]
 python_version = "3.11"
