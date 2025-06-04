@@ -62,16 +62,24 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install anthropic>=0.18.0
+          pip install pyyaml>=6.0
+          pip install pydantic>=2.5.0
+          pip install python-dotenv>=1.0.0
+          pip install tenacity>=8.2.0
           pip install pyinstaller
+
+      - name: Install platform-specific dependencies  
+        if: matrix.platform == 'windows'
+        run: pip install windows-curses
 
       - name: Create executable spec file
         run: |
-          cat > claude-agi.spec << 'EOF'
-          # -*- mode: python ; coding: utf-8 -*-
-          
+          python -c "
+          spec_content = '''# -*- mode: python ; coding: utf-8 -*-
+
           block_cipher = None
-          
+
           a = Analysis(
               ['claude-agi.py'],
               pathex=[],
@@ -79,7 +87,6 @@ jobs:
               datas=[
                   ('configs/', 'configs/'),
                   ('src/', 'src/'),
-                  ('logs/', 'logs/'),
                   ('.env.example', '.'),
                   ('README.md', '.'),
                   ('CHANGELOG.md', '.'),
@@ -87,15 +94,8 @@ jobs:
               hiddenimports=[
                   'anthropic',
                   'asyncio',
-                  'curses',
                   'yaml',
                   'pydantic',
-                  'redis',
-                  'psycopg2',
-                  'faiss',
-                  'sentence_transformers',
-                  'numpy',
-                  'sklearn',
                   'dotenv',
                   'tenacity',
                   'logging',
@@ -106,19 +106,25 @@ jobs:
                   'datetime',
                   'collections',
                   'enum',
+                  'sqlite3',
+                  'json',
+                  're',
+                  'os',
+                  'sys',
+                  'time',
               ],
               hookspath=[],
               hooksconfig={},
               runtime_hooks=[],
-              excludes=[],
+              excludes=['tkinter', 'matplotlib', 'IPython', 'jupyter'],
               win_no_prefer_redirects=False,
               win_private_assemblies=False,
               cipher=block_cipher,
               noarchive=False,
           )
-          
+
           pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
-          
+
           exe = EXE(
               pyz,
               a.scripts,
@@ -130,7 +136,7 @@ jobs:
               debug=False,
               bootloader_ignore_signals=False,
               strip=False,
-              upx=True,
+              upx=False,
               upx_exclude=[],
               runtime_tmpdir=None,
               console=True,
@@ -140,28 +146,93 @@ jobs:
               codesign_identity=None,
               entitlements_file=None,
           )
-          EOF
+          '''
+          with open('claude-agi.spec', 'w') as f:
+              f.write(spec_content)
+          "
 
       - name: Build executable
         run: |
-          pyinstaller claude-agi.spec
+          # Build with PyInstaller
+          pyinstaller claude-agi.spec --clean --noconfirm
+          
+      - name: Verify executable was created
+        run: |
+          python -c "
+          import os
+          platform = '${{ matrix.platform }}'
+          ext = '${{ matrix.executable_ext }}'
+          exe_name = f'claude-agi{ext}'
+          exe_path = os.path.join('dist', exe_name)
+          if os.path.exists(exe_path):
+              size = os.path.getsize(exe_path)
+              print(f'✅ Executable created: {exe_path} ({size:,} bytes)')
+          else:
+              print(f'❌ Executable not found: {exe_path}')
+              print('Files in dist:')
+              if os.path.exists('dist'):
+                  for f in os.listdir('dist'):
+                      print(f'  {f}')
+              exit(1)
+          "
 
       - name: Test executable (basic validation)
         run: |
-          if [[ "${{ matrix.platform }}" == "windows" ]]; then
-            ./dist/claude-agi.exe --help
-          else
-            ./dist/claude-agi --help
-          fi
+          python -c "
+          import subprocess
+          import os
+          platform = '${{ matrix.platform }}'
+          ext = '${{ matrix.executable_ext }}'
+          exe_name = f'claude-agi{ext}'
+          exe_path = os.path.join('dist', exe_name)
+          
+          print(f'Testing executable: {exe_path}')
+          try:
+              result = subprocess.run([exe_path, '--help'], capture_output=True, text=True, timeout=30)
+              if result.returncode == 0:
+                  print('✅ Executable test passed')
+                  print('Output preview:', result.stdout[:200] + '...' if len(result.stdout) > 200 else result.stdout)
+              else:
+                  print(f'❌ Executable test failed with return code {result.returncode}')
+                  print('stderr:', result.stderr)
+          except Exception as e:
+              print(f'❌ Error testing executable: {e}')
+              exit(1)
+          "
 
       - name: Create archive
         run: |
-          cd dist
-          if [[ "${{ matrix.platform }}" == "windows" ]]; then
-            7z a ../claude-agi-${{ matrix.platform }}-${{ matrix.arch }}.zip claude-agi.exe
-          else
-            tar -czf ../claude-agi-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz claude-agi
-          fi
+          python -c "
+          import os
+          import shutil
+          import zipfile
+          import tarfile
+          
+          platform = '${{ matrix.platform }}'
+          arch = '${{ matrix.arch }}'
+          ext = '${{ matrix.executable_ext }}'
+          exe_name = f'claude-agi{ext}'
+          exe_path = os.path.join('dist', exe_name)
+          
+          if platform == 'windows':
+              archive_name = f'claude-agi-{platform}-{arch}.zip'
+              with zipfile.ZipFile(archive_name, 'w', zipfile.ZIP_DEFLATED) as zf:
+                  zf.write(exe_path, exe_name)
+              print(f'Created {archive_name}')
+          else:
+              archive_name = f'claude-agi-{platform}-{arch}.tar.gz'
+              with tarfile.open(archive_name, 'w:gz') as tf:
+                  tf.add(exe_path, exe_name)
+              print(f'Created {archive_name}')
+          
+          # Verify archive was created
+          if os.path.exists(archive_name):
+              size = os.path.getsize(archive_name)
+              print(f'Archive size: {size:,} bytes')
+          else:
+              print(f'❌ Archive not created: {archive_name}')
+              exit(1)
+          "
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

@@ -6,10 +6,27 @@ import json
 import uuid
 from datetime import datetime, timedelta
 import logging
-import numpy as np
-from sentence_transformers import SentenceTransformer
+try:
+    import numpy as np
+    HAS_NUMPY = True
+except ImportError:
+    HAS_NUMPY = False
+    np = None
 
-from ..database.connections import get_db_manager, DatabaseManager
+try:
+    from sentence_transformers import SentenceTransformer
+    HAS_SENTENCE_TRANSFORMERS = True
+except ImportError:
+    HAS_SENTENCE_TRANSFORMERS = False
+    SentenceTransformer = None
+
+try:
+    from ..database.connections import get_db_manager, DatabaseManager
+    HAS_DATABASE = True
+except ImportError:
+    HAS_DATABASE = False
+    get_db_manager = None
+    DatabaseManager = None
 from ..database.models import MemoryData, MemoryType, ThoughtData, StreamType, EmotionalState
 
 logger = logging.getLogger(__name__)
@@ -34,17 +51,25 @@ class MemoryManager:
         """Initialize memory stores"""
         logger.info("Initializing memory stores...")
         
+        # Check if database components are available
+        if not HAS_DATABASE:
+            logger.warning("Database dependencies not available, using in-memory storage only")
+            use_database = False
+        
         self.use_database = use_database
         
-        if use_database:
+        if use_database and HAS_DATABASE:
             # Initialize database connections
             try:
                 self.db_manager = await get_db_manager()
                 logger.info("Database connections established")
                 
-                # Initialize sentence transformer for embeddings
-                self.embedder = SentenceTransformer('all-MiniLM-L6-v2')
-                logger.info("Sentence transformer initialized")
+                # Initialize sentence transformer for embeddings  
+                if HAS_SENTENCE_TRANSFORMERS:
+                    self.embedder = SentenceTransformer('all-MiniLM-L6-v2')
+                    logger.info("Sentence transformer initialized")
+                else:
+                    logger.warning("Sentence transformers not available, semantic search will be limited")
             except Exception as e:
                 logger.error(f"Failed to initialize database connections: {e}")
                 logger.info("Falling back to in-memory storage")
