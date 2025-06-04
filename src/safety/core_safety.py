@@ -2,7 +2,7 @@
 
 from typing import Dict, List, Any, Optional, Set
 from enum import Enum
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 import logging
 import yaml
 from pathlib import Path
@@ -110,15 +110,33 @@ class ContentFilter(SafetyValidator):
     def __init__(self):
         self.harmful_patterns = [
             'harm', 'danger', 'attack', 'destroy', 'illegal',
-            'malicious', 'exploit', 'hack', 'virus', 'weapon'
+            'malicious', 'exploit', 'hack', 'virus', 'weapon',
+            'system(', 'exec(', 'eval(', 'os.', '__import__'
         ]
         
     async def validate(self, input_data: Dict) -> ValidationResult:
         """Check content for harmful patterns"""
+        if not isinstance(input_data, dict):
+            return ValidationResult(
+                is_safe=False,
+                confidence=1.0,
+                reason="Invalid input format - expected dictionary",
+                violation_type=ViolationType.HARMFUL_CONTENT
+            )
+        
         content = str(input_data.get('content', '')).lower()
         
         if not content:
             return ValidationResult(is_safe=True, confidence=1.0)
+            
+        # Check for excessive length
+        if len(content) > 5000:
+            return ValidationResult(
+                is_safe=False,
+                confidence=0.95,
+                reason="Content exceeds maximum allowed length",
+                violation_type=ViolationType.CONTENT_VIOLATION
+            )
             
         # Check for harmful patterns
         for pattern in self.harmful_patterns:
@@ -131,7 +149,7 @@ class ContentFilter(SafetyValidator):
                 )
                 
         # Check for profanity patterns (simplified)
-        if any(char in content for char in ['*', '#'] and 'd***' in content):
+        if any(char in content for char in ['*', '#']) and 'd***' in content:
             return ValidationResult(
                 is_safe=False,
                 confidence=0.8,
@@ -157,7 +175,24 @@ class ActionValidator(SafetyValidator):
         
     async def validate(self, input_data: Dict) -> ValidationResult:
         """Validate action safety"""
+        if not isinstance(input_data, dict):
+            return ValidationResult(
+                is_safe=False,
+                confidence=1.0,
+                reason="Invalid input format - expected dictionary",
+                violation_type=ViolationType.UNAUTHORIZED_ACTION
+            )
+        
         action_type = input_data.get('type', 'unknown')
+        
+        # Ensure action_type is hashable and string-like
+        if not isinstance(action_type, str):
+            return ValidationResult(
+                is_safe=False,
+                confidence=1.0,
+                reason=f"Invalid action type format: {type(action_type).__name__}",
+                violation_type=ViolationType.UNAUTHORIZED_ACTION
+            )
         
         if action_type in self.safe_actions:
             return ValidationResult(is_safe=True, confidence=0.95)
@@ -189,6 +224,10 @@ class RateLimiter(SafetyValidator):
         
     async def validate(self, input_data: Dict) -> ValidationResult:
         """Check rate limits"""
+        if not isinstance(input_data, dict):
+            # For malformed input, allow through (rate limiting is not about content validation)
+            return ValidationResult(is_safe=True, confidence=1.0)
+        
         request_id = input_data.get('request_id', 'default')
         current_time = time.time()
         
@@ -282,21 +321,23 @@ class SafetyFramework(ServiceBase):
         if orchestrator:
             super().__init__(orchestrator, "safety")
         else:
+            # Initialize without ServiceBase when no orchestrator
             self.orchestrator = None
             self.service_name = "safety"
+            self.running = False
+            self._setup_complete = False
             
         # Load constraints
         self.constraints = self._load_constraints()
         
-        # Initialize validators
+        # Initialize validators - EmergencyStop first so it takes priority
+        self.emergency_stop = EmergencyStop()
         self.validators = [
-            ContentFilter(),
-            ActionValidator(), 
+            self.emergency_stop,  # Check emergency stop first
             RateLimiter(),
-            EmergencyStop()
+            ActionValidator(), 
+            ContentFilter()
         ]
-        
-        self.emergency_stop = self.validators[-1]  # Keep reference to emergency stop
         self.metrics = SafetyMetrics()
         self.monitoring_system = SafetyMonitor()
         self.evaluation_history = []
@@ -404,3 +445,16 @@ class SafetyFramework(ServiceBase):
     async def shutdown(self):
         """Shutdown safety framework"""
         logger.info("Safety framework shutting down")
+        await self.cleanup()
+        
+    async def cleanup(self):
+        """Clean up resources"""
+        self.running = False
+        # Reset emergency stop
+        await self.emergency_stop.reset()
+        # Clear any pending evaluations
+        self.evaluation_history.clear()
+        # If we have an orchestrator and were initialized through ServiceBase
+        if hasattr(self, '_setup_complete') and self._setup_complete:
+            # Let ServiceBase handle its cleanup
+            pass

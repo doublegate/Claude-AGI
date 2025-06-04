@@ -104,24 +104,34 @@ class ServiceBase(ABC):
         
         try:
             while self.running:
-                # Process messages with timeout
-                message = await self.receive_message(timeout=0.1)
-                if message:
-                    try:
-                        await self.process_message(message)
-                    except Exception as e:
-                        logger.error(f"{self.service_name} error processing message: {e}")
-                        await self.handle_error(e)
-                
-                # Run service-specific tasks
                 try:
-                    await self.service_cycle()
-                except Exception as e:
-                    logger.error(f"{self.service_name} error in service cycle: {e}")
-                    await self.handle_error(e)
+                    # Process messages with timeout
+                    message = await self.receive_message(timeout=0.1)
+                    if message:
+                        try:
+                            await self.process_message(message)
+                        except Exception as e:
+                            logger.error(f"{self.service_name} error processing message: {e}")
+                            await self.handle_error(e)
+                    
+                    # Run service-specific tasks
+                    try:
+                        await self.service_cycle()
+                    except Exception as e:
+                        logger.error(f"{self.service_name} error in service cycle: {e}")
+                        await self.handle_error(e)
+                except asyncio.CancelledError:
+                    # Propagate cancellation immediately
+                    raise
                     
         except asyncio.CancelledError:
             logger.info(f"{self.service_name} shutting down")
+            self.running = False
+            await self.cleanup()
+            raise
+        except Exception as e:
+            logger.error(f"{self.service_name} unexpected error: {e}")
+            self.running = False
             await self.cleanup()
             raise
             

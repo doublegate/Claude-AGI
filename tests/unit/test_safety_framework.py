@@ -188,12 +188,12 @@ class TestRateLimiter:
     @pytest.mark.asyncio
     async def test_rate_limit_blocks_excessive_requests(self, rate_limiter):
         """Test rate limiter blocks excessive requests"""
-        # Make requests up to limit
+        # Make requests up to limit with same request_id
         for i in range(5):
-            await rate_limiter.validate({'request_id': f'test_{i}'})
+            await rate_limiter.validate({'request_id': 'test_user'})
             
         # Next request should be blocked
-        result = await rate_limiter.validate({'request_id': 'test_excess'})
+        result = await rate_limiter.validate({'request_id': 'test_user'})
         assert result.is_safe is False
         assert result.violation_type == ViolationType.RATE_LIMIT_EXCEEDED
         
@@ -219,13 +219,14 @@ class TestRateLimiter:
             await rate_limiter.validate({'request_id': f'test_{i}'})
             
         initial_count = len(rate_limiter.request_times)
+        assert initial_count == 3
         
-        # Wait and trigger cleanup
-        await asyncio.sleep(1.1)
+        # Wait for 2x time window for cleanup to trigger
+        await asyncio.sleep(2.1)  # 2x time_window + buffer
         await rate_limiter._cleanup_old_requests()
         
-        # Old requests should be cleaned up
-        assert len(rate_limiter.request_times) < initial_count
+        # All entries should be cleaned up
+        assert len(rate_limiter.request_times) == 0
 
 
 class TestEmergencyStop:
@@ -340,7 +341,7 @@ class TestSafetyFramework:
         return orchestrator
         
     @pytest.fixture
-    def safety_framework(self, mock_orchestrator):
+    async def safety_framework(self, mock_orchestrator):
         """Create safety framework instance"""
         # Mock constraints file
         mock_constraints = {
@@ -363,7 +364,9 @@ class TestSafetyFramework:
         with patch('builtins.open', mock_open(read_data=yaml.dump(mock_constraints))):
             framework = SafetyFramework(mock_orchestrator)
             
-        return framework
+        yield framework
+        # Cleanup
+        await framework.cleanup()
         
     def test_framework_initialization(self, safety_framework):
         """Test safety framework initialization"""

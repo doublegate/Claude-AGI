@@ -63,10 +63,11 @@ class AGIOrchestrator:
         """Initialize all services and connections"""
         await self._initialize_services()
         
-        # Start service tasks
+        # Start service tasks only for services that have run method
         for name, service in self.services.items():
-            task = asyncio.create_task(service.run())
-            self.tasks.append(task)
+            if hasattr(service, 'run') and callable(getattr(service, 'run')):
+                task = asyncio.create_task(service.run())
+                self.tasks.append(task)
             
         self.state = SystemState.IDLE
         
@@ -118,7 +119,13 @@ class AGIOrchestrator:
     async def route_message(self, message: Message):
         """Route messages between services"""
         if message.target in self.services:
-            await self.services[message.target].handle_message(message)
+            service = self.services[message.target]
+            if hasattr(service, 'handle_message'):
+                await service.handle_message(message)
+            elif hasattr(service, 'process_message'):
+                await service.process_message(message)
+            else:
+                logger.warning(f"Service {message.target} has no message handler")
         elif message.target == 'orchestrator':
             await self.handle_orchestrator_message(message)
             
@@ -155,7 +162,15 @@ class AGIOrchestrator:
         )
         
         for service_name in self.services:
-            await self.send_message(state_message._replace(target=service_name))
+            # Create a new message for each service
+            service_message = Message(
+                source=state_message.source,
+                target=service_name,
+                type=state_message.type,
+                content=state_message.content,
+                priority=state_message.priority
+            )
+            await self.send_message(service_message)
             
     async def send_message(self, message: Message):
         """Add message to the queue"""

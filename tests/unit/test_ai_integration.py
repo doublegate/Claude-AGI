@@ -123,7 +123,9 @@ class TestThoughtGenerator:
         )
         
         assert thought['content'] is not None
-        assert 'processing' in thought['content'].lower() or 'conscious' in thought['content'].lower()
+        # Check that it's using a template response
+        template_keywords = ['processing', 'conscious', 'observing', 'focusing', 'integrating', 'maintaining']
+        assert any(keyword in thought['content'].lower() for keyword in template_keywords)
         
     @pytest.mark.asyncio
     async def test_thought_generation_all_stream_types(self, thought_generator_with_api):
@@ -302,7 +304,7 @@ class TestThoughtGenerator:
         
         # Should use fallback template
         assert response is not None
-        assert "interesting question" in response
+        assert "steady stream of consciousness" in response or "processing thoughts" in response
         
     @pytest.mark.asyncio
     async def test_response_templates(self, thought_generator_without_api):

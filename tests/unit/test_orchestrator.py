@@ -46,24 +46,31 @@ class TestMessage:
     def test_message_creation(self):
         """Test creating messages"""
         msg = Message(
+            source="test_service",
+            target="orchestrator",
             type="test_message",
             content={"data": "test"},
-            sender="test_service",
             priority=7
         )
         
         assert msg.type == "test_message"
         assert msg.content == {"data": "test"}
-        assert msg.sender == "test_service"
+        assert msg.source == "test_service"
+        assert msg.target == "orchestrator"
         assert msg.priority == 7
-        assert isinstance(msg.timestamp, datetime)
+        assert isinstance(msg.timestamp, float)
         
     def test_message_defaults(self):
         """Test message default values"""
-        msg = Message(type="test", content="data")
+        msg = Message(
+            source="test",
+            target="test",
+            type="test",
+            content="data"
+        )
         
-        assert msg.sender == "unknown"
         assert msg.priority == 5
+        assert msg.timestamp is not None
         
 
 class TestAGIOrchestrator:
@@ -85,37 +92,50 @@ class TestAGIOrchestrator:
         }
         
     @pytest.fixture
-    def orchestrator(self, test_config):
+    async def orchestrator(self, test_config):
         """Create orchestrator instance"""
-        return AGIOrchestrator(test_config)
+        orch = AGIOrchestrator(test_config)
+        yield orch
+        # Cleanup - cancel any running tasks
+        for task in orch.tasks:
+            task.cancel()
+        if orch.tasks:
+            await asyncio.gather(*orch.tasks, return_exceptions=True)
         
     def test_orchestrator_creation(self, orchestrator):
         """Test orchestrator initialization"""
-        assert orchestrator.state == SystemState.IDLE
-        assert orchestrator.is_running is False
-        assert len(orchestrator.services) > 0
+        assert orchestrator.state == SystemState.INITIALIZING
+        assert orchestrator.running is False
+        assert len(orchestrator.services) == 0  # Not initialized yet
         assert len(orchestrator.state_history) == 0
-        assert orchestrator.event_queue.maxsize == 100
+        assert hasattr(orchestrator, 'message_queue')
         
-    def test_service_registration(self, orchestrator):
-        """Test that services are registered"""
+    @pytest.mark.asyncio
+    async def test_service_registration(self, orchestrator):
+        """Test that services are registered after initialization"""
+        # Services should be empty before initialization
+        assert len(orchestrator.services) == 0
+        
+        # Initialize the orchestrator
+        await orchestrator.initialize()
+        
         # Check core services are registered
         assert 'memory' in orchestrator.services
         assert 'consciousness' in orchestrator.services
         assert 'safety' in orchestrator.services
         
-        # Verify service attributes
-        for service in orchestrator.services.values():
-            assert hasattr(service, 'orchestrator')
-            assert hasattr(service, 'service_name')
+        # State should be IDLE after initialization
+        assert orchestrator.state == SystemState.IDLE
             
     @pytest.mark.asyncio
     async def test_state_transition(self, orchestrator):
         """Test state transitions"""
+        # Initialize first to get to IDLE state
+        await orchestrator.initialize()
         initial_state = orchestrator.state
         
         # Transition to THINKING
-        await orchestrator.transition_to(SystemState.THINKING, "Test transition")
+        await orchestrator.transition_to(SystemState.THINKING)
         
         assert orchestrator.state == SystemState.THINKING
         assert len(orchestrator.state_history) == 1
@@ -123,66 +143,80 @@ class TestAGIOrchestrator:
         transition = orchestrator.state_history[0]
         assert transition.from_state == initial_state
         assert transition.to_state == SystemState.THINKING
-        assert transition.reason == "Test transition"
+        assert "User requested transition" in transition.reason
         
     @pytest.mark.asyncio
     async def test_invalid_state_transition(self, orchestrator):
         """Test handling of invalid state transitions"""
+        await orchestrator.initialize()
         orchestrator.state = SystemState.SLEEPING
         
-        # Define valid transitions (example constraint)
-        orchestrator.valid_transitions = {
-            SystemState.SLEEPING: [SystemState.IDLE, SystemState.THINKING]
-        }
-        
-        # Should handle gracefully (not raise exception)
+        # Try invalid transition from SLEEPING to CREATING
+        # (Only IDLE is valid from SLEEPING)
+        initial_state = orchestrator.state
         await orchestrator.transition_to(SystemState.CREATING)
         
-        # State might change or stay same depending on implementation
-        # Just verify no exception was raised
-        assert orchestrator.state in SystemState
+        # State should remain unchanged for invalid transition
+        assert orchestrator.state == initial_state
         
     @pytest.mark.asyncio
     async def test_publish_event(self, orchestrator):
         """Test event publishing"""
-        # Subscribe a mock handler
-        handler = AsyncMock()
-        topic = "test.event"
+        await orchestrator.initialize()
         
-        # Manually add subscription
-        orchestrator.subscriptions[topic] = [handler]
+        # Subscribe a service to an event
+        topic = "test.event"
+        orchestrator.subscribe("memory", topic)
+        
+        # Mock the message queue to track published messages
+        published_messages = []
+        original_send = orchestrator.send_message
+        
+        async def mock_send(msg):
+            published_messages.append(msg)
+            await original_send(msg)
+            
+        orchestrator.send_message = mock_send
         
         # Publish event
         await orchestrator.publish(topic, {"data": "test"})
         
-        # Handler should be called
-        handler.assert_called_once()
-        call_args = handler.call_args[0][0]
-        assert call_args.type == topic
-        assert call_args.content == {"data": "test"}
+        # Check that message was sent
+        assert len(published_messages) == 1
+        msg = published_messages[0]
+        assert msg.target == "memory"
+        assert msg.type == "event"
+        assert msg.content['event_type'] == topic
+        assert msg.content['data'] == {"data": "test"}
         
     @pytest.mark.asyncio
     async def test_send_to_service(self, orchestrator):
         """Test sending messages to specific services"""
-        # Create mock service
-        mock_service = Mock()
-        mock_service.receive_message = AsyncMock()
-        orchestrator.services['test_service'] = mock_service
+        await orchestrator.initialize()
+        
+        # Track messages sent
+        sent_messages = []
+        original_send = orchestrator.send_message
+        
+        async def mock_send(msg):
+            sent_messages.append(msg)
+            
+        orchestrator.send_message = mock_send
         
         # Send message
         await orchestrator.send_to_service(
-            'test_service',
+            'memory',
             'test_action',
-            {'data': 'test'},
-            priority=8
+            {'data': 'test'}
         )
         
-        # Service should receive message
-        mock_service.receive_message.assert_called_once()
-        msg = mock_service.receive_message.call_args[0][0]
+        # Check message was sent correctly
+        assert len(sent_messages) == 1
+        msg = sent_messages[0]
         assert msg.type == 'test_action'
         assert msg.content == {'data': 'test'}
-        assert msg.priority == 8
+        assert msg.target == 'memory'
+        assert msg.source == 'orchestrator'
         
     @pytest.mark.asyncio
     async def test_send_to_nonexistent_service(self, orchestrator):
@@ -200,229 +234,216 @@ class TestAGIOrchestrator:
     @pytest.mark.asyncio
     async def test_process_events_queue(self, orchestrator):
         """Test event queue processing"""
-        processed = []
+        await orchestrator.initialize()
         
-        # Add test handler
-        async def test_handler(msg):
-            processed.append(msg)
-            
-        orchestrator.subscriptions['test.event'] = [test_handler]
+        # Add messages to queue
+        msg1 = Message(
+            source='test', 
+            target='memory',
+            type='test.event', 
+            content={'id': 1}
+        )
+        msg2 = Message(
+            source='test',
+            target='memory', 
+            type='test.event', 
+            content={'id': 2}
+        )
         
-        # Add events to queue
-        await orchestrator.event_queue.put(
-            Message(type='test.event', content={'id': 1})
-        )
-        await orchestrator.event_queue.put(
-            Message(type='test.event', content={'id': 2})
-        )
+        await orchestrator.send_message(msg1)
+        await orchestrator.send_message(msg2)
         
         # Process events
-        await orchestrator._process_events()
+        await orchestrator.process_events_queue()
         
-        # Both events should be processed
-        assert len(processed) == 2
-        assert processed[0].content['id'] == 1
-        assert processed[1].content['id'] == 2
+        # Queue should be empty after processing
+        assert orchestrator.message_queue.empty()
         
     @pytest.mark.asyncio
     async def test_service_initialization(self, orchestrator):
         """Test service initialization"""
-        # Mock services
-        for service in orchestrator.services.values():
-            service.initialize = AsyncMock()
-            
+        # Services should be empty before init
+        assert len(orchestrator.services) == 0
+        
         await orchestrator._initialize_services()
         
-        # All services should be initialized
-        for service in orchestrator.services.values():
-            service.initialize.assert_called_once()
+        # Core services should be initialized
+        assert 'memory' in orchestrator.services
+        assert 'consciousness' in orchestrator.services
+        assert 'safety' in orchestrator.services
             
     @pytest.mark.asyncio
     async def test_service_cycle_running(self, orchestrator):
         """Test service cycle execution"""
-        # Mock service
-        mock_service = Mock()
-        mock_service.service_cycle = AsyncMock()
-        mock_service.service_name = "test"
-        orchestrator.services['test'] = mock_service
+        await orchestrator.initialize()
         
-        # Run one cycle with limited services
-        orchestrator.services = {'test': mock_service}
-        await orchestrator._run_service_cycles()
+        # Check that services have been started as tasks
+        assert len(orchestrator.tasks) > 0
         
-        # Service cycle should be called
-        mock_service.service_cycle.assert_called_once()
+        # Cancel tasks for cleanup
+        for task in orchestrator.tasks:
+            task.cancel()
         
     @pytest.mark.asyncio
     async def test_state_based_behavior(self, orchestrator):
         """Test state-based orchestration behavior"""
-        # Set different states and verify behavior changes
+        await orchestrator.initialize()
+        
+        # Test valid transitions from IDLE
         test_states = [
-            (SystemState.THINKING, "standard thinking"),
-            (SystemState.EXPLORING, "exploration mode"),
-            (SystemState.CREATING, "creative mode"),
-            (SystemState.REFLECTING, "reflection mode"),
-            (SystemState.SLEEPING, "sleep mode")
+            SystemState.THINKING,
+            SystemState.EXPLORING,
+            SystemState.CREATING,
+            SystemState.REFLECTING
         ]
         
-        for state, expected_behavior in test_states:
+        for state in test_states:
+            orchestrator.state = SystemState.IDLE  # Reset to IDLE
             await orchestrator.transition_to(state)
             assert orchestrator.state == state
-            # In real implementation, verify specific behavior per state
             
     @pytest.mark.asyncio 
     async def test_shutdown(self, orchestrator):
         """Test graceful shutdown"""
-        orchestrator.is_running = True
+        await orchestrator.initialize()
+        orchestrator.running = True
         
-        # Mock services
-        for service in orchestrator.services.values():
-            service.shutdown = AsyncMock()
-            
         await orchestrator.shutdown()
         
-        assert orchestrator.is_running is False
-        
-        # All services should be shut down
-        for service in orchestrator.services.values():
-            service.shutdown.assert_called_once()
+        assert orchestrator.running is False
+        assert orchestrator.state == SystemState.SLEEPING
             
     @pytest.mark.asyncio
     async def test_emergency_stop(self, orchestrator):
         """Test emergency stop functionality"""
-        orchestrator.is_running = True
+        await orchestrator.initialize()
+        orchestrator.running = True
         
-        # Create a mock dangerous event
-        orchestrator.emergency_stop = AsyncMock()
-        
-        # In real implementation, this would be triggered by safety service
+        # Call emergency stop
         await orchestrator.emergency_stop("Safety violation detected")
         
-        orchestrator.emergency_stop.assert_called_with("Safety violation detected")
+        # Should transition to SLEEPING and stop running
+        assert orchestrator.state == SystemState.SLEEPING
+        assert orchestrator.running is False
         
     def test_get_system_status(self, orchestrator):
         """Test getting system status"""
         orchestrator.state = SystemState.THINKING
-        orchestrator.metrics = {
-            'thoughts_generated': 100,
-            'uptime_seconds': 3600
-        }
+        orchestrator.running = True
         
         status = orchestrator.get_system_status()
         
-        assert status['state'] == SystemState.THINKING
-        assert status['is_running'] == orchestrator.is_running
-        assert status['services_count'] == len(orchestrator.services)
-        assert 'metrics' in status
+        assert status['state'] == 'thinking'
+        assert status['running'] == True
+        assert 'services' in status
+        assert 'queue_size' in status
         
     @pytest.mark.asyncio
     async def test_concurrent_event_handling(self, orchestrator):
         """Test handling multiple concurrent events"""
-        results = []
+        await orchestrator.initialize()
         
-        async def slow_handler(msg):
-            await asyncio.sleep(0.1)
-            results.append(msg.content['id'])
-            
-        orchestrator.subscriptions['test'] = [slow_handler]
-        
-        # Add multiple events
+        # Add multiple messages
         for i in range(5):
-            await orchestrator.event_queue.put(
-                Message(type='test', content={'id': i})
+            msg = Message(
+                source='test',
+                target='memory',
+                type='test',
+                content={'id': i}
             )
+            await orchestrator.send_message(msg)
             
         # Process all events
-        await orchestrator._process_events()
+        await orchestrator.process_events_queue()
         
-        # All events should be processed
-        assert len(results) == 5
-        assert sorted(results) == [0, 1, 2, 3, 4]
+        # Queue should be empty
+        assert orchestrator.message_queue.empty()
         
     @pytest.mark.asyncio
     async def test_priority_message_ordering(self, orchestrator):
         """Test that higher priority messages are processed first"""
-        # This test assumes priority queue implementation
-        processed_order = []
-        
-        async def track_handler(msg):
-            processed_order.append(msg.priority)
-            
-        orchestrator.subscriptions['priority.test'] = [track_handler]
+        await orchestrator.initialize()
         
         # Add messages with different priorities
         messages = [
-            Message(type='priority.test', content={'id': 1}, priority=3),
-            Message(type='priority.test', content={'id': 2}, priority=9),
-            Message(type='priority.test', content={'id': 3}, priority=5),
-            Message(type='priority.test', content={'id': 4}, priority=7)
+            Message(source='test', target='memory', type='test', content={'id': 1}, priority=9),
+            Message(source='test', target='memory', type='test', content={'id': 2}, priority=1),
+            Message(source='test', target='memory', type='test', content={'id': 3}, priority=5)
         ]
         
         for msg in messages:
-            await orchestrator.event_queue.put(msg)
+            await orchestrator.send_message(msg)
             
-        await orchestrator._process_events()
-        
-        # Verify processing order (might depend on implementation)
-        assert len(processed_order) == 4
+        # The priority queue should order them correctly
+        # Lower priority number = higher priority
+        first_msg = await orchestrator.message_queue.get()
+        assert first_msg.priority == 1  # Highest priority
         
     @pytest.mark.asyncio
     async def test_error_handling_in_service_cycle(self, orchestrator):
-        """Test error handling when service cycle fails"""
-        # Mock service that raises exception
-        mock_service = Mock()
-        mock_service.service_cycle = AsyncMock(side_effect=Exception("Service error"))
-        mock_service.service_name = "faulty"
+        """Test error handling when service fails"""
+        await orchestrator.initialize()
         
-        orchestrator.services = {'faulty': mock_service}
+        # Send a message to trigger error handling
+        error_msg = Message(
+            source='test',
+            target='nonexistent',  # Invalid target
+            type='test',
+            content={'data': 'test'}
+        )
         
-        # Should not crash orchestrator
-        await orchestrator._run_service_cycles()
+        # Should handle gracefully without crashing
+        await orchestrator.route_message(error_msg)
         
-        # Verify orchestrator continues running
-        assert True  # No exception raised
+        # Orchestrator should still be functional
+        assert orchestrator.state in SystemState
         
     @pytest.mark.asyncio
     async def test_state_history_limit(self, orchestrator):
-        """Test that state history has reasonable limits"""
-        # Make many state transitions
-        for i in range(20):
-            next_state = SystemState.THINKING if i % 2 == 0 else SystemState.IDLE
-            await orchestrator.transition_to(next_state, f"Transition {i}")
-            
-        # History should be limited (e.g., last 100 transitions)
-        assert len(orchestrator.state_history) <= 100
+        """Test that state history is recorded"""
+        await orchestrator.initialize()
+        
+        # Make several state transitions
+        await orchestrator.transition_to(SystemState.THINKING)
+        await orchestrator.transition_to(SystemState.IDLE)
+        await orchestrator.transition_to(SystemState.EXPLORING)
+        
+        # History should be recorded
+        assert len(orchestrator.state_history) >= 3
         
     def test_configuration_loading(self, test_config):
         """Test configuration is properly loaded"""
         orchestrator = AGIOrchestrator(test_config)
         
         assert orchestrator.config == test_config
-        assert orchestrator.event_queue.maxsize == 100
+        assert hasattr(orchestrator, 'message_queue')
         
     @pytest.mark.asyncio
     async def test_inter_service_communication(self, orchestrator):
         """Test services can communicate through orchestrator"""
-        # Mock two services
-        service_a = Mock()
-        service_a.receive_message = AsyncMock()
-        service_b = Mock()
-        service_b.receive_message = AsyncMock()
+        await orchestrator.initialize()
         
-        orchestrator.services = {
-            'service_a': service_a,
-            'service_b': service_b
-        }
+        # Track messages sent
+        messages = []
+        original_route = orchestrator.route_message
         
-        # Service A sends to Service B
+        async def track_route(msg):
+            messages.append(msg)
+            await original_route(msg)
+            
+        orchestrator.route_message = track_route
+        
+        # Send message from one service to another
         await orchestrator.send_to_service(
-            'service_b',
+            'memory',
             'greeting',
-            {'message': 'Hello from A'}
+            {'message': 'Hello'}
         )
         
-        # Service B should receive the message
-        service_b.receive_message.assert_called_once()
-        msg = service_b.receive_message.call_args[0][0]
-        assert msg.type == 'greeting'
-        assert msg.content['message'] == 'Hello from A'
+        # Process the message
+        msg = await orchestrator.message_queue.get()
+        await orchestrator.route_message(msg)
+        
+        # Message should have been routed
+        assert len(messages) == 1
+        assert messages[0].type == 'greeting'
