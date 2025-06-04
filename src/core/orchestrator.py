@@ -103,7 +103,7 @@ class AGIOrchestrator:
         """Main event loop"""
         await self.initialize()
         
-        while True:
+        while self.running:
             try:
                 # Process messages with timeout
                 message = await asyncio.wait_for(
@@ -114,10 +114,17 @@ class AGIOrchestrator:
                 
             except asyncio.TimeoutError:
                 # No messages - run idle tasks
-                await self.idle_cycle()
+                if self.running:
+                    await self.idle_cycle()
+                
+            except asyncio.CancelledError:
+                # Task cancelled, exit gracefully
+                logger.info("Orchestrator task cancelled")
+                break
                 
             except Exception as e:
-                await self.handle_error(e)
+                if self.running:
+                    await self.handle_error(e)
                 
     async def route_message(self, message: Message):
         """Route messages between services"""
@@ -285,17 +292,20 @@ class AGIOrchestrator:
 
     async def shutdown(self):
         """Gracefully shutdown all services"""
+        logger.info("Starting orchestrator shutdown")
         self.running = False
         self.state = SystemState.SLEEPING
         
         # Cancel all service tasks
         for task in self.tasks:
-            task.cancel()
-            
-        # Wait for services to shutdown
-        await asyncio.gather(*self.tasks, return_exceptions=True)
+            if not task.done():
+                task.cancel()
+        
+        # Wait for tasks to complete cancellation
+        if self.tasks:
+            await asyncio.gather(*self.tasks, return_exceptions=True)
         
         # Close connections
-        for service in self.services.values():
+        for service_name, service in self.services.items():
             if hasattr(service, 'close'):
                 await service.close()

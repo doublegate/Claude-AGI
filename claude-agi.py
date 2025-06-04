@@ -43,7 +43,7 @@ from collections import deque
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Import AGI components
-from src.core.orchestrator import AGIOrchestrator, SystemState
+from src.core.orchestrator import AGIOrchestrator, SystemState, Message
 from src.memory.manager import MemoryManager
 from src.consciousness.stream import ConsciousnessStream
 from src.database.models import EmotionalState, Goal, Interest, StreamType
@@ -751,8 +751,8 @@ class ClaudeAGI:
                 # Single screen update
                 curses.doupdate()
                 
-                # Shorter sleep for more responsive feel
-                await asyncio.sleep(0.5)
+                # Check for updates frequently but only redraw when needed
+                await asyncio.sleep(0.1)
             except Exception as e:
                 logger.error(f"UI refresh error: {e}")
                 needs_full_redraw = True  # Redraw everything on error
@@ -807,17 +807,23 @@ class ClaudeAGI:
                                     self.metrics['thoughts_generated'] += 1
                                     self.total_thoughts += 1
                                     
-                                    # Store thought in memory
+                                    # Store thought in memory via orchestrator message system
                                     if self.memory_manager and importance > 3:  # Only store meaningful thoughts
-                                        await self.memory_manager.store_thought({
-                                            'type': 'thought',
-                                            'content': thought_text,
-                                            'stream': stream_id,
-                                            'timestamp': datetime.now().isoformat(),
-                                            'importance': importance,
-                                            'emotional_tone': thought.get('emotional_tone', 'neutral'),
-                                            'stream_type': stream_id
-                                        })
+                                        message = Message(
+                                            source='consciousness',
+                                            target='memory',
+                                            type='store_thought',
+                                            content={
+                                                'type': 'thought',
+                                                'content': thought_text,
+                                                'stream': stream_id,
+                                                'timestamp': datetime.now().isoformat(),
+                                                'importance': importance,
+                                                'emotional_tone': thought.get('emotional_tone', 'neutral'),
+                                                'stream_type': stream_id
+                                            }
+                                        )
+                                        await self.orchestrator.send_message(message)
                                         self.metrics['memories_stored'] += 1
                                     
                                     # Update emotional state
@@ -1013,7 +1019,7 @@ class ClaudeAGI:
                     
                 self.metrics['memories_stored'] = working_count + long_term_count
                 
-                # Force update of memory pane
+                # Force immediate update of memory pane
                 if PaneType.MEMORY in self.panes:
                     self._draw_pane(self.panes[PaneType.MEMORY])
                     self.panes[PaneType.MEMORY].window.noutrefresh()
@@ -1113,7 +1119,7 @@ class ClaudeAGI:
         if subcmd == "add" and len(args) > 1:
             description = " ".join(args[1:])
             goal = Goal(
-                goal_id=f"goal_{datetime.now().timestamp()}",
+                id=f"goal_{datetime.now().timestamp()}",
                 description=description,
                 priority=0.5,
                 created_at=datetime.now(),
@@ -1128,7 +1134,7 @@ class ClaudeAGI:
                 if 0 <= index < len(self.active_goals):
                     goal = self.active_goals.pop(index)
                     goal.status = "completed"
-                    goal.completed_at = datetime.now()
+                    goal.updated_at = datetime.now()
                     self.completed_goals.append(goal)
                     self.metrics['goals_completed'] += 1
                     self.add_system_line(f"Completed goal: {goal.description}", 3)
@@ -1255,16 +1261,6 @@ class ClaudeAGI:
         self.add_system_line("Shutting down Claude-AGI...", 3)
         self.running = False
         
-        # Cancel all tracked tasks properly
-        if hasattr(self.orchestrator, 'tasks'):
-            for task in self.orchestrator.tasks:
-                if not task.done():
-                    task.cancel()
-        
-        # Shut down orchestrator
-        if self.orchestrator:
-            await self.orchestrator.shutdown()
-        
     async def show_help(self, args: List[str] = None):
         """Show help information"""
         help_sections = {
@@ -1333,15 +1329,21 @@ class ClaudeAGI:
             "timestamp": datetime.now()
         })
         
-        # Store in memory
+        # Store in memory via orchestrator
         if self.memory_manager:
-            await self.memory_manager.store_thought({
-                'type': 'conversation',
-                'content': f"User said: {message}",
-                'timestamp': datetime.now().isoformat(),
-                'importance': 6,
-                'stream_type': 'conversation'
-            })
+            message_obj = Message(
+                source='chat',
+                target='memory',
+                type='store_thought',
+                content={
+                    'type': 'conversation',
+                    'content': f"User said: {message}",
+                    'timestamp': datetime.now().isoformat(),
+                    'importance': 6,
+                    'stream_type': 'conversation'
+                }
+            )
+            await self.orchestrator.send_message(message_obj)
         
         # Notify consciousness of user input
         if self.consciousness:
@@ -1360,15 +1362,21 @@ class ClaudeAGI:
             "timestamp": datetime.now()
         })
         
-        # Store response in memory
+        # Store response in memory via orchestrator
         if self.memory_manager:
-            await self.memory_manager.store_thought({
-                'type': 'conversation',
-                'content': f"I responded: {response}",
-                'timestamp': datetime.now().isoformat(),
-                'importance': 5,
-                'stream_type': 'conversation'
-            })
+            message_obj = Message(
+                source='chat',
+                target='memory',
+                type='store_thought',
+                content={
+                    'type': 'conversation',
+                    'content': f"I responded: {response}",
+                    'timestamp': datetime.now().isoformat(),
+                    'importance': 5,
+                    'stream_type': 'conversation'
+                }
+            )
+            await self.orchestrator.send_message(message_obj)
         
         self.in_conversation = False
         
@@ -1405,7 +1413,7 @@ class ClaudeAGI:
                 ch = self.stdscr.getch()
                 
                 if ch == -1:  # No input
-                    await asyncio.sleep(0.01)
+                    await asyncio.sleep(0.0001)  # Ultra-short delay for max responsiveness
                     continue
                     
                 # Handle special keys
@@ -1557,14 +1565,16 @@ class ClaudeAGI:
             else:
                 self.add_system_line("Safety framework initializing...", 3)
             
+            # Store tasks for cleanup
+            self.tasks = [orchestrator_task, consciousness_task, input_task, ui_refresh_task]
+            
             # Run until stopped
-            await asyncio.gather(
-                orchestrator_task,
-                consciousness_task, 
-                input_task,
-                ui_refresh_task,
-                return_exceptions=True
-            )
+            try:
+                await asyncio.gather(*self.tasks, return_exceptions=True)
+            except asyncio.CancelledError:
+                logger.info("Main tasks cancelled")
+            except Exception as e:
+                logger.error(f"Error in main loop: {e}")
             
         except asyncio.CancelledError:
             logger.info("Async tasks cancelled")
@@ -1575,10 +1585,6 @@ class ClaudeAGI:
             # Cleanup
             logger.info("Shutting down Claude-AGI...")
             self.running = False
-            
-            # Save any final state
-            if self.memory_manager:
-                await self.memory_manager.consolidate_memories()
                 
     def run(self, stdscr):
         """Main run method called by curses wrapper"""
@@ -1596,9 +1602,55 @@ class ClaudeAGI:
         except Exception as e:
             logger.error(f"Fatal error: {e}", exc_info=True)
         finally:
-            # Ensure clean shutdown
-            if loop:
-                loop.close()
+            # Cancel all tasks
+            if hasattr(self, 'tasks'):
+                for task in self.tasks:
+                    if not task.done():
+                        task.cancel()
+            
+            # Shutdown orchestrator properly
+            if hasattr(self, 'orchestrator') and self.orchestrator:
+                try:
+                    # Create a new loop for cleanup if current is closed
+                    if loop and loop.is_closed():
+                        cleanup_loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(cleanup_loop)
+                        cleanup_loop.run_until_complete(self.orchestrator.shutdown())
+                        cleanup_loop.close()
+                    elif loop:
+                        loop.run_until_complete(self.orchestrator.shutdown())
+                except Exception as e:
+                    logger.error(f"Error during orchestrator shutdown: {e}")
+            
+            # Clean up curses
+            try:
+                curses.endwin()
+            except:
+                pass
+                
+            # Close event loop properly
+            if loop and not loop.is_closed():
+                try:
+                    # Stop the loop first to prevent new tasks
+                    loop.stop()
+                    
+                    # Get all pending tasks
+                    pending = [t for t in asyncio.all_tasks(loop) if not t.done()]
+                    for task in pending:
+                        task.cancel()
+                    
+                    # Run once more to handle cancellations
+                    if pending:
+                        loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+                except:
+                    pass
+                finally:
+                    # Close all async generators
+                    try:
+                        loop.run_until_complete(loop.shutdown_asyncgens())
+                    except:
+                        pass
+                    loop.close()
             
 
 def main():

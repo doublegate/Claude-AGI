@@ -54,8 +54,11 @@ kubectl apply -f deployment/kubernetes/
 4. Memory persistence should be considered for all stateful operations
 5. Test coverage requirements: 90% for core components, 100% for safety-critical code
 6. Emotional impact assessment required for user-facing features
-7. When developing TUI features, ensure responsive input handling (minimal polling delays)
+7. When developing TUI features, ensure ultra-responsive input handling (0.1ms polling)
 8. Always verify service message handlers are properly connected to orchestrator
+9. Check orchestrator running flag in main loop to prevent infinite loops
+10. Handle CancelledError exceptions gracefully during shutdown
+11. Avoid duplicate curses cleanup calls to prevent ERR exceptions
 
 ## Key Implementation Notes
 

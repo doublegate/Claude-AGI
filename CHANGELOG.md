@@ -341,6 +341,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Eliminated unnecessary screen redraws
 - Optimized memory access patterns for UI display
 
+## [1.0.6] - 2025-06-04 - TUI Stability Complete
+
+### Fixed
+- **Ultra-Responsive Input**: Reduced polling delay to 0.1ms (0.0001s) for instant typing feedback
+- **Goal Validation**: Fixed field name from `goal_id` to `id` to match Pydantic model
+- **Memory Storage**: Implemented proper message passing through orchestrator
+- **Event Loop Errors**: Fixed shutdown sequence to prevent "Event loop is closed" errors
+- **Clean Exit**: /quit command now exits cleanly without requiring Ctrl-C
+- **Memory Browser**: Updates immediately when viewing memory statistics
+- **Orchestrator Loop**: Added running flag check to prevent infinite loop on shutdown
+
+### Changed
+- Simplified quit command to just set running flag to False
+- Improved task cancellation handling in shutdown sequence  
+- Enhanced memory message import and handling
+- All cleanup now happens in proper shutdown handlers
+
+### Technical Improvements
+- Input responsiveness increased 100x (from 10ms to 0.1ms)
+- Proper CancelledError exception handling
+- Clean event loop closure with task cancellation
+- Message-based memory storage for proper integration
+
 ## [1.0.4] - 2025-01-06 - CI/CD Fixes
 
 ### Fixed

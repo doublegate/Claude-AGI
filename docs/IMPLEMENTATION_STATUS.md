@@ -5,10 +5,10 @@ This document tracks the implementation status of all Claude-AGI components.
 ## Overview
 
 **Phase 1 Status**: ✅ Complete (100% Implementation, Test Suite Fully Operational)  
-**TUI Status**: ✅ Fixed (v1.0.5) - Performance and functionality issues resolved  
+**TUI Status**: ✅ Stable (v1.0.6) - All issues resolved, ultra-responsive input  
 **Test Suite**: ✅ All 153 tests passing (100% pass rate, 49.61% coverage)  
 **CI/CD Status**: ✅ All GitHub Actions jobs passing (v1.0.4)  
-**Last Updated**: 2025-06-03 (TUI Performance Fixes)
+**Last Updated**: 2025-06-04 (TUI Stability Complete)
 
 ## Core Components
 
@@ -79,6 +79,11 @@ This document tracks the implementation status of all Claude-AGI components.
      - Goal creation validation fixed
      - Clean shutdown with /quit command
      - Reduced UI flickering
+   - **v1.0.6 FIXES**:
+     - Ultra-responsive input (0.1ms polling)
+     - Event loop errors eliminated
+     - Proper message-based memory storage
+     - Clean exit without Ctrl-C requirement
 
 8. **Exploration Engine** (`src/exploration/engine.py`)
    - Interest tracking with decay
