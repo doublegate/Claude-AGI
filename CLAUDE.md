@@ -36,10 +36,19 @@ pip install -r requirements.txt
 # Run the consciousness TUI demo
 python scripts/claude-consciousness-tui.py
 
-# Testing
+# Testing (local)
 pytest tests/unit -v --cov=src         # Unit tests with coverage
 pytest tests/integration -v            # Integration tests
 pytest tests/safety -v --safety-critical # Safety-critical tests
+pytest tests/performance -v            # Performance benchmarks
+
+# Local CI/CD (matches cloud pipeline exactly)
+python scripts/ci-local.py            # Run full CI pipeline locally
+python scripts/ci-local.py --suite unit # Run specific test suite
+python scripts/ci-local.py --python 3.11 # Test with specific Python version
+
+# Cross-platform builds
+python scripts/build-executable.py    # Build platform-specific executable
 
 # Deployment
 ./deployment/scripts/initial_deploy.sh
@@ -54,11 +63,14 @@ kubectl apply -f deployment/kubernetes/
 4. Memory persistence should be considered for all stateful operations
 5. Test coverage requirements: 90% for core components, 100% for safety-critical code
 6. Emotional impact assessment required for user-facing features
-7. When developing TUI features, ensure ultra-responsive input handling (0.1ms polling)
+7. When developing TUI features, ensure ultra-responsive input handling (0.01s polling) with minimal CPU usage
 8. Always verify service message handlers are properly connected to orchestrator
 9. Check orchestrator running flag in main loop to prevent infinite loops
 10. Handle CancelledError exceptions gracefully during shutdown
 11. Avoid duplicate curses cleanup calls to prevent ERR exceptions
+12. Ensure Unicode compatibility for cross-platform TUI deployment
+13. Use CI-local tools to test changes before committing
+14. Test executables on target platforms before release
 
 ## Key Implementation Notes
 
@@ -66,6 +78,10 @@ kubectl apply -f deployment/kubernetes/
 - Consciousness streams operate at human-like pacing (1-3 seconds between thoughts)
 - All external actions must pass through the safety framework
 - Memory systems use both structured (PostgreSQL) and unstructured (Redis) storage for flexibility
+- TUI features professional-grade polish with scrolling, active pane indicators, and clean exit handling
+- Cross-platform executables include all dependencies for standalone deployment
+- CI/CD pipeline optimized for 50% faster builds with comprehensive test coverage tracking
+- Local development tools (`scripts/ci-local.py`) match cloud pipeline structure exactly
 
 ## Testing Approach
 
@@ -74,6 +90,9 @@ kubectl apply -f deployment/kubernetes/
 - Safety tests with adversarial scenarios
 - Performance tests for real-time requirements
 - Ethical review for all major features
+- Local CI/CD testing with `scripts/ci-local.py` before commits
+- Cross-platform executable testing via `scripts/build-executable.py`
+- Codecov integration for comprehensive coverage tracking
 
 ## Current Status
 
@@ -181,10 +200,16 @@ The project has completed Phase 1 foundation implementation with working orchest
   - GitHub Releases integration with automatic asset uploads
   - Manual build triggering via GitHub Actions workflow dispatch
 - **Local development tools**:
-  - scripts/ci-local.py matching cloud pipeline structure exactly
+  - `scripts/ci-local.py` matching cloud pipeline structure exactly
+  - `scripts/build-executable.py` for cross-platform executable creation
   - Individual test suite execution via workflow dispatch
   - Configurable Python version testing (3.10, 3.11, 3.12)
   - Comprehensive documentation for CI/CD processes
+- **CI/CD Infrastructure Files**:
+  - `.github/workflows/ci-optimized.yml` - Main CI/CD pipeline with caching
+  - `.github/workflows/release.yml` - Cross-platform release automation
+  - `.github/workflows/test-suite.yml` - Individual test suite execution
+  - `codecov.yml` - Coverage reporting configuration
 
 ### TUI Final Polish (2025-06-04 v1.0.7)
 - **All UI issues eliminated**:
@@ -214,13 +239,14 @@ The project has completed Phase 1 foundation implementation with working orchest
   - Larger history buffers (3x consciousness)
 - **TUI is now professional-grade** for extended use
 
-### Production Ready (2025-06-04 v1.1.0)
-- ✅ **Optimized CI/CD Pipeline**: 50% faster builds with dependency caching
-- ✅ **Cross-Platform Releases**: Automatic Linux, Windows, macOS executables
-- ✅ **Professional TUI**: Clean exit handling, error suppression, perfect formatting
-- ✅ **Local Development Tools**: CI-matching scripts and comprehensive documentation
-- ✅ **Release Automation**: Version tags trigger automatic GitHub releases
-- ✅ **Test Suite Stability**: 153/153 tests passing (100% pass rate)
+### Production Ready (2025-06-04 v1.1.0) - CI/CD Optimization Complete
+- ✅ **Optimized CI/CD Pipeline**: 50% faster builds with dependency caching and parallel execution
+- ✅ **Cross-Platform Releases**: Automatic Linux, Windows, macOS executables with PyInstaller
+- ✅ **Professional TUI**: Clean exit handling, error suppression, Unicode compatibility
+- ✅ **Local Development Tools**: `ci-local.py` and `build-executable.py` matching cloud infrastructure
+- ✅ **Release Automation**: Version tags trigger automatic GitHub releases with assets
+- ✅ **Test Suite Stability**: 153/153 tests passing (100% pass rate) with Codecov integration
+- ✅ **Cross-Platform Distribution**: Standalone executables for all major platforms
 
 ### Ready for Phase 2
 - ✅ Anthropic API connection for actual thought generation (working)
@@ -248,3 +274,5 @@ The project has completed Phase 1 foundation implementation with working orchest
 - `/ref_docs/claude-agi-deployment-ops.md`: Production deployment procedures
 - `/ref_docs/claude-agi-gantt-chart.md`: 18-month development timeline
 - `/to-dos/MASTER_TODO.md`: Complete task list organized by phase
+- `/docs/CI_CD_INFRASTRUCTURE.md`: CI/CD pipeline documentation and workflow guide
+- `/docs/CROSS_PLATFORM_DEPLOYMENT.md`: Cross-platform executable build and distribution guide

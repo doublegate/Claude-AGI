@@ -157,6 +157,12 @@ models/
 checkpoints/
 .env.local
 .env.*.local
+
+# Build artifacts
+claude-agi-linux-x86_64/
+claude-agi-windows-x86_64/
+claude-agi-macos-x86_64/
+artifacts/
 secrets/
 credentials/
 

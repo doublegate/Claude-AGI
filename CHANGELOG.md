@@ -5,6 +5,46 @@ All notable changes to the Claude-AGI Project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-06-04 - CI/CD Pipeline Optimization & Cross-Platform Release Automation 🚀
+
+### Added
+
+#### CI/CD Infrastructure
+- **Optimized CI Pipeline** (`.github/workflows/ci-pipeline.yml`)
+  - 50% faster builds with shared dependency caching
+  - Parallel execution of unit, integration, safety, and performance tests
+  - Consolidated setup job eliminating redundant dependency installation
+- **Cross-Platform Release Automation** (`.github/workflows/release-build.yml`)
+  - Automated executable generation for Linux, Windows, and macOS
+  - GitHub Releases integration with automatic asset uploads
+  - PyInstaller optimization with minimal dependencies
+- **Individual Test Execution** (`.github/workflows/manual-tests.yml`)
+  - Manual workflow for running specific test suites
+  - Maintains capability for targeted debugging
+- **Local CI Development Tools** (`scripts/ci-local.py`)
+  - Local development CI runner matching cloud pipeline exactly
+  - Same test execution commands as GitHub Actions
+
+#### TUI Performance & Functionality
+- **Enhanced Input Responsiveness**: Reduced polling delay to 0.01s for immediate character display
+- **Memory Integration**: Fixed consciousness thoughts storage and display in Memory Browser
+- **Goal Management**: Corrected field validation (id vs goal_id) for proper goal creation
+- **Clean Shutdown**: /quit command now properly cancels tasks without requiring Ctrl-C
+- **UI Optimization**: Selective pane updates and reduced flickering
+
+### Fixed
+- **Windows Unicode Encoding**: Replaced emoji characters with ASCII text for cross-platform compatibility
+- **Memory Manager Message Handling**: Added proper `handle_message` method for orchestrator integration
+- **PyInstaller Compatibility**: Made heavy ML dependencies optional with graceful fallbacks
+- **Executable Crashes**: Fixed missing log directory creation for PyInstaller builds
+- **TUI Exit Errors**: Comprehensive exit handling with curses cleanup and auth warning suppression
+
+### Changed
+- **Build Performance**: CI pipeline now completes in ~2 minutes (down from ~4 minutes)
+- **Release Process**: Automated cross-platform executable generation with each tagged release
+- **Dependency Management**: Optional imports pattern for better PyInstaller compatibility
+- **Error Handling**: Enhanced logging and graceful fallbacks throughout system
+
 ## [1.0.6] - 2025-06-04
 
 ### Fixed

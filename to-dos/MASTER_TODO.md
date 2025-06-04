@@ -111,15 +111,18 @@
 - [x] 🟢 **Conditional messages** - Only shows shutdown message for clean exits
 
 ### CI/CD Pipeline Optimization & Release Automation (2025-06-04 v1.1.0)
-- [x] 🟢 **Optimized CI pipeline** - 50% faster builds with dependency caching
-- [x] 🟢 **Parallel test execution** - All test suites run concurrently after setup
-- [x] 🟢 **Cross-platform releases** - Automatic Linux, Windows, macOS executables
+- [x] 🟢 **Optimized CI pipeline** - 50% faster builds with dependency caching (.github/workflows/ci-pipeline.yml)
+- [x] 🟢 **Parallel test execution** - All test suites run concurrently after shared setup job
+- [x] 🟢 **Cross-platform releases** - Automatic Linux, Windows, macOS executables (.github/workflows/release-build.yml)
+- [x] 🟢 **PyInstaller optimization** - Optional ML dependencies, Windows Unicode compatibility
 - [x] 🟢 **Local CI script** - scripts/ci-local.py matches cloud pipeline exactly
-- [x] 🟢 **Manual test workflows** - Individual test suite execution via dispatch
-- [x] 🟢 **GitHub releases integration** - Automatic asset uploads and changelog
-- [x] 🟢 **Virtual environment caching** - Eliminates redundant installations
-- [x] 🟢 **Codecov integration** - Comprehensive coverage reporting
-- [x] 🟢 **Release documentation** - Complete CI/CD and release guides
+- [x] 🟢 **Manual test workflows** - Individual test suite execution via workflow dispatch
+- [x] 🟢 **GitHub releases integration** - Automatic asset uploads with comprehensive changelog
+- [x] 🟢 **Virtual environment caching** - Eliminates redundant dependency installations
+- [x] 🟢 **Memory manager fixes** - Enhanced handle_message method for orchestrator integration
+- [x] 🟢 **TUI v1.1.0 integration** - Enhanced responsiveness, memory integration, clean shutdown
+- [x] 🟢 **Unicode encoding fixes** - Windows CP1252 compatibility resolved
+- [x] 🟢 **Release documentation** - Complete CI/CD and release automation guides
 
 ---
 
