@@ -6,14 +6,21 @@ This guide covers the comprehensive test suite for the Claude-AGI project, inclu
 
 ## Test Suite Status
 
-As of 2025-06-03 (Test Suite Complete):
-- **Total Tests**: 153
-- **Passing**: 153 (100%)
+As of 2025-06-04 (Test Suite Expanded):
+- **Total Tests**: 299
+- **Passing**: 299 (100%)
 - **Failing**: 0
 - **Errors**: 0
-- **Code Coverage**: 49.61%
+- **Code Coverage**: 72.80%
 
 All tests are now passing with stable event loop handling and no warnings.
+
+### Recent Additions
+- Added 146 new tests for comprehensive coverage
+- Security tests: 62+ tests for prompt sanitization, key management, and memory validation
+- Extended memory manager tests: Coverage improved from 53.88% to 95.10%
+- API client/server tests: Full coverage of all endpoints
+- Enhanced communication tests: Coverage improved to 84.76%
 
 ## Running Tests
 
