@@ -320,7 +320,20 @@ jobs:
           VERSION="${{ github.event.inputs.version || github.ref_name }}"
           
           if [ "${{ steps.check_release.outputs.exists }}" = "true" ]; then
-            echo "Uploading artifacts to existing release..."
+            echo "Existing release found. Removing old build artifacts before uploading new ones..."
+            
+            # Get list of existing assets
+            EXISTING_ASSETS=$(gh release view "$VERSION" --json assets -q '.assets[].name')
+            
+            # Delete existing build artifacts (preserve other files)
+            for asset in $EXISTING_ASSETS; do
+              if [[ "$asset" == claude-agi-*.tar.gz ]] || [[ "$asset" == claude-agi-*.zip ]]; then
+                echo "Deleting old artifact: $asset"
+                gh release delete-asset "$VERSION" "$asset" -y || true
+              fi
+            done
+            
+            echo "Uploading new artifacts to existing release..."
             for file in release-assets/*; do
               echo "Uploading: $file"
               gh release upload "$VERSION" "$file" --clobber || true
