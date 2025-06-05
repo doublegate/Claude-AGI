@@ -266,39 +266,6 @@ jobs:
           find artifacts -name "claude-agi-*" -type f \( -name "*.zip" -o -name "*.tar.gz" \) -exec cp {} release-assets/ \;
           ls -la release-assets/
 
-      - name: Generate release notes
-        id: release_notes
-        run: |
-          VERSION="${{ github.event.inputs.version || github.ref_name }}"
-
-          # Extract changelog entry for this version
-          if grep -q "## \[$VERSION\]" CHANGELOG.md; then
-            NOTES=$(sed -n "/## \[$VERSION\]/,/## \[/p" CHANGELOG.md | head -n -1 | tail -n +2)
-          else
-            NOTES="Release $VERSION
-
-          ## What's New
-          - Claude-AGI executable builds for Linux, Windows, and macOS
-          - Standalone deployment without Python installation required
-          - All Phase 1 features included in portable format
-
-          ## Installation
-          1. Download the appropriate executable for your platform
-          2. Extract the archive
-          3. Run \`claude-agi --help\` to get started
-
-          ## System Requirements
-          - Terminal with color support
-          - Minimum 80x20 terminal size
-          - For API features: ANTHROPIC_API_KEY environment variable
-
-          See the full [CHANGELOG.md](https://github.com/doublegate/Claude-AGI/blob/main/CHANGELOG.md) for detailed changes."
-          fi
-
-          # Write to file for multi-line output
-          echo "$NOTES" > release_notes.txt
-          echo "notes_file=release_notes.txt" >> $GITHUB_OUTPUT
-
       - name: Check if release exists
         id: check_release
         run: |
@@ -314,6 +281,45 @@ jobs:
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          VERSION="${{ github.event.inputs.version || github.ref_name }}"
+          
+          # Only generate notes if we're creating a new release
+          if [ "${{ steps.check_release.outputs.exists }}" = "false" ]; then
+            # Extract changelog entry for this version
+            if grep -q "## \[$VERSION\]" CHANGELOG.md; then
+              NOTES=$(sed -n "/## \[$VERSION\]/,/## \[/p" CHANGELOG.md | head -n -1 | tail -n +2)
+            else
+              NOTES="Release $VERSION
+
+            ## What's New
+            - Claude-AGI executable builds for Linux, Windows, and macOS
+            - Standalone deployment without Python installation required
+            - All Phase 1 features included in portable format
+
+            ## Installation
+            1. Download the appropriate executable for your platform
+            2. Extract the archive
+            3. Run \`claude-agi --help\` to get started
+
+            ## System Requirements
+            - Terminal with color support
+            - Minimum 80x20 terminal size
+            - For API features: ANTHROPIC_API_KEY environment variable
+
+            See the full [CHANGELOG.md](https://github.com/doublegate/Claude-AGI/blob/main/CHANGELOG.md) for detailed changes."
+            fi
+
+            # Write to file for multi-line output
+            echo "$NOTES" > release_notes.txt
+            echo "notes_file=release_notes.txt" >> $GITHUB_OUTPUT
+          else
+            echo "Existing release found, skipping notes generation"
+            echo "notes_file=" >> $GITHUB_OUTPUT
+          fi
 
       - name: Update existing release or create new one
         run: |
