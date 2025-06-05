@@ -7,7 +7,7 @@ Provides REST API endpoints for interacting with the consciousness system.
 
 import os
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 from contextlib import asynccontextmanager
 
@@ -83,7 +83,7 @@ class SystemStatus(BaseModel):
 orchestrator: Optional[AGIOrchestrator] = None
 memory_manager: Optional[MemoryManager] = None
 thought_generator: Optional[ThoughtGenerator] = None
-startup_time: datetime = datetime.utcnow()
+startup_time: datetime = datetime.now(timezone.utc)
 
 
 @asynccontextmanager
@@ -152,7 +152,7 @@ async def health_check():
     """Health check endpoint"""
     return {
         "status": "healthy",
-        "timestamp": datetime.utcnow(),
+        "timestamp": datetime.now(timezone.utc),
         "components": {
             "orchestrator": orchestrator is not None and orchestrator.running,
             "memory": memory_manager is not None,
@@ -168,7 +168,7 @@ async def get_status():
     if not orchestrator:
         raise HTTPException(status_code=503, detail="System not initialized")
     
-    uptime = (datetime.utcnow() - startup_time).total_seconds()
+    uptime = (datetime.now(timezone.utc) - startup_time).total_seconds()
     
     # Get consciousness stream info
     consciousness_service = orchestrator.services.get('consciousness')
@@ -284,7 +284,7 @@ async def have_conversation(request: ConversationRequest):
     
     try:
         # Generate conversation ID if not provided
-        conversation_id = request.conversation_id or f"conv-{datetime.utcnow().timestamp()}"
+        conversation_id = request.conversation_id or f"conv-{datetime.now(timezone.utc).timestamp()}"
         
         # Update orchestrator state
         orchestrator.state = SystemState.CONVERSING

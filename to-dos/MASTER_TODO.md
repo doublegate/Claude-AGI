@@ -61,7 +61,7 @@
 - [x] 🟢 **Emergency Protocols** - Crisis response framework
 - [x] 🟢 **Disaster Recovery** - Complete recovery procedures
 
-### CI/CD Pipeline Complete (2025-01-06)
+### CI/CD Pipeline Complete (2025-06-04)
 - [x] 🟢 **Performance tests fixed** - Removed pull request condition, now runs on all pushes
 - [x] 🟢 **Unit test fixed** - test_service_cycle_running handles CLAUDE_AGI_TEST_MODE
 - [x] 🟢 **All CI/CD jobs passing** - Unit, integration, safety, and performance tests
@@ -123,6 +123,19 @@
 - [x] 🟢 **TUI v1.1.0 integration** - Enhanced responsiveness, memory integration, clean shutdown
 - [x] 🟢 **Unicode encoding fixes** - Windows CP1252 compatibility resolved
 - [x] 🟢 **Release documentation** - Complete CI/CD and release automation guides
+
+### Test Suite Expansion Complete (2025-06-04 v1.2.0)
+- [x] 🟢 **Test count increased** - From 153 to 299 tests (+146 new tests)
+- [x] 🟢 **Coverage improved** - From 49.22% to 72.80% (+23.58%)
+- [x] 🟢 **API client tests** - 19 comprehensive tests for all HTTP/WebSocket methods
+- [x] 🟢 **Memory manager tests** - 55 additional tests, coverage 53.88% → 95.10%
+- [x] 🟢 **Communication tests** - 14 tests added, coverage 62.86% → 84.76%
+- [x] 🟢 **API server tests fixed** - Removed non-existent endpoints, added missing ones
+- [x] 🟢 **Exploration engine fixed** - RateLimiter API and WebExplorer tests corrected
+- [x] 🟢 **Main module tests** - All passing with 98.72% coverage
+- [x] 🟢 **Performance tests** - Thresholds adjusted for test environment
+- [x] 🟢 **All tests passing** - 299/299 tests pass (100% success rate)
+- [x] 🟢 **DEFERRED_TEST_IMPLEMENTATIONS.md** - Comprehensive documentation of all test changes
 
 ---
 
