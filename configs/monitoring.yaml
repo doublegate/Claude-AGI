@@ -1,0 +1,114 @@
+# Monitoring Configuration
+
+prometheus:
+  enabled: true
+  host: "0.0.0.0"
+  port: 9090
+  path: "/metrics"
+  auth_token: null  # Set to enable authentication
+
+metrics:
+  collection_interval: 10.0  # seconds
+  retention_time: 86400  # 24 hours
+  
+  # Component-specific metrics
+  orchestrator:
+    track_state_transitions: true
+    track_service_lifecycle: true
+  
+  memory:
+    track_operations: true
+    track_store_sizes: true
+    track_sync_status: true
+  
+  consciousness:
+    track_thought_generation: true
+    track_stream_activity: true
+  
+  safety:
+    track_validations: true
+    track_violations: true
+  
+  api:
+    track_requests: true
+    track_response_times: true
+    track_errors: true
+  
+  database:
+    track_connections: true
+    track_queries: true
+    track_pool_status: true
+
+health:
+  enabled: true
+  check_interval: 30.0  # seconds
+  history_size: 100
+  
+  # Component health checks
+  checks:
+    - name: "service_registry"
+      critical: true
+      timeout: 5.0
+    
+    - name: "event_bus"
+      critical: true
+      timeout: 5.0
+    
+    - name: "postgresql"
+      critical: true
+      timeout: 10.0
+    
+    - name: "redis"
+      critical: true
+      timeout: 5.0
+    
+    - name: "memory_system"
+      critical: true
+      timeout: 10.0
+    
+    - name: "consciousness_streams"
+      critical: false
+      timeout: 15.0
+    
+    - name: "safety_framework"
+      critical: true
+      timeout: 5.0
+    
+    - name: "api_server"
+      critical: false
+      timeout: 5.0
+
+alerting:
+  enabled: false  # Enable when alert manager is configured
+  webhook_url: null
+  
+  rules:
+    - name: "system_unhealthy"
+      condition: "health_status == 'unhealthy'"
+      severity: "critical"
+      
+    - name: "database_down"
+      condition: "postgresql_health == 'unhealthy' or redis_health == 'unhealthy'"
+      severity: "critical"
+      
+    - name: "high_memory_usage"
+      condition: "resource_memory_usage_percent > 90"
+      severity: "warning"
+      
+    - name: "high_cpu_usage"
+      condition: "resource_cpu_usage_percent > 80"
+      severity: "warning"
+
+grafana:
+  dashboards:
+    - name: "Claude-AGI Overview"
+      uid: "claude-agi-overview"
+      
+    - name: "Memory System"
+      uid: "claude-agi-memory"
+      
+    - name: "Consciousness Streams"
+      uid: "claude-agi-consciousness"
+      
+    - name: "Safety Framework"
+      uid: "claude-agi-safety"

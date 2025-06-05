@@ -31,7 +31,8 @@ logger = logging.getLogger(__name__)
 # Add src to Python path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from core.orchestrator import AGIOrchestrator
+from core.orchestrator_refactored import AGIOrchestrator
+from monitoring.monitoring_integration import MonitoringSystem
 
 
 class ClaudeAGI:
@@ -40,6 +41,7 @@ class ClaudeAGI:
     def __init__(self, config_path: Optional[str] = None):
         self.config = self.load_config(config_path)
         self.orchestrator = None
+        self.monitoring_system = None
         self.running = False
         
     def load_config(self, config_path: Optional[str] = None) -> dict:
@@ -76,8 +78,25 @@ class ClaudeAGI:
         # Create orchestrator with config
         self.orchestrator = AGIOrchestrator(config=self.config)
         
-        # Configure services based on config
-        # (In a full implementation, this would configure each service)
+        # Initialize monitoring system if enabled
+        monitoring_enabled = self.config.get('monitoring', {}).get('enabled', True)
+        if monitoring_enabled:
+            self.monitoring_system = MonitoringSystem(
+                service_registry=self.orchestrator.service_registry,
+                event_bus=self.orchestrator.event_bus,
+                config=self.config.get('monitoring', {})
+            )
+            await self.monitoring_system.initialize()
+            
+            # Pass monitoring hooks to orchestrator
+            from core.monitoring_hooks import MonitoringHooks
+            monitoring_hooks = MonitoringHooks(self.monitoring_system.get_metrics_collector())
+            self.orchestrator.set_monitoring_hooks(monitoring_hooks)
+            
+            logger.info("Monitoring system initialized")
+            monitoring_endpoints = self.monitoring_system.get_monitoring_endpoints()
+            for name, url in monitoring_endpoints.items():
+                logger.info(f"  {name}: {url}")
         
         # Setup signal handlers
         for sig in (signal.SIGTERM, signal.SIGINT):
@@ -110,6 +129,9 @@ class ClaudeAGI:
         if self.orchestrator:
             await self.orchestrator.shutdown()
             
+        if self.monitoring_system:
+            await self.monitoring_system.shutdown()
+            
         logger.info("Claude AGI shutdown complete")
         
     async def health_check(self) -> dict:
@@ -125,6 +147,11 @@ class ClaudeAGI:
                 health['services'][service_name] = {
                     'running': getattr(service, 'running', False)
                 }
+                
+        # Add monitoring system health
+        if self.monitoring_system:
+            monitoring_health = await self.monitoring_system.get_health_status()
+            health['monitoring'] = monitoring_health
                 
         return health
 

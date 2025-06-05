@@ -81,6 +81,9 @@ class MemoryCoordinator:
         self._operation_count = {op: 0 for op in MemoryOperation}
         self._consolidation_count = 0
         
+        # Monitoring hooks (optional)
+        self.monitoring_hooks = None
+        
     async def initialize(self):
         """Initialize all memory components"""
         self.logger.info("Initializing Memory Coordinator")
@@ -187,6 +190,20 @@ class MemoryCoordinator:
         if self.service_registry:
             await self.service_registry.unregister_service("memory_coordinator")
     
+    def set_monitoring_hooks(self, monitoring_hooks):
+        """Set monitoring hooks for instrumentation"""
+        self.monitoring_hooks = monitoring_hooks
+        
+        # Pass to sub-components
+        if self.working_memory and hasattr(self.working_memory, 'set_monitoring_hooks'):
+            self.working_memory.set_monitoring_hooks(monitoring_hooks)
+        if self.episodic_memory and hasattr(self.episodic_memory, 'set_monitoring_hooks'):
+            self.episodic_memory.set_monitoring_hooks(monitoring_hooks)
+        if self.synchronizer and hasattr(self.synchronizer, 'set_monitoring_hooks'):
+            self.synchronizer.set_monitoring_hooks(monitoring_hooks)
+        if self.connection_pool and hasattr(self.connection_pool, 'set_monitoring_hooks'):
+            self.connection_pool.set_monitoring_hooks(monitoring_hooks)
+    
     async def store_thought(self, thought: Dict[str, Any]) -> str:
         """
         Store a thought across appropriate memory systems.
@@ -198,6 +215,13 @@ class MemoryCoordinator:
             Thought ID
         """
         self._operation_count[MemoryOperation.STORE] += 1
+        
+        # Track with monitoring if available
+        if self.monitoring_hooks:
+            self.monitoring_hooks.increment_counter(
+                "memory_operations_total",
+                labels={"operation": "store", "type": "thought"}
+            )
         
         # Generate ID and enrich thought
         thought_id = thought.get('id', str(uuid.uuid4()))
@@ -281,6 +305,13 @@ class MemoryCoordinator:
         """
         self._operation_count[MemoryOperation.RECALL] += 1
         
+        # Track with monitoring if available
+        if self.monitoring_hooks:
+            self.monitoring_hooks.increment_counter(
+                "memory_operations_total",
+                labels={"operation": "recall", "type": "recent"}
+            )
+        
         # Get from working memory first
         recent = await self.working_memory.get_recent_thoughts(n)
         
@@ -335,6 +366,13 @@ class MemoryCoordinator:
             List of similar memories
         """
         self._operation_count[MemoryOperation.SEARCH] += 1
+        
+        # Track with monitoring if available
+        if self.monitoring_hooks:
+            self.monitoring_hooks.increment_counter(
+                "memory_operations_total",
+                labels={"operation": "search", "type": "semantic"}
+            )
         
         if self.semantic_index and self.embedder:
             try:

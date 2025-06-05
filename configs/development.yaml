@@ -127,3 +127,18 @@ knowledge:
   graph_size_limit: 100000
   confidence_threshold: 0.6
   source_diversity_weight: 0.3
+
+# Monitoring Configuration
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    host: "0.0.0.0"
+    port: 9090
+    path: "/metrics"
+  metrics:
+    collection_interval: 10.0
+  health:
+    enabled: true
+    check_interval: 30.0
+    history_size: 100

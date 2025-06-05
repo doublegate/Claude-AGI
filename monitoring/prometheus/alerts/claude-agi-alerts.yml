@@ -1,0 +1,160 @@
+groups:
+  - name: claude-agi
+    interval: 30s
+    rules:
+      # System health alerts
+      - alert: ClaudeAGIDown
+        expr: up{job="claude-agi"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: system
+        annotations:
+          summary: "Claude-AGI is down"
+          description: "Claude-AGI has been down for more than 2 minutes."
+      
+      - alert: SystemUnhealthy
+        expr: claude_agi_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: system
+        annotations:
+          summary: "Claude-AGI system is unhealthy"
+          description: "The Claude-AGI system health check is failing."
+      
+      # Resource alerts
+      - alert: HighCPUUsage
+        expr: resource_cpu_usage_percent > 80
+        for: 5m
+        labels:
+          severity: warning
+          component: resources
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage has been above 80% for more than 5 minutes (current: {{ $value }}%)."
+      
+      - alert: HighMemoryUsage
+        expr: (resource_memory_usage_bytes / (1024 * 1024 * 1024)) > 4
+        for: 5m
+        labels:
+          severity: warning
+          component: resources
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage has been above 4GB for more than 5 minutes (current: {{ $value | humanize }}B)."
+      
+      # Database alerts
+      - alert: PostgreSQLDown
+        expr: up{job="postgresql"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL database has been down for more than 1 minute."
+      
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "Redis is down"
+          description: "Redis has been down for more than 1 minute."
+      
+      - alert: DatabaseConnectionPoolExhausted
+        expr: database_connections_active{database_type="postgres"} >= 20
+        for: 2m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "PostgreSQL connection pool near limit"
+          description: "PostgreSQL connection pool has {{ $value }} active connections (limit: 20)."
+      
+      # Memory system alerts
+      - alert: MemorySyncFailures
+        expr: rate(memory_operations_total{operation="sync", status="failure"}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: memory
+        annotations:
+          summary: "High memory sync failure rate"
+          description: "Memory sync operations are failing at {{ $value | humanize }} ops/sec."
+      
+      - alert: LowWorkingMemoryHitRate
+        expr: memory_working_hit_rate < 0.5
+        for: 10m
+        labels:
+          severity: warning
+          component: memory
+        annotations:
+          summary: "Low working memory hit rate"
+          description: "Working memory hit rate is {{ $value | humanizePercentage }} (expected > 50%)."
+      
+      # Consciousness alerts
+      - alert: NoThoughtsGenerated
+        expr: rate(consciousness_thoughts_generated_total[5m]) == 0
+        for: 5m
+        labels:
+          severity: warning
+          component: consciousness
+        annotations:
+          summary: "No thoughts being generated"
+          description: "No thoughts have been generated in the last 5 minutes."
+      
+      - alert: SlowThoughtGeneration
+        expr: histogram_quantile(0.95, rate(consciousness_thought_generation_duration_seconds_bucket[5m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+          component: consciousness
+        annotations:
+          summary: "Slow thought generation"
+          description: "95th percentile thought generation time is {{ $value }}s (expected < 5s)."
+      
+      # Safety alerts
+      - alert: HighSafetyViolationRate
+        expr: rate(safety_violations_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: critical
+          component: safety
+        annotations:
+          summary: "High safety violation rate"
+          description: "Safety violations occurring at {{ $value | humanize }} per second."
+      
+      - alert: SafetyValidationSlow
+        expr: histogram_quantile(0.95, rate(safety_validation_duration_seconds_bucket[5m])) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          component: safety
+        annotations:
+          summary: "Slow safety validation"
+          description: "95th percentile safety validation time is {{ $value }}s (expected < 10ms)."
+      
+      # API alerts
+      - alert: HighAPIErrorRate
+        expr: rate(api_requests_total{status_code=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "High API error rate"
+          description: "API 5xx error rate is {{ $value | humanizePercentage }}."
+      
+      - alert: SlowAPIResponse
+        expr: histogram_quantile(0.95, rate(api_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "Slow API response times"
+          description: "95th percentile API response time is {{ $value }}s (expected < 2s)."

@@ -14,9 +14,9 @@ import logging
 from typing import Dict, Any, Optional
 import random
 
-from src.core.service_registry import ServiceRegistry
-from src.core.state_manager import StateManager, SystemState
-from src.core.event_bus import EventBus, Message, Event, Priority
+from core.service_registry import ServiceRegistry
+from core.state_manager import StateManager, SystemState
+from core.event_bus import EventBus, Message, Event, Priority
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +42,9 @@ class AGIOrchestrator:
         # Orchestrator state
         self.running = False
         self._idle_task: Optional[asyncio.Task] = None
+        
+        # Monitoring hooks (optional)
+        self.monitoring_hooks = None
         
         # Setup component integration
         self._setup_component_integration()
@@ -287,6 +290,23 @@ class AGIOrchestrator:
             'state_statistics': self.state_manager.get_state_statistics()
         }
         
+    def set_monitoring_hooks(self, monitoring_hooks):
+        """Set monitoring hooks for instrumentation"""
+        self.monitoring_hooks = monitoring_hooks
+        
+        # Pass monitoring hooks to components that need them
+        if hasattr(self.service_registry, 'set_monitoring_hooks'):
+            self.service_registry.set_monitoring_hooks(monitoring_hooks)
+        if hasattr(self.state_manager, 'set_monitoring_hooks'):
+            self.state_manager.set_monitoring_hooks(monitoring_hooks)
+        if hasattr(self.event_bus, 'set_monitoring_hooks'):
+            self.event_bus.set_monitoring_hooks(monitoring_hooks)
+            
+        # Pass to existing services
+        for service_name, service in self.service_registry.get_all_services().items():
+            if hasattr(service, 'set_monitoring_hooks'):
+                service.set_monitoring_hooks(monitoring_hooks)
+    
     async def shutdown(self):
         """Gracefully shutdown the orchestrator"""
         logger.info("Starting orchestrator shutdown")
