@@ -93,6 +93,22 @@ safety:
   action_logging: true
   alert_threshold: medium
 
+# Security configuration (for enhanced safety framework)
+security:
+  # Prompt sanitization
+  max_prompt_length: 10000
+  strict_mode: false  # Enable for production
+  
+  # Key management
+  key_storage_path: "data/secure_keys"
+  key_rotation_days: 30
+  # master_passphrase: loaded from environment variable CLAUDE_AGI_MASTER_KEY
+  
+  # Memory validation
+  anomaly_threshold: 0.7
+  consistency_window: 100
+  enable_quarantine: true
+
 # Development features
 development:
   debug_mode: true

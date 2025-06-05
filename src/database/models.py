@@ -5,7 +5,7 @@ Database models for Claude-AGI
 Defines the schema for all persistent data structures used in the consciousness system.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field, ConfigDict
 from enum import Enum
@@ -40,8 +40,33 @@ class EmotionalState(BaseModel):
     intensity: float = Field(default=0.5, ge=0.0, le=1.0)
 
 
+class Memory(BaseModel):
+    """Individual memory unit in the consciousness system"""
+    id: str
+    content: str
+    memory_type: MemoryType
+    importance: float = Field(default=0.5, ge=0.0, le=10.0)
+    embedding: List[float] = Field(default_factory=list)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    
+    # Emotional context
+    emotional_context: Optional[Dict[str, Any]] = None
+    emotional_valence: float = Field(default=0.0, ge=-1.0, le=1.0)
+    
+    # Relationships
+    associations: List[str] = Field(default_factory=list)
+    source: Optional[str] = None
+    
+    # Access tracking
+    access_count: int = 0
+    last_accessed: Optional[datetime] = None
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
 class MemoryData(BaseModel):
-    """Data structure for storing memories"""
+    """Data structure for storing memories (legacy)"""
     memory_type: MemoryType
     content: str
     embedding: Optional[List[float]] = None
@@ -49,7 +74,7 @@ class MemoryData(BaseModel):
     importance: float = Field(default=0.5, ge=0.0, le=1.0)
     context: Dict[str, Any] = Field(default_factory=dict)
     associations: List[int] = Field(default_factory=list)
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class ThoughtData(BaseModel):
@@ -59,7 +84,7 @@ class ThoughtData(BaseModel):
     emotional_state: Optional[EmotionalState] = None
     context: Dict[str, Any] = Field(default_factory=dict)
     memory_references: List[int] = Field(default_factory=list)
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
     # Processing metadata
     processing_time_ms: Optional[float] = None
@@ -73,8 +98,8 @@ class Goal(BaseModel):
     description: str
     priority: float = Field(default=0.5, ge=0.0, le=1.0)
     status: str = "active"  # active, completed, abandoned
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
     # Goal metadata
     category: Optional[str] = None
@@ -95,7 +120,7 @@ class Interest(BaseModel):
     topic: str
     curiosity_level: float = Field(default=0.5, ge=0.0, le=1.0)
     knowledge_level: float = Field(default=0.0, ge=0.0, le=1.0)
-    last_explored: datetime = Field(default_factory=datetime.utcnow)
+    last_explored: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     exploration_count: int = 0
     
     # Related information
@@ -112,8 +137,8 @@ class ConversationContext(BaseModel):
     """Context for ongoing conversations"""
     conversation_id: str
     participant_id: str
-    start_time: datetime = Field(default_factory=datetime.utcnow)
-    last_interaction: datetime = Field(default_factory=datetime.utcnow)
+    start_time: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    last_interaction: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
     # Conversation state
     topic_history: List[str] = Field(default_factory=list)
@@ -133,7 +158,7 @@ class ConversationContext(BaseModel):
 
 class SystemState(BaseModel):
     """Overall system state snapshot"""
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
     # Cognitive state
     current_activity: str = "idle"

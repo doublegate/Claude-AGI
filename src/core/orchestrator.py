@@ -79,7 +79,7 @@ class AGIOrchestrator:
         # Import services here to avoid circular imports
         from src.memory.manager import MemoryManager
         from src.consciousness.stream import ConsciousnessStream
-        from src.safety.core_safety import SafetyFramework
+        from src.safety.enhanced_safety import EnhancedSafetyFramework
         
         # Initialize core services
         memory_manager = MemoryManager()
@@ -89,7 +89,10 @@ class AGIOrchestrator:
         self.services['memory'] = memory_manager
         
         self.services['consciousness'] = ConsciousnessStream(self)
-        self.services['safety'] = SafetyFramework(self)
+        
+        # Use enhanced safety framework with security configuration
+        security_config = self.config.get('security', {})
+        self.services['safety'] = EnhancedSafetyFramework(self, security_config)
         
         # Comment out services that don't exist yet
         # self.services['learning'] = LearningEngine(self)

@@ -105,6 +105,22 @@ safety:
   alert_threshold: low
   emergency_shutdown_enabled: true
 
+# Security configuration (for enhanced safety framework)
+security:
+  # Prompt sanitization
+  max_prompt_length: 10000
+  strict_mode: true  # Strict mode for production
+  
+  # Key management
+  key_storage_path: "/var/lib/claude-agi/secure_keys"
+  key_rotation_days: 7  # Weekly rotation in production
+  # master_passphrase: loaded from environment variable CLAUDE_AGI_MASTER_KEY
+  
+  # Memory validation
+  anomaly_threshold: 0.5  # More strict in production
+  consistency_window: 200
+  enable_quarantine: true
+
 # Monitoring
 monitoring:
   prometheus:
