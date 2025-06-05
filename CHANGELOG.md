@@ -5,6 +5,27 @@ All notable changes to the Claude-AGI Project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2025-06-04 - Security Hardening & Documentation Reorganization 🛡️
+
+### Added
+- **Security Hardening**: Comprehensive security implementation addressing all Phase 1 vulnerabilities
+  - **PromptSanitizer**: Multi-level threat detection with pattern matching and Constitutional AI validation
+  - **SecureKeyManager**: Fernet encryption for API keys with audit logging and rotation
+  - **MemoryValidator**: Anomaly detection, temporal consistency checking, and quarantine system
+  - **EnhancedSafetyFramework**: Integrated security layer combining all components
+- **Security Tests**: 62+ new security tests covering all security features
+- **Security Configuration**: Added security settings to development.yaml and production.yaml
+- **Documentation**: Created PHASE_1_COMPLETED.md documenting security implementation
+
+### Changed
+- **Orchestrator**: Updated to use EnhancedSafetyFramework instead of basic SafetyFramework
+- **Documentation Structure**: Major reorganization with archive folders for historical docs
+- **Testing Guide**: Updated to reflect 299 tests and 72.80% coverage
+
+### Fixed
+- **Security Vulnerabilities**: All critical Phase 1 security issues resolved
+- **Documentation**: Consolidated test history and archived outdated documents
+
 ## [1.2.0] - 2025-06-04 - Comprehensive Test Suite Expansion & Coverage Improvement 🧪
 
 ### Added
