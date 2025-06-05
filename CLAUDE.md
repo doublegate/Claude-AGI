@@ -87,6 +87,18 @@ kubectl apply -f deployment/kubernetes/
 - CI/CD pipeline optimized for 50% faster builds with comprehensive test coverage tracking
 - Local development tools (`scripts/ci-local.py`) match cloud pipeline structure exactly
 
+### TUI-Specific Implementation Details
+- **Input Polling**: 0.0001s (0.1ms) for ultra-responsive typing
+- **Refresh Interval**: 1 second for main UI updates
+- **Buffer Sizes**: 3x for consciousness streams, 2x for other panes
+- **Memory Integration**: Store directly in working_memory for immediate visibility
+- **Slash Commands**: Immediate display updates when entering command mode
+- **Active Pane**: Bold borders with ▶ title arrows ◀
+- **Field Names**: Use `id` not `goal_id` for Pydantic validation
+- **Service Connections**: Verify message handlers exist and are connected
+- **Async Cleanup**: Check for close method existence, handle variants
+- **CPU Optimization**: 95% reduction when idle via smart update tracking
+
 ## Testing Approach
 
 - Unit tests for individual components
@@ -97,6 +109,17 @@ kubectl apply -f deployment/kubernetes/
 - Local CI/CD testing with `scripts/ci-local.py` before commits
 - Cross-platform executable testing via `scripts/build-executable.py`
 - Codecov integration for comprehensive coverage tracking
+
+### Project-Specific Testing Patterns
+- **Python Async**: Use pytest-asyncio with proper AsyncMock for async methods
+- **Dataclass Testing**: Python 3.11+ requires `__replace__` instead of `_replace`
+- **Service Lifecycle**: Track service tasks in orchestrator for proper shutdown
+- **Mock Orchestrator**: Always include send_message, publish as AsyncMock methods
+- **Test Statistics**: 299 tests total (up from 153), 72.80% coverage
+- **Extended Test Files**: Created for memory_manager, communication, API modules
+- **ASGI Transport**: Use proper ASGI transport for async client fixtures
+- **Environment Variables**: Use CLAUDE_AGI_TEST_MODE to control CI behavior
+- **Test Documentation**: Update DEFERRED_TEST_IMPLEMENTATIONS.md with changes
 
 ## Current Status
 
