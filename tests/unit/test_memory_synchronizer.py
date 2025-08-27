@@ -40,16 +40,17 @@ class TestMemorySynchronizer:
     @pytest.fixture
     async def mock_postgres(self):
         """Create mock PostgreSQL pool"""
-        mock_pool = AsyncMock(spec=asyncpg.Pool)
+        mock_pool = MagicMock(spec=asyncpg.Pool)
         mock_conn = AsyncMock()
         mock_conn.execute = AsyncMock()
         mock_conn.fetch = AsyncMock(return_value=[])
         mock_conn.fetchrow = AsyncMock(return_value=None)
         mock_conn.fetchval = AsyncMock(return_value=1)
         
-        mock_pool.acquire = AsyncMock()
+        # Create async context manager for acquire()
+        mock_pool.acquire.return_value = AsyncMock()
         mock_pool.acquire.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
-        mock_pool.acquire.return_value.__aexit__ = AsyncMock()
+        mock_pool.acquire.return_value.__aexit__ = AsyncMock(return_value=None)
         
         return mock_pool
     
