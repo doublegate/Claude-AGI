@@ -406,7 +406,7 @@ class HealthChecker:
                 received = True
             
             # Subscribe
-            await self.event_bus.subscribe(test_event, test_handler)
+            self.event_bus.subscribe(test_event, test_handler)
             
             # Publish
             await self.event_bus.publish(test_event, {"test": True})

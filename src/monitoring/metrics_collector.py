@@ -463,35 +463,35 @@ class MetricsCollector:
     async def _subscribe_to_events(self):
         """Subscribe to events for metric updates"""
         # State transitions
-        await self.event_bus.subscribe(
+        self.event_bus.subscribe(
             "orchestrator.state_changed",
             self._handle_state_change
         )
         
         # Memory operations
-        await self.event_bus.subscribe(
+        self.event_bus.subscribe(
             "memory.thought_stored",
             self._handle_thought_stored
         )
         
         # Safety events
-        await self.event_bus.subscribe(
+        self.event_bus.subscribe(
             "safety.validation_complete",
             self._handle_safety_validation
         )
         
-        await self.event_bus.subscribe(
+        self.event_bus.subscribe(
             "safety.violation_detected",
             self._handle_safety_violation
         )
         
         # Service events
-        await self.event_bus.subscribe(
+        self.event_bus.subscribe(
             "service.registered",
             self._handle_service_registered
         )
         
-        await self.event_bus.subscribe(
+        self.event_bus.subscribe(
             "service.unregistered",
             self._handle_service_unregistered
         )
