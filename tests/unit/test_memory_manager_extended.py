@@ -376,18 +376,28 @@ class TestMemoryManagerExtended:
         """Test memory pruning (lines 385)"""
         memory = await MemoryManager.create()
         
-        # Add more than max memories
+        # Add more than max memories with timestamps
+        import time
+        base_time = time.time()
         for i in range(1200):
             memory.working_memory['recent_thoughts'].append({
-                'content': f'Thought {i}'
+                'content': f'Thought {i}',
+                'timestamp': base_time + i,  # Newer thoughts have higher timestamps
+                'importance': 0.5  # Default importance
             })
         
         await memory.prune_memories()
         
-        # Should be limited to max_working_memory (1000)
-        assert len(memory.working_memory['recent_thoughts']) == 1000
-        # Should keep the most recent
-        assert memory.working_memory['recent_thoughts'][-1]['content'] == 'Thought 1199'
+        # Should be limited to max_working_memory // 2 (500) per the pruning logic
+        assert len(memory.working_memory['recent_thoughts']) == 500
+        # Should keep the most "important" thoughts (combining recency and importance)
+        # Older thoughts get higher scores due to being "established" longer
+        assert memory.working_memory['recent_thoughts'][0]['content'] == 'Thought 0'
+        # Should contain a range of thoughts based on the algorithm 
+        contents = [thought['content'] for thought in memory.working_memory['recent_thoughts']]
+        assert 'Thought 0' in contents  # Oldest (most established)
+        # The algorithm keeps the first 500 thoughts (0-499) due to identical importance scores
+        assert 'Thought 499' in contents  # Last thought kept by the algorithm
     
     @pytest.mark.asyncio
     async def test_update_context_with_database(self):

@@ -37,11 +37,13 @@ class MonitoringSystem:
         self,
         service_registry: ServiceRegistry,
         event_bus: EventBus,
-        config: Optional[Dict[str, Any]] = None
+        config: Optional[Dict[str, Any]] = None,
+        registry: Optional[Any] = None
     ):
         self.service_registry = service_registry
         self.event_bus = event_bus
         self.config = config or {}
+        self.registry = registry
         
         self.logger = logging.getLogger(__name__)
         
@@ -77,7 +79,8 @@ class MonitoringSystem:
         self.metrics_collector = MetricsCollector(
             service_registry=self.service_registry,
             event_bus=self.event_bus,
-            collect_interval=metrics_config.get("collection_interval", 10.0)
+            collect_interval=metrics_config.get("collection_interval", 10.0),
+            registry=self.registry
         )
         await self.metrics_collector.initialize()
         

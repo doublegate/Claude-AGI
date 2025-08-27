@@ -333,8 +333,9 @@ class ConnectionPoolManager:
             
             # Publish event
             if self.event_bus:
-                await self.event_bus.publish(
+                await self.event_bus.emit(
                     "database.postgres.connected",
+                    "connection_pool_manager",
                     {"pool_size": self._postgres_pool.get_size()}
                 )
                 
@@ -376,8 +377,9 @@ class ConnectionPoolManager:
             
             # Publish event
             if self.event_bus:
-                await self.event_bus.publish(
+                await self.event_bus.emit(
                     "database.redis.connected",
+                    "connection_pool_manager",
                     {"max_connections": self.config.redis_max_connections}
                 )
                 

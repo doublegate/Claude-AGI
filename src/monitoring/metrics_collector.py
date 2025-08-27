@@ -14,10 +14,12 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 try:
-    from prometheus_client import Counter, Gauge, Histogram, Summary, Info
+    from prometheus_client import Counter, Gauge, Histogram, Summary, Info, CollectorRegistry, REGISTRY
     HAS_PROMETHEUS = True
 except ImportError:
     HAS_PROMETHEUS = False
+    REGISTRY = None
+    CollectorRegistry = None
     # Mock classes for when prometheus_client is not available
     class Counter:
         def __init__(self, *args, **kwargs): pass
@@ -89,11 +91,18 @@ class MetricsCollector:
         self,
         service_registry: Optional[ServiceRegistry] = None,
         event_bus: Optional[EventBus] = None,
-        collect_interval: float = 10.0
+        collect_interval: float = 10.0,
+        registry: Optional['CollectorRegistry'] = None
     ):
         self.service_registry = service_registry
         self.event_bus = event_bus
         self.collect_interval = collect_interval
+        
+        # Use custom registry or global registry
+        if HAS_PROMETHEUS:
+            self.registry = registry or CollectorRegistry() if registry is not None else REGISTRY
+        else:
+            self.registry = None
         
         self.logger = logging.getLogger(__name__)
         
@@ -309,36 +318,41 @@ class MetricsCollector:
         self._metric_definitions[definition.name] = definition
         
         if HAS_PROMETHEUS:
-            # Create actual Prometheus metric
+            # Create actual Prometheus metric with custom registry
             if definition.metric_type == MetricType.COUNTER:
                 metric = Counter(
                     definition.name,
                     definition.description,
-                    labelnames=definition.labels
+                    labelnames=definition.labels,
+                    registry=self.registry
                 )
             elif definition.metric_type == MetricType.GAUGE:
                 metric = Gauge(
                     definition.name,
                     definition.description,
-                    labelnames=definition.labels
+                    labelnames=definition.labels,
+                    registry=self.registry
                 )
             elif definition.metric_type == MetricType.HISTOGRAM:
                 metric = Histogram(
                     definition.name,
                     definition.description,
                     labelnames=definition.labels,
-                    buckets=definition.buckets or Histogram.DEFAULT_BUCKETS
+                    buckets=definition.buckets or Histogram.DEFAULT_BUCKETS,
+                    registry=self.registry
                 )
             elif definition.metric_type == MetricType.SUMMARY:
                 metric = Summary(
                     definition.name,
                     definition.description,
-                    labelnames=definition.labels
+                    labelnames=definition.labels,
+                    registry=self.registry
                 )
             elif definition.metric_type == MetricType.INFO:
                 metric = Info(
                     definition.name,
-                    definition.description
+                    definition.description,
+                    registry=self.registry
                 )
             else:
                 raise ValueError(f"Unknown metric type: {definition.metric_type}")

@@ -18,7 +18,7 @@ class TestMetricsCollector:
     """Test suite for MetricsCollector"""
     
     @pytest.fixture
-    async def metrics_collector(self):
+    async def metrics_collector(self, prometheus_registry):
         """Create MetricsCollector instance"""
         service_registry = ServiceRegistry()
         event_bus = EventBus()
@@ -26,7 +26,8 @@ class TestMetricsCollector:
         collector = MetricsCollector(
             service_registry=service_registry,
             event_bus=event_bus,
-            collect_interval=1.0
+            collect_interval=1.0,
+            registry=prometheus_registry
         )
         
         await collector.initialize()
@@ -197,9 +198,9 @@ class TestPrometheusExporter:
     """Test suite for PrometheusExporter"""
     
     @pytest.fixture
-    async def prometheus_exporter(self):
+    async def prometheus_exporter(self, prometheus_registry):
         """Create PrometheusExporter instance"""
-        metrics_collector = MetricsCollector()
+        metrics_collector = MetricsCollector(registry=prometheus_registry)
         
         exporter = PrometheusExporter(
             metrics_collector=metrics_collector,
@@ -232,7 +233,7 @@ class TestMonitoringSystem:
     """Test suite for MonitoringSystem integration"""
     
     @pytest.fixture
-    async def monitoring_system(self):
+    async def monitoring_system(self, prometheus_registry):
         """Create MonitoringSystem instance"""
         service_registry = ServiceRegistry()
         event_bus = EventBus()
@@ -247,10 +248,12 @@ class TestMonitoringSystem:
         system = MonitoringSystem(
             service_registry=service_registry,
             event_bus=event_bus,
-            config=config
+            config=config,
+            registry=prometheus_registry
         )
         
         await system.initialize()
+        
         yield system
         await system.shutdown()
     

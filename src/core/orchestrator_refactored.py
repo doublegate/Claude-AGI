@@ -14,9 +14,9 @@ import logging
 from typing import Dict, Any, Optional
 import random
 
-from core.service_registry import ServiceRegistry
-from core.state_manager import StateManager, SystemState
-from core.event_bus import EventBus, Message, Event, Priority
+from src.core.service_registry import ServiceRegistry
+from src.core.state_manager import StateManager, SystemState
+from src.core.event_bus import EventBus, Message, Event, Priority
 
 logger = logging.getLogger(__name__)
 

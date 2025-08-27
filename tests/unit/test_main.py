@@ -29,6 +29,9 @@ def mock_config():
             'memory': {'enabled': True},
             'safety': {'enabled': True}
         },
+        'monitoring': {
+            'enabled': False  # Disable monitoring to avoid HTTP server conflicts
+        },
         'logging': {
             'level': 'INFO'
         }
@@ -53,6 +56,9 @@ def mock_orchestrator():
         'memory': Mock(running=True),
         'safety': Mock(running=True)
     }
+    # Add new attributes needed by refactored orchestrator
+    orchestrator.service_registry = Mock()
+    orchestrator.event_bus = Mock()
     return orchestrator
 
 

@@ -115,6 +115,13 @@ class EventBus:
                 logger.info("Message processing cancelled")
                 break
                 
+            except RuntimeError as e:
+                if "Event loop is closed" in str(e) or "no running event loop" in str(e):
+                    logger.debug("Event loop closed, stopping message processing")
+                    break
+                else:
+                    logger.error(f"Runtime error processing message: {e}")
+                    self._metrics['errors'] += 1
             except Exception as e:
                 logger.error(f"Error processing message: {e}")
                 self._metrics['errors'] += 1

@@ -369,14 +369,26 @@ class TestRefactoredOrchestrator:
     @pytest.mark.asyncio
     async def test_message_routing(self):
         """Test message routing through orchestrator"""
-        with patch('src.core.orchestrator_refactored.MemoryManager') as MockMemory, \
-             patch('src.core.orchestrator_refactored.ConsciousnessStream'), \
-             patch('src.core.orchestrator_refactored.EnhancedSafetyFramework'):
+        with patch('src.memory.manager.MemoryManager') as MockMemory, \
+             patch('src.consciousness.stream.ConsciousnessStream') as MockConsciousness, \
+             patch('src.safety.enhanced_safety.EnhancedSafetyFramework') as MockSafety:
             
-            # Set up mock with handle_message
+            # Set up memory mock with handle_message
             mock_memory = AsyncMock()
             mock_memory.handle_message = AsyncMock()
+            mock_memory.initialize = AsyncMock()
+            mock_memory.run = AsyncMock()
             MockMemory.return_value = mock_memory
+            
+            # Set up consciousness mock
+            mock_consciousness = AsyncMock()
+            mock_consciousness.run = AsyncMock()
+            MockConsciousness.return_value = mock_consciousness
+            
+            # Set up safety mock  
+            mock_safety = AsyncMock()
+            mock_safety.run = AsyncMock()
+            MockSafety.return_value = mock_safety
             
             orchestrator = AGIOrchestrator()
             await orchestrator.initialize()

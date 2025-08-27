@@ -268,6 +268,18 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "performance: Performance tests")
     config.addinivalue_line("markers", "slow: Slow running tests")
 
+# Prometheus registry isolation for tests
+@pytest.fixture
+def prometheus_registry():
+    """Provide isolated Prometheus registry for tests"""
+    try:
+        from prometheus_client import CollectorRegistry
+        registry = CollectorRegistry()
+        yield registry
+        # Registry will be garbage collected after test
+    except ImportError:
+        yield None
+
 # Environment setup
 @pytest.fixture(autouse=True)
 def setup_test_environment():

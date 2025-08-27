@@ -208,7 +208,7 @@ class HealthChecker:
         
         # Publish health status event
         if self.event_bus:
-            await self.event_bus.publish("health.status_updated", health_report)
+            await self.event_bus.emit("health.status_updated", "health_checker", health_report)
         
         return health_report
     
@@ -409,7 +409,7 @@ class HealthChecker:
             self.event_bus.subscribe(test_event, test_handler)
             
             # Publish
-            await self.event_bus.publish(test_event, {"test": True})
+            await self.event_bus.emit(test_event, "health_checker", {"test": True})
             
             # Wait briefly
             await asyncio.sleep(0.1)

@@ -282,8 +282,9 @@ class MemoryCoordinator:
         
         # Publish event
         if self.event_bus:
-            await self.event_bus.publish(
+            await self.event_bus.emit(
                 "memory.thought_stored",
+                "memory_coordinator",
                 {
                     "thought_id": thought_id,
                     "stream_type": enriched_thought['stream_type'],
@@ -482,8 +483,9 @@ class MemoryCoordinator:
         
         # Publish event
         if self.event_bus:
-            await self.event_bus.publish(
+            await self.event_bus.emit(
                 "memory.context_updated",
+                "memory_coordinator",
                 {"key": key, "has_value": value is not None}
             )
     
@@ -532,8 +534,9 @@ class MemoryCoordinator:
             
             # Could send response back through event bus
             if self.event_bus:
-                await self.event_bus.publish(
+                await self.event_bus.emit(
                     "memory.recall_complete",
+                    "memory_coordinator",
                     {
                         "query": query,
                         "count": len(memories),

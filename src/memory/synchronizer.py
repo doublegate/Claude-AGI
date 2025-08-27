@@ -214,8 +214,9 @@ class MemorySynchronizer:
                 
                 # Publish sync event
                 if self.event_bus:
-                    await self.event_bus.publish(
+                    await self.event_bus.emit(
                         "memory.synchronized",
+                        "memory_synchronizer",
                         {
                             "memory_id": memory_id,
                             "version": version.version,

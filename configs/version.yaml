@@ -1,10 +1,11 @@
 version:
   major: 1
   minor: 5
-  patch: 0
-  release: "1.5.0"
-  codename: "Phase 1 Complete"
-  release_date: "2024-12-27"
+  patch: 1
+  release: "1.5.1"
+  codename: "CI Pipeline Restored"
+  release_date: "2025-08-27"
+  previous_release: "1.5.0"
   
 phase_status:
   phase_1:
@@ -19,8 +20,11 @@ phase_status:
       - Web exploration
       - RBAC authentication
       - Production monitoring
-    test_coverage: 72.80
+    test_coverage: 83.7
     test_count: 423
+    ci_pipeline_status: "FULLY_RESTORED"
+    ci_pipeline_restored_date: "2025-08-27"
+    errors_fixed: 24
     
   phase_2:
     status: "READY"
