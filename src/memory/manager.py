@@ -219,8 +219,26 @@ class MemoryManager:
                 if thought_json:
                     return json.loads(thought_json)
                 
-                # TODO: Query PostgreSQL for older thoughts
-                # This would require adding a method to db_manager to query thoughts by ID
+                # Query PostgreSQL for older thoughts
+                try:
+                    async with self.db_manager.get_connection() as conn:
+                        async with conn.cursor() as cursor:
+                            await cursor.execute(
+                                "SELECT content, metadata FROM thoughts WHERE id = %s", 
+                                (thought_id,)
+                            )
+                            result = await cursor.fetchone()
+                            if result:
+                                content, metadata = result
+                                return {
+                                    'id': thought_id,
+                                    'content': content,
+                                    'metadata': json.loads(metadata) if metadata else {},
+                                    'source': 'postgresql'
+                                }
+                except Exception as db_error:
+                    logger.error(f"PostgreSQL query failed: {db_error}")
+                    # Continue to in-memory fallback
             except Exception as e:
                 logger.error(f"Failed to recall from database: {e}")
         
@@ -371,19 +389,296 @@ class MemoryManager:
         
     async def create_associations(self, thoughts: List[Dict]):
         """Create associative links between related memories"""
-        # TODO: Implement association creation logic
-        # This would involve finding semantic similarities and creating links
-        pass
+        logger.debug(f"Creating associations for {len(thoughts)} thoughts")
+        
+        if len(thoughts) < 2:
+            return  # Need at least 2 thoughts to create associations
+        
+        for i, thought_a in enumerate(thoughts):
+            for j, thought_b in enumerate(thoughts[i+1:], i+1):
+                # Calculate semantic similarity
+                similarity = await self._calculate_semantic_similarity(thought_a, thought_b)
+                
+                if similarity > 0.6:  # High similarity threshold
+                    # Create bidirectional association
+                    await self._create_bidirectional_link(thought_a, thought_b, similarity)
+        
+        logger.debug("Association creation completed")
+    
+    async def _calculate_semantic_similarity(self, thought_a: Dict, thought_b: Dict) -> float:
+        """Calculate semantic similarity between two thoughts"""
+        content_a = thought_a.get('content', '').lower()
+        content_b = thought_b.get('content', '').lower()
+        
+        if not content_a or not content_b:
+            return 0.0
+        
+        # Simple word overlap similarity (in production, use embeddings)
+        words_a = set(content_a.split())
+        words_b = set(content_b.split())
+        
+        intersection = words_a.intersection(words_b)
+        union = words_a.union(words_b)
+        
+        if not union:
+            return 0.0
+        
+        jaccard_similarity = len(intersection) / len(union)
+        
+        # Boost similarity for similar emotional tones
+        tone_a = thought_a.get('emotional_tone', 'neutral')
+        tone_b = thought_b.get('emotional_tone', 'neutral')
+        
+        emotional_boost = 0.1 if tone_a == tone_b else 0.0
+        
+        # Boost similarity for similar stream types
+        stream_a = thought_a.get('stream_type', 'primary')
+        stream_b = thought_b.get('stream_type', 'primary')
+        
+        stream_boost = 0.1 if stream_a == stream_b else 0.0
+        
+        return jaccard_similarity + emotional_boost + stream_boost
+    
+    async def _create_bidirectional_link(self, thought_a: Dict, thought_b: Dict, similarity: float):
+        """Create bidirectional associative link between thoughts"""
+        id_a = thought_a.get('id')
+        id_b = thought_b.get('id')
+        
+        if not id_a or not id_b:
+            return
+        
+        # Add association to thought A
+        if 'associations' not in thought_a:
+            thought_a['associations'] = []
+        
+        if id_b not in thought_a['associations']:
+            thought_a['associations'].append({
+                'thought_id': id_b,
+                'similarity': similarity,
+                'association_type': 'semantic'
+            })
+        
+        # Add association to thought B
+        if 'associations' not in thought_b:
+            thought_b['associations'] = []
+        
+        if id_a not in thought_b['associations']:
+            thought_b['associations'].append({
+                'thought_id': id_a,
+                'similarity': similarity,
+                'association_type': 'semantic'
+            })
+        
+        # Store associations in persistent memory if database is available
+        if self.db_manager:
+            try:
+                await self.db_manager.set_working_memory(f"associations:{id_a}", json.dumps(thought_a.get('associations', [])))
+                await self.db_manager.set_working_memory(f"associations:{id_b}", json.dumps(thought_b.get('associations', [])))
+            except Exception as e:
+                logger.error(f"Failed to store associations: {e}")
         
     async def prune_memories(self):
         """Remove redundant or low-value memories"""
-        # TODO: Implement memory pruning logic
+        logger.debug("Starting memory pruning process")
+        
         # Keep working memory size manageable
         max_working_memory = 1000
+        pruned_count = 0
+        
         if len(self.working_memory['recent_thoughts']) > max_working_memory:
-            # Keep only the most recent
-            self.working_memory['recent_thoughts'] = \
-                self.working_memory['recent_thoughts'][-max_working_memory:]
+            # Sort by importance and recency
+            sorted_thoughts = sorted(
+                self.working_memory['recent_thoughts'], 
+                key=lambda t: (
+                    t.get('importance', 0.5) * 0.6 +  # Importance weight
+                    (time.time() - t.get('timestamp', 0)) / 86400 * 0.4  # Recency weight (days ago)
+                ),
+                reverse=True
+            )
+            
+            # Keep the most important/recent thoughts
+            thoughts_to_keep = sorted_thoughts[:max_working_memory // 2]  # Keep top 50%
+            thoughts_to_archive = sorted_thoughts[max_working_memory // 2:]
+            
+            # Archive low-value thoughts to long-term memory
+            for thought in thoughts_to_archive:
+                if thought.get('importance', 0.5) > 0.3:  # Don't discard moderately important thoughts
+                    await self._archive_to_long_term(thought)
+                pruned_count += 1
+            
+            self.working_memory['recent_thoughts'] = thoughts_to_keep
+            
+        # Prune short-term memory
+        max_short_term = 500
+        if len(self.working_memory['short_term']) > max_short_term:
+            # Remove oldest entries
+            items = list(self.working_memory['short_term'].items())
+            items.sort(key=lambda x: x[1].get('timestamp', 0))  # Sort by timestamp
+            
+            items_to_keep = items[-max_short_term // 2:]  # Keep newest 50%
+            items_to_remove = items[:-max_short_term // 2]
+            
+            # Archive important short-term memories
+            for key, item in items_to_remove:
+                if item.get('importance', 0.5) > 0.4:
+                    await self._archive_to_long_term(item)
+                pruned_count += 1
+            
+            self.working_memory['short_term'] = dict(items_to_keep)
+        
+        # Remove duplicate or highly similar memories
+        await self._remove_duplicate_memories()
+        
+        # Consolidate related memories
+        await self._consolidate_related_memories()
+        
+        logger.info(f"Memory pruning completed. Pruned {pruned_count} memories")
+    
+    async def _archive_to_long_term(self, memory: Dict):
+        """Archive memory to long-term storage"""
+        try:
+            memory_id = memory.get('id', f"archived_{int(time.time())}")
+            
+            # Add archival metadata
+            memory['archived_at'] = time.time()
+            memory['archive_reason'] = 'working_memory_pruning'
+            
+            # Store in long-term memory
+            if memory_id not in self.working_memory['long_term']:
+                self.working_memory['long_term'][memory_id] = memory
+                
+                # If database is available, persist
+                if self.db_manager:
+                    await self.db_manager.set_episodic_memory(memory_id, json.dumps(memory))
+                    
+        except Exception as e:
+            logger.error(f"Failed to archive memory: {e}")
+    
+    async def _remove_duplicate_memories(self):
+        """Remove duplicate or highly similar memories"""
+        thoughts = self.working_memory['recent_thoughts']
+        unique_thoughts = []
+        removed_count = 0
+        
+        for thought in thoughts:
+            is_duplicate = False
+            
+            for unique_thought in unique_thoughts:
+                similarity = await self._calculate_semantic_similarity(thought, unique_thought)
+                
+                if similarity > 0.9:  # Very high similarity - likely duplicate
+                    # Keep the one with higher importance or more recent
+                    import time as time_module
+                    thought_score = (
+                        thought.get('importance', 0.5) * 0.7 + 
+                        (thought.get('timestamp', 0) / time_module.time()) * 0.3
+                    )
+                    unique_score = (
+                        unique_thought.get('importance', 0.5) * 0.7 + 
+                        (unique_thought.get('timestamp', 0) / time_module.time()) * 0.3
+                    )
+                    
+                    if thought_score <= unique_score:
+                        is_duplicate = True
+                        removed_count += 1
+                        break
+                    else:
+                        # Replace the unique thought with this better one
+                        unique_thoughts.remove(unique_thought)
+                        break
+            
+            if not is_duplicate:
+                unique_thoughts.append(thought)
+        
+        self.working_memory['recent_thoughts'] = unique_thoughts
+        
+        if removed_count > 0:
+            logger.debug(f"Removed {removed_count} duplicate memories")
+    
+    async def _consolidate_related_memories(self):
+        """Consolidate related memories to reduce redundancy"""
+        thoughts = self.working_memory['recent_thoughts']
+        consolidated_groups = []
+        processed_indices = set()
+        
+        for i, thought in enumerate(thoughts):
+            if i in processed_indices:
+                continue
+                
+            # Find related thoughts
+            related_group = [thought]
+            processed_indices.add(i)
+            
+            for j, other_thought in enumerate(thoughts):
+                if j <= i or j in processed_indices:
+                    continue
+                    
+                similarity = await self._calculate_semantic_similarity(thought, other_thought)
+                
+                if similarity > 0.7:  # High similarity - can be consolidated
+                    related_group.append(other_thought)
+                    processed_indices.add(j)
+            
+            if len(related_group) > 1:
+                # Consolidate group into single memory
+                consolidated = await self._merge_related_thoughts(related_group)
+                consolidated_groups.append(consolidated)
+            else:
+                consolidated_groups.append(thought)
+        
+        # Only update if we actually consolidated something
+        if len(consolidated_groups) < len(thoughts):
+            self.working_memory['recent_thoughts'] = consolidated_groups
+            consolidated_count = len(thoughts) - len(consolidated_groups)
+            logger.debug(f"Consolidated {consolidated_count} related memories")
+    
+    async def _merge_related_thoughts(self, thoughts: List[Dict]) -> Dict:
+        """Merge multiple related thoughts into a consolidated memory"""
+        if not thoughts:
+            return {}
+        
+        # Use the most important/recent thought as base
+        base_thought = max(thoughts, key=lambda t: (
+            t.get('importance', 0.5) * 0.6 + 
+            (t.get('timestamp', 0) / time.time()) * 0.4
+        ))
+        
+        # Merge content
+        all_content = [t.get('content', '') for t in thoughts if t.get('content')]
+        consolidated_content = f"{base_thought.get('content', '')} [Consolidated with: {'; '.join(all_content[1:])}]"
+        
+        # Average numerical properties
+        avg_importance = sum(t.get('importance', 0.5) for t in thoughts) / len(thoughts)
+        avg_emotional_valence = sum(t.get('emotional_valence', 0.0) for t in thoughts) / len(thoughts)
+        
+        # Merge associations
+        all_associations = []
+        for t in thoughts:
+            all_associations.extend(t.get('associations', []))
+        
+        # Remove duplicates
+        unique_associations = []
+        seen = set()
+        for assoc in all_associations:
+            if isinstance(assoc, dict):
+                key = assoc.get('thought_id')
+            else:
+                key = assoc
+            if key not in seen:
+                unique_associations.append(assoc)
+                seen.add(key)
+        
+        consolidated = base_thought.copy()
+        consolidated.update({
+            'content': consolidated_content,
+            'importance': min(1.0, avg_importance * 1.1),  # Slight boost for consolidated memories
+            'emotional_valence': avg_emotional_valence,
+            'associations': unique_associations,
+            'consolidated_from': [t.get('id') for t in thoughts if t.get('id')],
+            'consolidation_timestamp': time.time()
+        })
+        
+        return consolidated
                 
     async def update_context(self, key: str, value: Any):
         """Update active context"""

@@ -1,0 +1,11 @@
+{
+  "test-key": {
+    "key_type": "api_key",
+    "created_at": "2025-08-27T04:14:28.029174+00:00",
+    "last_accessed": null,
+    "last_rotated": null,
+    "access_count": 0,
+    "expires_at": null,
+    "description": null
+  }
+}

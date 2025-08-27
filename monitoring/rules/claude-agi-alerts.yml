@@ -1,0 +1,193 @@
+groups:
+  - name: claude-agi-alerts
+    rules:
+      # Application Health Alerts
+      - alert: ClaudeAGIDown
+        expr: up{job="claude-agi-app"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Claude-AGI application is down"
+          description: "Claude-AGI application has been down for more than 30 seconds."
+
+      - alert: ClaudeAGIHighErrorRate
+        expr: rate(claude_agi_errors_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate in Claude-AGI"
+          description: "Error rate is {{ $value }} errors per second over 5 minutes."
+
+      # Memory and Performance Alerts
+      - alert: HighMemoryUsage
+        expr: claude_agi_memory_usage_bytes / claude_agi_memory_limit_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Claude-AGI high memory usage"
+          description: "Memory usage is {{ $value | humanizePercentage }} of limit."
+
+      - alert: HighCPUUsage
+        expr: rate(process_cpu_seconds_total{job="claude-agi-app"}[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Claude-AGI high CPU usage"
+          description: "CPU usage is {{ $value | humanizePercentage }} over 5 minutes."
+
+      # Consciousness Stream Alerts
+      - alert: ConsciousnessStreamStalled
+        expr: increase(claude_agi_thoughts_generated_total[5m]) == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Consciousness stream appears stalled"
+          description: "No new thoughts generated in the last 5 minutes."
+
+      - alert: LowConsciousnessQuality
+        expr: claude_agi_consciousness_quality_score < 0.5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low consciousness quality score"
+          description: "Consciousness quality score is {{ $value }}, below threshold of 0.5."
+
+      # Memory System Alerts
+      - alert: MemorySystemErrors
+        expr: rate(claude_agi_memory_errors_total[5m]) > 0.01
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Memory system errors detected"
+          description: "Memory system error rate: {{ $value }} errors per second."
+
+      - alert: MemoryFragmentation
+        expr: claude_agi_memory_fragmentation_ratio > 0.7
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory fragmentation"
+          description: "Memory fragmentation ratio is {{ $value | humanizePercentage }}."
+
+      # Database Connection Alerts
+      - alert: DatabaseConnectionLoss
+        expr: claude_agi_db_connections_active < 1
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database connection lost"
+          description: "No active database connections available."
+
+      - alert: DatabaseSlowQueries
+        expr: claude_agi_db_query_duration_seconds{quantile="0.95"} > 1.0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow database queries detected"
+          description: "95th percentile query time is {{ $value }}s, exceeding 1s threshold."
+
+      # API Performance Alerts
+      - alert: HighAPILatency
+        expr: claude_agi_api_request_duration_seconds{quantile="0.95"} > 2.0
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API response latency"
+          description: "95th percentile API response time is {{ $value }}s."
+
+      - alert: APIRateLimitApproaching
+        expr: rate(claude_agi_api_requests_total[1m]) > 90
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API rate limit approaching"
+          description: "API request rate is {{ $value }} requests per second."
+
+      # Safety System Alerts
+      - alert: SafetyViolation
+        expr: increase(claude_agi_safety_violations_total[5m]) > 0
+        for: 0s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Safety violation detected"
+          description: "{{ $value }} safety violations in the last 5 minutes."
+
+      - alert: SafetySystemDown
+        expr: claude_agi_safety_system_active == 0
+        for: 10s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Safety system is not active"
+          description: "Safety system is not operational."
+
+  - name: system-alerts
+    rules:
+      # System Resource Alerts
+      - alert: HighDiskUsage
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High disk usage"
+          description: "Disk usage is above 90% on {{ $labels.instance }}."
+
+      - alert: HighSystemMemoryUsage
+        expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High system memory usage"
+          description: "System memory usage is above 90% on {{ $labels.instance }}."
+
+      - alert: HighSystemLoad
+        expr: node_load15 > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High system load"
+          description: "System load is {{ $value }} on {{ $labels.instance }}."
+
+      # Container Alerts
+      - alert: ContainerHighCPU
+        expr: rate(container_cpu_usage_seconds_total{name="claude-agi-app"}[5m]) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container high CPU usage"
+          description: "Container CPU usage is {{ $value | humanizePercentage }}."
+
+      - alert: ContainerHighMemory
+        expr: container_memory_usage_bytes{name="claude-agi-app"} / container_spec_memory_limit_bytes{name="claude-agi-app"} > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container high memory usage"
+          description: "Container memory usage is {{ $value | humanizePercentage }}."
+
+      - alert: ContainerRestarting
+        expr: increase(container_start_time_seconds{name="claude-agi-app"}[10m]) > 1
+        for: 0s
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container restarting frequently"
+          description: "Container has restarted {{ $value }} times in the last 10 minutes."

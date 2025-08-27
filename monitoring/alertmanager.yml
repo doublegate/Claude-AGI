@@ -1,0 +1,77 @@
+global:
+  smtp_smarthost: 'localhost:587'
+  smtp_from: 'claude-agi-alerts@example.com'
+  smtp_auth_username: 'alerts'
+  smtp_auth_password: 'your-smtp-password'
+
+route:
+  group_by: ['alertname', 'severity']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'web.hook'
+  routes:
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+      repeat_interval: 30m
+    - match:
+        severity: warning
+      receiver: 'warning-alerts'
+      repeat_interval: 2h
+
+receivers:
+  - name: 'web.hook'
+    webhook_configs:
+      - url: 'http://localhost:5000/alerts'
+        send_resolved: true
+
+  - name: 'critical-alerts'
+    email_configs:
+      - to: 'admin@example.com'
+        subject: '🚨 CRITICAL: Claude-AGI Alert - {{ .GroupLabels.alertname }}'
+        body: |
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Instance: {{ .Labels.instance }}
+          Severity: {{ .Labels.severity }}
+          Time: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          {{ end }}
+        headers:
+          Priority: 'high'
+    webhook_configs:
+      - url: 'http://localhost:5000/critical-alerts'
+        send_resolved: true
+
+  - name: 'warning-alerts'
+    email_configs:
+      - to: 'monitoring@example.com'
+        subject: '⚠️  WARNING: Claude-AGI Alert - {{ .GroupLabels.alertname }}'
+        body: |
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Instance: {{ .Labels.instance }}
+          Severity: {{ .Labels.severity }}
+          Time: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          {{ end }}
+    slack_configs:
+      - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+        channel: '#claude-agi-alerts'
+        username: 'Claude-AGI Monitor'
+        title: '⚠️ Claude-AGI Warning Alert'
+        text: |
+          {{ range .Alerts }}
+          *{{ .Annotations.summary }}*
+          {{ .Annotations.description }}
+          Instance: {{ .Labels.instance }}
+          {{ end }}
+        send_resolved: true
+
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'instance']

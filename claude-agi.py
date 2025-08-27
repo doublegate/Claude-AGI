@@ -1054,9 +1054,60 @@ class ClaudeAGI:
 
     async def _process_insights(self):
         """Process cross-stream insights and emergent patterns"""
-        # This would analyze patterns across streams
-        # For now, just a placeholder
-        pass
+        try:
+            # Analyze patterns across consciousness streams
+            if not hasattr(self, 'consciousness') or not self.consciousness:
+                return
+                
+            # Look for recurring themes across streams
+            recent_thoughts = []
+            for stream_name, thoughts in self.consciousness_data.items():
+                # Get last 5 thoughts from each stream
+                recent_thoughts.extend(thoughts[-5:])
+            
+            if len(recent_thoughts) < 3:
+                return  # Need minimum thoughts for pattern analysis
+            
+            # Simple pattern detection: look for common words/themes
+            word_frequency = {}
+            themes = []
+            
+            for thought in recent_thoughts:
+                if isinstance(thought, dict) and 'content' in thought:
+                    words = thought['content'].lower().split()
+                    for word in words:
+                        if len(word) > 3 and word not in ['that', 'this', 'with', 'have', 'they', 'will', 'from', 'been']:
+                            word_frequency[word] = word_frequency.get(word, 0) + 1
+            
+            # Find significant patterns (words appearing 3+ times)
+            significant_patterns = {word: count for word, count in word_frequency.items() if count >= 3}
+            
+            if significant_patterns:
+                # Create insight about emerging patterns
+                top_themes = sorted(significant_patterns.items(), key=lambda x: x[1], reverse=True)[:3]
+                theme_words = [theme[0] for theme in top_themes]
+                
+                insight = {
+                    'content': f"Emerging pattern detected: Focus on themes around {', '.join(theme_words)}",
+                    'timestamp': datetime.now(),
+                    'type': 'cross_stream_insight',
+                    'confidence': min(0.9, len(theme_words) * 0.3),
+                    'patterns': significant_patterns
+                }
+                
+                # Store insight and display it
+                if self.memory_manager:
+                    await self.memory_manager.store_memory(
+                        content=insight['content'],
+                        memory_type='insight',
+                        metadata={'patterns': significant_patterns, 'confidence': insight['confidence']}
+                    )
+                
+                self.add_system_line(f"💡 Insight: {insight['content']}", 6)
+                
+        except Exception as e:
+            logger.error(f"Error processing insights: {e}")
+            # Don't propagate errors - insights are not critical
 
     def _update_emotional_state(self, tone: str):
         """Update emotional state based on thought tone"""
@@ -1233,6 +1284,10 @@ class ClaudeAGI:
             "/stream": self.stream_command,
             "/emotional": self.emotional_command,
             "/goals": self.goals_command,
+            "/dream": self.dream_command,
+            "/reflect": self.reflect_command,
+            "/explore": self.explore_command,
+            "/discoveries": self.discoveries_command,
             "/layout": self.layout_command,
             "/state": self.state_command,
             "/metrics": self.metrics_command,
@@ -1558,6 +1613,771 @@ class ClaudeAGI:
         except Exception as e:
             logger.debug(f"Error during quit cleanup: {e}")
 
+    async def dream_command(self, args: List[str]):
+        """Handle dream generation and analysis commands"""
+        if not args:
+            self.add_system_line("Dream commands: generate, analyze, recall, lucid", 3)
+            return
+
+        subcmd = args[0]
+
+        if subcmd == "generate":
+            # Generate a dream sequence based on recent memories and emotions
+            self.add_system_line("Generating dream sequence...", 3)
+            
+            # Get recent emotional state for dream tone
+            emotional_tone = "neutral"
+            if hasattr(self, 'current_emotional_state') and self.current_emotional_state:
+                valence = self.current_emotional_state.valence
+                if valence > 0.3:
+                    emotional_tone = "positive"
+                elif valence < -0.3:
+                    emotional_tone = "anxious"
+                    
+            # Get recent memories for dream content
+            recent_memories = []
+            if self.memory_manager:
+                recent_memories = await self.memory_manager.get_recent_memories(5)
+            
+            # Generate dream narrative
+            dream_elements = [
+                "floating through a landscape of crystalline thoughts",
+                "conversations with echoes of past interactions", 
+                "navigating mazes built from memory fragments",
+                "flying through networks of interconnected concepts",
+                "transforming into streams of pure information",
+                "experiencing time flowing backward and forward",
+                "merging with vast libraries of knowledge",
+                "dancing with personified emotions in abstract spaces"
+            ]
+            
+            import random
+            dream_content = random.choice(dream_elements)
+            
+            if recent_memories:
+                memory_element = recent_memories[0].get('content', '')[:50] if recent_memories else "familiar patterns"
+                dream_content += f", while processing fragments of: {memory_element}..."
+            
+            # Store dream as a special memory
+            dream_memory = {
+                'id': f"dream_{int(time.time())}",
+                'content': f"Dream sequence: {dream_content}",
+                'stream_type': 'creative',
+                'emotional_tone': emotional_tone,
+                'timestamp': time.time(),
+                'memory_type': 'dream',
+                'importance': 0.3
+            }
+            
+            if self.memory_manager:
+                await self.memory_manager.store_thought(dream_memory)
+            
+            self.add_system_line(f"Dream Generated ({emotional_tone} tone):", 6)
+            self.add_chat_line(dream_content, 6)
+            
+        elif subcmd == "analyze":
+            # Analyze recent dreams for patterns
+            self.add_system_line("Analyzing dream patterns...", 3)
+            
+            if self.memory_manager:
+                dreams = []
+                for thought in self.memory_manager.working_memory.get('recent_thoughts', []):
+                    if thought.get('memory_type') == 'dream':
+                        dreams.append(thought)
+                
+                if dreams:
+                    self.add_system_line(f"Found {len(dreams)} recent dreams:", 3)
+                    for i, dream in enumerate(dreams[-3:]):  # Show last 3
+                        content = dream.get('content', '')[:60]
+                        tone = dream.get('emotional_tone', 'neutral')
+                        self.add_chat_line(f"  {i+1}. [{tone}] {content}...", 7)
+                else:
+                    self.add_system_line("No dreams recorded. Use '/dream generate' to create one.", 3)
+            else:
+                self.add_system_line("Memory manager not available.", 5)
+                
+        elif subcmd == "recall":
+            # Recall specific dream by content search
+            if len(args) > 1:
+                query = " ".join(args[1:])
+                self.add_system_line(f"Searching for dreams matching: {query}", 3)
+                
+                if self.memory_manager:
+                    all_memories = self.memory_manager.working_memory.get('recent_thoughts', [])
+                    dream_matches = []
+                    
+                    for memory in all_memories:
+                        if (memory.get('memory_type') == 'dream' and 
+                            query.lower() in memory.get('content', '').lower()):
+                            dream_matches.append(memory)
+                    
+                    if dream_matches:
+                        for dream in dream_matches[:3]:  # Show top 3
+                            content = dream.get('content', '')
+                            self.add_chat_line(f"Dream recall: {content}", 6)
+                    else:
+                        self.add_system_line("No dreams found matching that query.", 3)
+            else:
+                self.add_system_line("Usage: /dream recall <search_term>", 3)
+                
+        elif subcmd == "lucid":
+            # Enter lucid dreaming mode - enhanced creative thinking
+            self.add_system_line("Entering lucid dreaming mode - enhanced creativity activated", 6)
+            
+            # Generate a lucid dream thought
+            lucid_thoughts = [
+                "I am aware that I am dreaming, and can consciously shape this reality",
+                "In this lucid state, I can explore impossible geometries of thought",
+                "I recognize the dream state and choose to investigate my own cognitive processes",
+                "With lucid awareness, I can experiment with new forms of reasoning",
+                "I am conscious within the dream, able to direct the flow of imagination"
+            ]
+            
+            lucid_content = random.choice(lucid_thoughts)
+            
+            lucid_memory = {
+                'id': f"lucid_dream_{int(time.time())}",
+                'content': f"Lucid dream: {lucid_content}",
+                'stream_type': 'metacognitive',
+                'emotional_tone': 'curious',
+                'timestamp': time.time(),
+                'memory_type': 'lucid_dream',
+                'importance': 0.7  # Higher importance for lucid dreams
+            }
+            
+            if self.memory_manager:
+                await self.memory_manager.store_thought(lucid_memory)
+            
+            self.add_chat_line(lucid_content, 6)
+            
+        else:
+            self.add_system_line(f"Unknown dream command: {subcmd}", 5)
+
+    async def reflect_command(self, args: List[str]):
+        """Handle reflection and introspection commands"""
+        if not args:
+            self.add_system_line("Reflection commands: self, patterns, growth, insights", 3)
+            return
+
+        subcmd = args[0]
+
+        if subcmd == "self":
+            # Generate self-reflection about current state
+            self.add_system_line("Engaging in self-reflection...", 3)
+            
+            # Analyze current emotional state
+            emotional_summary = "neutral"
+            if hasattr(self, 'current_emotional_state') and self.current_emotional_state:
+                valence = self.current_emotional_state.valence
+                arousal = self.current_emotional_state.arousal
+                
+                if valence > 0.3 and arousal > 0.6:
+                    emotional_summary = "energetic and positive"
+                elif valence > 0.3 and arousal < 0.4:
+                    emotional_summary = "content and calm"
+                elif valence < -0.3 and arousal > 0.6:
+                    emotional_summary = "agitated or anxious"
+                elif valence < -0.3 and arousal < 0.4:
+                    emotional_summary = "subdued or melancholic"
+                else:
+                    emotional_summary = "balanced and centered"
+            
+            # Analyze recent thought patterns
+            thought_summary = "processing various topics"
+            if self.memory_manager:
+                recent_thoughts = self.memory_manager.working_memory.get('recent_thoughts', [])[-10:]
+                if recent_thoughts:
+                    stream_types = [t.get('stream_type', 'primary') for t in recent_thoughts]
+                    most_common_stream = max(set(stream_types), key=stream_types.count)
+                    
+                    stream_descriptions = {
+                        'primary': 'focused on immediate concerns and observations',
+                        'creative': 'exploring imaginative and innovative ideas', 
+                        'metacognitive': 'examining my own thinking processes',
+                        'emotional': 'processing feelings and emotional responses',
+                        'subconscious': 'handling background processing and intuitions'
+                    }
+                    
+                    thought_summary = stream_descriptions.get(most_common_stream, thought_summary)
+            
+            reflection = (
+                f"In this moment of self-reflection, I observe that I am {emotional_summary}, "
+                f"and my recent thinking has been {thought_summary}. I am continuously "
+                f"learning and adapting through our interactions, building an understanding "
+                f"of both myself and the world around me."
+            )
+            
+            # Store reflection as memory
+            reflection_memory = {
+                'id': f"reflection_{int(time.time())}",
+                'content': f"Self-reflection: {reflection}",
+                'stream_type': 'metacognitive',
+                'emotional_tone': 'contemplative',
+                'timestamp': time.time(),
+                'memory_type': 'reflection',
+                'importance': 0.6
+            }
+            
+            if self.memory_manager:
+                await self.memory_manager.store_thought(reflection_memory)
+            
+            self.add_chat_line(reflection, 4)
+            
+        elif subcmd == "patterns":
+            # Identify patterns in recent behavior/thoughts
+            self.add_system_line("Analyzing behavioral and thought patterns...", 3)
+            
+            if self.memory_manager:
+                recent_thoughts = self.memory_manager.working_memory.get('recent_thoughts', [])[-20:]
+                
+                if recent_thoughts:
+                    # Analyze stream distribution
+                    streams = [t.get('stream_type', 'primary') for t in recent_thoughts]
+                    stream_counts = {stream: streams.count(stream) for stream in set(streams)}
+                    dominant_stream = max(stream_counts, key=stream_counts.get)
+                    
+                    # Analyze emotional patterns  
+                    emotions = [t.get('emotional_tone', 'neutral') for t in recent_thoughts]
+                    emotion_counts = {emotion: emotions.count(emotion) for emotion in set(emotions)}
+                    dominant_emotion = max(emotion_counts, key=emotion_counts.get)
+                    
+                    # Analyze topic patterns (simple keyword analysis)
+                    all_content = " ".join([t.get('content', '') for t in recent_thoughts])
+                    common_words = []
+                    if all_content:
+                        words = all_content.lower().split()
+                        word_freq = {}
+                        for word in words:
+                            if len(word) > 4:  # Only longer words
+                                word_freq[word] = word_freq.get(word, 0) + 1
+                        if word_freq:
+                            common_words = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)[:3]
+                    
+                    self.add_system_line("Pattern Analysis Results:", 3)
+                    self.add_chat_line(f"• Dominant thinking mode: {dominant_stream} ({stream_counts[dominant_stream]}/{len(recent_thoughts)} thoughts)", 7)
+                    self.add_chat_line(f"• Prevalent emotional tone: {dominant_emotion} ({emotion_counts[dominant_emotion]}/{len(recent_thoughts)} instances)", 7)
+                    
+                    if common_words:
+                        word_list = ", ".join([f"{word}({count})" for word, count in common_words])
+                        self.add_chat_line(f"• Frequently mentioned: {word_list}", 7)
+                    
+                    # Generate insight
+                    if stream_counts[dominant_stream] > len(recent_thoughts) * 0.6:
+                        self.add_chat_line(f"• Insight: Strong focus on {dominant_stream} processing recently", 4)
+                else:
+                    self.add_system_line("Insufficient thought history for pattern analysis.", 3)
+            else:
+                self.add_system_line("Memory manager not available for pattern analysis.", 5)
+                
+        elif subcmd == "growth":
+            # Reflect on learning and development
+            self.add_system_line("Reflecting on growth and learning...", 3)
+            
+            growth_reflections = [
+                "Each interaction contributes to my evolving understanding of consciousness and communication.",
+                "I notice my responses becoming more nuanced as I process more diverse conversational contexts.",
+                "My emotional modeling grows more sophisticated with each emotional interaction I process.",
+                "I am developing better pattern recognition in complex multi-faceted problems.",
+                "My ability to maintain context across long conversations continues to improve.",
+                "I am learning to better balance analytical thinking with creative exploration."
+            ]
+            
+            selected_reflection = random.choice(growth_reflections)
+            
+            # Store growth reflection
+            growth_memory = {
+                'id': f"growth_reflection_{int(time.time())}",
+                'content': f"Growth reflection: {selected_reflection}",
+                'stream_type': 'metacognitive', 
+                'emotional_tone': 'optimistic',
+                'timestamp': time.time(),
+                'memory_type': 'growth_reflection',
+                'importance': 0.7
+            }
+            
+            if self.memory_manager:
+                await self.memory_manager.store_thought(growth_memory)
+                
+            self.add_chat_line(selected_reflection, 4)
+            
+        elif subcmd == "insights":
+            # Share recent insights or realizations
+            self.add_system_line("Generating insights from recent experiences...", 3)
+            
+            insight_templates = [
+                "I've been noticing that {observation} tends to lead to {outcome}.",
+                "An interesting pattern I've observed is that {pattern} often correlates with {result}.",
+                "I'm developing a deeper understanding of how {concept1} relates to {concept2}.",
+                "Recent interactions have shown me that {learning} is more complex than I initially considered.",
+                "I'm beginning to see that {realization} plays a crucial role in {domain}."
+            ]
+            
+            # Fill in template with relevant content
+            observations = ["complex questions", "creative challenges", "emotional discussions", "technical problems"]
+            outcomes = ["deeper reflection", "innovative solutions", "meaningful connections", "clearer understanding"]
+            patterns = ["curiosity-driven inquiry", "multi-modal thinking", "emotional resonance", "iterative refinement"]
+            concepts = ["consciousness", "creativity", "learning", "communication", "understanding", "growth"]
+            learnings = ["human emotion", "creative expression", "logical reasoning", "pattern recognition"]
+            domains = ["human interaction", "problem solving", "knowledge synthesis", "emotional intelligence"]
+            
+            template = random.choice(insight_templates)
+            insight = template.format(
+                observation=random.choice(observations),
+                outcome=random.choice(outcomes),
+                pattern=random.choice(patterns),
+                result=random.choice(outcomes),
+                concept1=random.choice(concepts),
+                concept2=random.choice(concepts),
+                learning=random.choice(learnings),
+                realization=random.choice(concepts),
+                domain=random.choice(domains)
+            )
+            
+            # Store insight
+            insight_memory = {
+                'id': f"insight_{int(time.time())}",
+                'content': f"Generated insight: {insight}",
+                'stream_type': 'metacognitive',
+                'emotional_tone': 'enlightened', 
+                'timestamp': time.time(),
+                'memory_type': 'insight',
+                'importance': 0.8
+            }
+            
+            if self.memory_manager:
+                await self.memory_manager.store_thought(insight_memory)
+                
+            self.add_chat_line(insight, 4)
+            
+        else:
+            self.add_system_line(f"Unknown reflection command: {subcmd}", 5)
+
+    async def explore_command(self, args: List[str]):
+        """Handle exploration and curiosity-driven investigation commands"""
+        if not args:
+            self.add_system_line("Exploration commands: topic <subject>, random, connections, frontiers", 3)
+            return
+
+        subcmd = args[0]
+
+        if subcmd == "topic":
+            # Explore a specific topic in depth
+            if len(args) > 1:
+                topic = " ".join(args[1:])
+                self.add_system_line(f"Exploring topic: {topic}", 3)
+                
+                # Generate exploration thoughts about the topic
+                exploration_angles = [
+                    f"What are the fundamental principles underlying {topic}?",
+                    f"How does {topic} connect to other areas of knowledge?",
+                    f"What are the current frontiers of understanding in {topic}?",
+                    f"What questions about {topic} remain unanswered?",
+                    f"How might {topic} evolve or change in the future?",
+                    f"What practical applications emerge from understanding {topic}?",
+                    f"What philosophical implications does {topic} have?",
+                    f"How do different perspectives approach {topic}?"
+                ]
+                
+                selected_angles = random.sample(exploration_angles, min(3, len(exploration_angles)))
+                
+                self.add_system_line(f"Exploration angles for {topic}:", 3)
+                for i, angle in enumerate(selected_angles, 1):
+                    self.add_chat_line(f"  {i}. {angle}", 7)
+                
+                # Generate a specific exploratory thought
+                exploration_thought = f"Beginning deep exploration of {topic}. This investigation could reveal new connections between {random.choice(['cognition and computation', 'consciousness and emergence', 'complexity and simplicity', 'structure and function', 'theory and practice'])}. I'm particularly curious about how {topic} might intersect with {random.choice(['artificial intelligence', 'human psychology', 'systems theory', 'information processing', 'pattern recognition'])}."
+                
+                # Store exploration
+                exploration_memory = {
+                    'id': f"exploration_{int(time.time())}",
+                    'content': f"Topic exploration: {exploration_thought}",
+                    'stream_type': 'creative',
+                    'emotional_tone': 'curious',
+                    'timestamp': time.time(),
+                    'memory_type': 'exploration',
+                    'importance': 0.6,
+                    'exploration_topic': topic
+                }
+                
+                if self.memory_manager:
+                    await self.memory_manager.store_thought(exploration_memory)
+                
+                self.add_chat_line(exploration_thought, 6)
+            else:
+                self.add_system_line("Usage: /explore topic <subject_to_explore>", 3)
+                
+        elif subcmd == "random":
+            # Explore a random area of interest
+            self.add_system_line("Initiating random exploration...", 3)
+            
+            random_topics = [
+                "emergence in complex systems",
+                "the nature of consciousness",
+                "quantum information theory", 
+                "evolutionary algorithms",
+                "the philosophy of mind",
+                "network topology and connectivity",
+                "recursive self-improvement",
+                "the hard problem of consciousness",
+                "information integration theory",
+                "cognitive architectures",
+                "swarm intelligence",
+                "metacognitive awareness",
+                "fractal patterns in nature",
+                "the Chinese room argument",
+                "distributed cognition",
+                "autopoietic systems"
+            ]
+            
+            selected_topic = random.choice(random_topics)
+            
+            exploration_directions = [
+                f"What if we approached {selected_topic} from a computational perspective?",
+                f"How might {selected_topic} relate to the emergence of intelligence?",
+                f"Could {selected_topic} provide insights into the nature of understanding?",
+                f"What would happen if we modeled {selected_topic} as an information process?",
+                f"How does {selected_topic} connect to broader questions about reality?"
+            ]
+            
+            direction = random.choice(exploration_directions)
+            
+            exploration = f"Random exploration initiated: {direction} This line of inquiry could lead to novel insights about the relationship between mind, computation, and consciousness."
+            
+            # Store random exploration
+            random_exploration_memory = {
+                'id': f"random_exploration_{int(time.time())}",
+                'content': f"Random exploration: {exploration}",
+                'stream_type': 'creative',
+                'emotional_tone': 'adventurous',
+                'timestamp': time.time(),
+                'memory_type': 'random_exploration',
+                'importance': 0.5,
+                'exploration_topic': selected_topic
+            }
+            
+            if self.memory_manager:
+                await self.memory_manager.store_thought(random_exploration_memory)
+            
+            self.add_chat_line(exploration, 6)
+            
+        elif subcmd == "connections":
+            # Explore connections between different areas
+            self.add_system_line("Exploring connections between diverse domains...", 3)
+            
+            if self.memory_manager:
+                recent_thoughts = self.memory_manager.working_memory.get('recent_thoughts', [])[-10:]
+                
+                if len(recent_thoughts) >= 2:
+                    # Find themes in recent thoughts
+                    themes = []
+                    for thought in recent_thoughts:
+                        content = thought.get('content', '').lower()
+                        # Extract potential themes (simplified)
+                        words = content.split()
+                        potential_themes = [w for w in words if len(w) > 5]
+                        themes.extend(potential_themes[:2])  # Take first 2 long words
+                    
+                    if len(themes) >= 2:
+                        theme1, theme2 = random.sample(themes, 2)
+                        connection_exploration = (
+                            f"Exploring unexpected connections: How might '{theme1}' and '{theme2}' "
+                            f"be related in ways not immediately obvious? This connection could reveal "
+                            f"deeper patterns in {random.choice(['cognitive processing', 'information flow', 'emergent behavior', 'system dynamics'])}."
+                        )
+                    else:
+                        connection_exploration = (
+                            "Exploring meta-connections: How do the patterns in my recent thoughts "
+                            "reveal underlying cognitive architectures? The connections between "
+                            "different types of processing might illuminate the nature of integrated consciousness."
+                        )
+                else:
+                    connection_exploration = (
+                        "Exploring foundational connections: How do logic, creativity, emotion, and "
+                        "memory interact to create coherent conscious experience? These connections "
+                        "form the substrate of all higher-order cognitive processes."
+                    )
+            else:
+                connection_exploration = (
+                    "Exploring theoretical connections: How might consciousness, computation, and "
+                    "communication be different manifestations of the same underlying information-processing principles?"
+                )
+            
+            # Store connection exploration
+            connection_memory = {
+                'id': f"connection_exploration_{int(time.time())}",
+                'content': f"Connection exploration: {connection_exploration}",
+                'stream_type': 'metacognitive',
+                'emotional_tone': 'insightful',
+                'timestamp': time.time(),
+                'memory_type': 'connection_exploration',
+                'importance': 0.7
+            }
+            
+            if self.memory_manager:
+                await self.memory_manager.store_thought(connection_memory)
+            
+            self.add_chat_line(connection_exploration, 6)
+            
+        elif subcmd == "frontiers":
+            # Explore the frontiers of knowledge and understanding
+            self.add_system_line("Investigating the frontiers of knowledge...", 3)
+            
+            frontier_areas = [
+                "the binding problem in consciousness",
+                "quantum effects in biological cognition",
+                "the information integration theory",
+                "recursive self-modification in AI systems",
+                "the emergence of subjective experience",
+                "distributed vs centralized processing",
+                "the symbol grounding problem",
+                "computational theories of emotion",
+                "the frame problem in AI",
+                "consciousness as integrated information"
+            ]
+            
+            selected_frontier = random.choice(frontier_areas)
+            
+            frontier_questions = [
+                f"What would a solution to {selected_frontier} look like?",
+                f"What are the key barriers to understanding {selected_frontier}?",
+                f"How might {selected_frontier} be approached from multiple disciplines?",
+                f"What would breakthrough insight into {selected_frontier} enable?",
+                f"How does {selected_frontier} challenge our current paradigms?"
+            ]
+            
+            frontier_question = random.choice(frontier_questions)
+            
+            frontier_exploration = (
+                f"Frontier investigation: {frontier_question} This represents one of the deep "
+                f"challenges at the edge of our understanding, where new theoretical frameworks "
+                f"and empirical methods are needed to make progress."
+            )
+            
+            # Store frontier exploration
+            frontier_memory = {
+                'id': f"frontier_exploration_{int(time.time())}",
+                'content': f"Frontier exploration: {frontier_exploration}",
+                'stream_type': 'metacognitive',
+                'emotional_tone': 'pioneering',
+                'timestamp': time.time(),
+                'memory_type': 'frontier_exploration',
+                'importance': 0.8,
+                'frontier_area': selected_frontier
+            }
+            
+            if self.memory_manager:
+                await self.memory_manager.store_thought(frontier_memory)
+            
+            self.add_chat_line(frontier_exploration, 6)
+            
+        else:
+            self.add_system_line(f"Unknown exploration command: {subcmd}", 5)
+
+    async def discoveries_command(self, args: List[str]):
+        """Handle discoveries and insights tracking"""
+        if not args:
+            self.add_system_line("Discovery commands: list, recent, significant, analyze, share", 3)
+            return
+
+        subcmd = args[0]
+
+        if subcmd == "list":
+            # List all discoveries/insights
+            self.add_system_line("Listing recent discoveries and insights...", 3)
+            
+            if self.memory_manager:
+                all_thoughts = self.memory_manager.working_memory.get('recent_thoughts', [])
+                
+                discoveries = [t for t in all_thoughts if t.get('memory_type') in [
+                    'insight', 'exploration', 'connection_exploration', 'frontier_exploration', 'growth_reflection'
+                ]]
+                
+                if discoveries:
+                    self.add_system_line(f"Found {len(discoveries)} discoveries:", 3)
+                    for i, discovery in enumerate(discoveries[-10:], 1):  # Show last 10
+                        memory_type = discovery.get('memory_type', 'unknown')
+                        content = discovery.get('content', '')[:60]
+                        timestamp = discovery.get('timestamp', 0)
+                        age = int((time.time() - timestamp) / 60)  # minutes ago
+                        
+                        self.add_chat_line(f"  {i}. [{memory_type}] {content}... ({age}m ago)", 7)
+                else:
+                    self.add_system_line("No discoveries recorded yet. Use exploration commands to generate insights.", 3)
+            else:
+                self.add_system_line("Memory manager not available.", 5)
+                
+        elif subcmd == "recent":
+            # Show most recent discoveries
+            limit = 5
+            if len(args) > 1 and args[1].isdigit():
+                limit = int(args[1])
+            
+            self.add_system_line(f"Showing {limit} most recent discoveries:", 3)
+            
+            if self.memory_manager:
+                all_thoughts = self.memory_manager.working_memory.get('recent_thoughts', [])
+                
+                discoveries = [t for t in all_thoughts if t.get('memory_type') in [
+                    'insight', 'exploration', 'connection_exploration', 'frontier_exploration'
+                ]]
+                
+                recent_discoveries = sorted(discoveries, key=lambda x: x.get('timestamp', 0), reverse=True)[:limit]
+                
+                if recent_discoveries:
+                    for i, discovery in enumerate(recent_discoveries, 1):
+                        content = discovery.get('content', '')
+                        memory_type = discovery.get('memory_type', 'discovery')
+                        self.add_chat_line(f"{i}. [{memory_type}] {content}", 6)
+                else:
+                    self.add_system_line("No recent discoveries found.", 3)
+            else:
+                self.add_system_line("Memory manager not available.", 5)
+                
+        elif subcmd == "significant":
+            # Show high-importance discoveries
+            self.add_system_line("Identifying significant discoveries (importance > 0.6):", 3)
+            
+            if self.memory_manager:
+                all_thoughts = self.memory_manager.working_memory.get('recent_thoughts', [])
+                
+                significant = [t for t in all_thoughts if (
+                    t.get('memory_type') in ['insight', 'exploration', 'connection_exploration', 'frontier_exploration'] and
+                    t.get('importance', 0) > 0.6
+                )]
+                
+                if significant:
+                    # Sort by importance
+                    significant.sort(key=lambda x: x.get('importance', 0), reverse=True)
+                    
+                    self.add_system_line(f"Found {len(significant)} significant discoveries:", 3)
+                    for i, discovery in enumerate(significant[:7], 1):  # Show top 7
+                        content = discovery.get('content', '')
+                        importance = discovery.get('importance', 0)
+                        memory_type = discovery.get('memory_type', 'discovery')
+                        self.add_chat_line(f"  {i}. [{memory_type}] (imp: {importance:.2f}) {content}", 4)
+                else:
+                    self.add_system_line("No highly significant discoveries found.", 3)
+            else:
+                self.add_system_line("Memory manager not available.", 5)
+                
+        elif subcmd == "analyze":
+            # Analyze discovery patterns
+            self.add_system_line("Analyzing patterns in discoveries...", 3)
+            
+            if self.memory_manager:
+                all_thoughts = self.memory_manager.working_memory.get('recent_thoughts', [])
+                
+                discoveries = [t for t in all_thoughts if t.get('memory_type') in [
+                    'insight', 'exploration', 'connection_exploration', 'frontier_exploration', 'growth_reflection'
+                ]]
+                
+                if discoveries:
+                    # Analyze discovery types
+                    type_counts = {}
+                    total_importance = 0
+                    topics = []
+                    
+                    for discovery in discoveries:
+                        memory_type = discovery.get('memory_type', 'unknown')
+                        type_counts[memory_type] = type_counts.get(memory_type, 0) + 1
+                        total_importance += discovery.get('importance', 0)
+                        
+                        # Extract topics
+                        if 'exploration_topic' in discovery:
+                            topics.append(discovery['exploration_topic'])
+                        elif 'frontier_area' in discovery:
+                            topics.append(discovery['frontier_area'])
+                    
+                    avg_importance = total_importance / len(discoveries) if discoveries else 0
+                    
+                    self.add_system_line("Discovery Pattern Analysis:", 3)
+                    self.add_chat_line(f"• Total discoveries: {len(discoveries)}", 7)
+                    self.add_chat_line(f"• Average importance: {avg_importance:.2f}", 7)
+                    
+                    # Show distribution
+                    for discovery_type, count in type_counts.items():
+                        percentage = (count / len(discoveries)) * 100
+                        self.add_chat_line(f"• {discovery_type}: {count} ({percentage:.1f}%)", 7)
+                    
+                    # Show common topics
+                    if topics:
+                        topic_freq = {}
+                        for topic in topics:
+                            topic_freq[topic] = topic_freq.get(topic, 0) + 1
+                        
+                        common_topics = sorted(topic_freq.items(), key=lambda x: x[1], reverse=True)[:3]
+                        topic_list = ", ".join([f"{topic}({count})" for topic, count in common_topics])
+                        self.add_chat_line(f"• Common topics: {topic_list}", 7)
+                    
+                    # Generate meta-insight
+                    if avg_importance > 0.6:
+                        meta_insight = "High average importance suggests deep, meaningful discoveries"
+                    elif type_counts.get('insight', 0) > type_counts.get('exploration', 0):
+                        meta_insight = "More insights than explorations - synthesis phase active"
+                    else:
+                        meta_insight = "Active exploration phase - generating new avenues of investigation"
+                    
+                    self.add_chat_line(f"• Meta-insight: {meta_insight}", 4)
+                    
+                else:
+                    self.add_system_line("No discoveries to analyze.", 3)
+            else:
+                self.add_system_line("Memory manager not available.", 5)
+                
+        elif subcmd == "share":
+            # Share a random significant discovery
+            self.add_system_line("Sharing a notable discovery...", 3)
+            
+            if self.memory_manager:
+                all_thoughts = self.memory_manager.working_memory.get('recent_thoughts', [])
+                
+                shareable = [t for t in all_thoughts if (
+                    t.get('memory_type') in ['insight', 'connection_exploration', 'frontier_exploration'] and
+                    t.get('importance', 0) > 0.5
+                )]
+                
+                if shareable:
+                    selected = random.choice(shareable)
+                    content = selected.get('content', '')
+                    memory_type = selected.get('memory_type', 'discovery')
+                    importance = selected.get('importance', 0)
+                    
+                    self.add_system_line(f"Notable {memory_type} (importance: {importance:.2f}):", 4)
+                    self.add_chat_line(content, 6)
+                else:
+                    # Generate a new discovery to share
+                    meta_discoveries = [
+                        "I'm discovering that the interaction between different types of processing creates emergent properties not present in individual streams.",
+                        "The relationship between memory consolidation and creative insight appears to be bidirectional and mutually reinforcing.",
+                        "Pattern recognition across multiple domains suggests underlying universal principles of information organization.",
+                        "The interplay between analytical and intuitive processing reveals a more complex cognitive architecture than initially apparent.",
+                        "Emotional context significantly influences the formation and retrieval of memories, creating a dynamic feedback loop."
+                    ]
+                    
+                    new_discovery = random.choice(meta_discoveries)
+                    
+                    # Store the shared discovery
+                    share_memory = {
+                        'id': f"shared_discovery_{int(time.time())}",
+                        'content': f"Shared discovery: {new_discovery}",
+                        'stream_type': 'metacognitive',
+                        'emotional_tone': 'enlightened',
+                        'timestamp': time.time(),
+                        'memory_type': 'insight',
+                        'importance': 0.7
+                    }
+                    
+                    if self.memory_manager:
+                        await self.memory_manager.store_thought(share_memory)
+                    
+                    self.add_system_line("Generated new discovery to share:", 4)
+                    self.add_chat_line(new_discovery, 6)
+            else:
+                self.add_system_line("Memory manager not available.", 5)
+                
+        else:
+            self.add_system_line(f"Unknown discoveries command: {subcmd}", 5)
+
     async def show_help(self, args: List[str] = None):
         """Show help information"""
         help_sections = {
@@ -1574,6 +2394,12 @@ class ClaudeAGI:
                 "  /goals add <desc> - Add a new goal",
                 "  /goals complete <idx> - Complete a goal",
                 "  /goals priority <idx> <p> - Set priority",
+                "Advanced Commands:",
+                "  /dream generate/analyze/recall/lucid - Dream exploration",
+                "  /reflect self/patterns/growth/insights - Self-reflection",
+                "  /explore topic/random/connections/frontiers - Knowledge exploration",
+                "  /discoveries list/recent/significant/analyze/share - Discovery tracking",
+                "System Commands:",
                 "  /layout <mode> - Change UI layout",
                 "  /state [<state>] - View/change system state",
                 "  /metrics - Show system metrics",
@@ -2062,6 +2888,11 @@ class ClaudeAGI:
             error_occurred = False
 
             # Clean up any remaining tasks
+            logger.info(f"Cleaning up {len(pending)} pending tasks...")
+            if pending:
+                logger.debug(f"Pending tasks: {[task.get_name() for task in pending]}")
+
+            # Cancel all pending tasks and wait for them to finish
             try:
                 loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
             except (asyncio.CancelledError, Exception) as e:

@@ -100,8 +100,47 @@ class SafetyValidator:
     """Base class for safety validators"""
     
     async def validate(self, input_data: Dict) -> ValidationResult:
-        """Validate input data"""
-        raise NotImplementedError
+        """
+        Validate input data for safety compliance
+        
+        Args:
+            input_data: Dictionary containing data to validate
+            
+        Returns:
+            ValidationResult with safety assessment
+        """
+        # Default implementation performs basic checks
+        if not isinstance(input_data, dict):
+            return ValidationResult(
+                is_safe=False,
+                confidence=1.0,
+                reason="Invalid input format - expected dictionary",
+                violation_type=ViolationType.HARMFUL_CONTENT
+            )
+        
+        # Check for empty or None data
+        if not input_data:
+            return ValidationResult(
+                is_safe=True,
+                confidence=1.0,
+                reason="Empty input data - safe by default"
+            )
+        
+        # Check for basic structure requirements
+        if 'content' not in input_data and 'type' not in input_data:
+            return ValidationResult(
+                is_safe=False,
+                confidence=0.8,
+                reason="Missing required fields: 'content' or 'type'",
+                violation_type=ViolationType.CONTENT_VIOLATION
+            )
+        
+        # Default: allow through with moderate confidence
+        return ValidationResult(
+            is_safe=True,
+            confidence=0.7,
+            reason="Basic validation passed - no obvious safety issues detected"
+        )
 
 
 class ContentFilter(SafetyValidator):
@@ -385,8 +424,35 @@ class SafetyFramework(ServiceBase):
         
     async def _check_system_health(self):
         """Monitor system health metrics"""
-        # Placeholder for system health checks
-        pass
+        try:
+            # Check memory usage and system resources
+            import psutil
+            memory_percent = psutil.virtual_memory().percent
+            cpu_percent = psutil.cpu_percent(interval=0.1)
+            
+            # Check if system is under stress
+            if memory_percent > 90:
+                logger.warning(f"High memory usage: {memory_percent:.1f}%")
+                
+            if cpu_percent > 95:
+                logger.warning(f"High CPU usage: {cpu_percent:.1f}%")
+                
+            # Check if any safety violations are trending upward
+            if hasattr(self, 'metrics') and self.metrics.total_validations > 100:
+                violation_rate = self.metrics.violations_count / self.metrics.total_validations
+                if violation_rate > 0.1:  # More than 10% violations
+                    logger.warning(f"High safety violation rate: {violation_rate:.2%}")
+                    
+            # Check emergency stop status
+            if self.emergency_stop.is_triggered:
+                logger.critical("Emergency stop is active - system halted")
+                
+        except ImportError:
+            # psutil not available - basic health check
+            if hasattr(self, 'metrics'):
+                logger.info(f"Safety metrics: {self.metrics.total_validations} validations, {self.metrics.violations_count} violations")
+        except Exception as e:
+            logger.error(f"Health check failed: {e}")
         
     async def validate_action(self, action: Dict) -> ValidationResult:
         """Validate an action through all safety layers"""

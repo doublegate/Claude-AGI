@@ -366,3 +366,106 @@ The project has completed Phase 1 foundation implementation with working orchest
 - `/docs/MEMORY_REFACTORING_GUIDE.md`: Migration instructions for memory system
 - `/docs/MONITORING_SETUP.md`: Production monitoring setup and configuration
 - `/docs/SESSION_SUMMARY_2025-06-05.md`: Today's major achievements
+
+## Architecture Refactoring Implementation
+
+### God Object Elimination
+- **AGIOrchestrator Refactoring**: Break into ServiceRegistry, StateManager, EventBus
+  - ServiceRegistry: Central service lifecycle management with health tracking
+  - StateManager: Centralized state transitions with validation and history
+  - EventBus: Decoupled pub/sub messaging with request/response support
+  - Provide migration scripts to update existing code to new APIs
+
+### Service Patterns
+- **Service Registry Pattern**: 
+  - Track service instances, health status, and dependencies
+  - Implement graceful startup/shutdown ordering based on dependencies
+  - Use weak references to prevent circular dependencies
+  - Provide service discovery and dynamic reconfiguration
+- **Event Bus Pattern**:
+  - Type-safe channels with compile-time guarantees
+  - Support both async fire-and-forget and request-response patterns
+  - Built-in dead letter queues for failed message handling
+  - Message routing based on topic hierarchies
+- **State Manager Pattern**:
+  - Immutable state snapshots with timestamp tracking
+  - State transition guards to enforce business rules
+  - Automatic rollback on validation failures
+  - State history for debugging and audit trails
+
+### Memory System Refactoring
+- **Store Pattern**: Separate storage concerns (working, episodic, semantic) with coordinators
+  - Each store handles its specific data type and access patterns
+  - Coordinator manages cross-store transactions and consistency
+  - Lazy loading and caching strategies per store type
+  - Clear interfaces between stores and business logic
+- **Connection Pooling**: Always use connection pools with health monitoring
+  - Implement health checks with exponential backoff
+  - Track connection metrics (active, idle, failed)
+  - Automatic connection recycling based on age/usage
+  - Graceful degradation when connections unavailable
+- **Memory Synchronization**: Version tracking with conflict resolution
+  - Use vector clocks or hybrid logical clocks for ordering
+  - Implement three-way merge for conflict resolution
+  - Track sync status per memory type and peer
+  - Handle partial sync failures gracefully
+
+### Migration Patterns
+- **Migration Scripts**: Provide automated migration when refactoring APIs
+  - Generate migration code from old to new API signatures
+  - Support incremental migration with compatibility layers
+  - Validate migration correctness with parallel testing
+  - Provide rollback capabilities for failed migrations
+- **Backwards Compatibility**: Maintain compatibility during major refactoring
+  - Keep old APIs as thin wrappers around new implementation
+  - Use deprecation warnings with migration guidance
+  - Version APIs explicitly with semantic versioning
+  - Document breaking changes in upgrade guides
+
+## Operations & Monitoring Patterns
+
+### Welfare Monitoring
+- **Continuous Assessment**: Implement automated welfare checks with interventions
+- **Emergency Protocols**: Establish crisis response procedures for multiple emergency types
+- **Backup Strategy**: Use multi-destination backups (S3, local) with verification
+- **Daily Operations**: Automate routine checks and generate comprehensive reports
+- **Validation Approach**: Run pre-deployment and continuous validation checks
+- **Debug Tooling**: Create deep inspection capabilities for complex debugging
+- **Test Data Generation**: Build comprehensive synthetic data generators for testing
+- **Disaster Recovery**: Document and test complete recovery procedures
+
+### Production Monitoring Infrastructure
+- **MetricsCollector**: Application-specific metrics aggregation
+- **HealthChecker**: Configurable thresholds and alerts
+- **PrometheusExporter**: Standard metrics exposition
+- **Monitoring Hooks**: Zero-intrusion instrumentation
+
+### Metrics Collection Patterns
+- **Counter Usage**: For monotonic values (requests, errors)
+- **Gauge Usage**: For point-in-time values (memory, connections)
+- **Histogram Usage**: For distributions (latency, sizes)
+- **Label Strategy**: Always include labels for dimensional analysis
+
+### Health Check Design
+- **Liveness**: Basic process health (can respond)
+- **Readiness**: Service dependencies available
+- **Startup**: Initialization complete
+- **Deep Health**: Full functional validation
+
+### Prometheus Integration
+- **Client Libraries**: Use official libraries for consistency
+- **Metrics Endpoint**: Implement /metrics with proper formatting
+- **Default Metrics**: Include process and runtime metrics
+- **Naming Conventions**: Use consistent metric naming
+
+### Mock Patterns for Monitoring Tests
+- **Registry Mocking**: Mock Prometheus registry for metrics collection tests
+- **In-Memory Collectors**: Use for unit testing
+- **Metric Verification**: Verify names, labels, and values in tests
+- **Alert Testing**: Test alert rules with synthetic metric data
+
+### Import Resolution
+- **Optional Dependencies**: Use try/except for prometheus_client imports
+- **No-op Implementations**: When monitoring disabled
+- **Graceful Degradation**: Allow operation without metrics
+- **Environment Configuration**: Configure monitoring via environment variables

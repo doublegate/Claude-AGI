@@ -699,6 +699,48 @@ class HealthChecker:
     
     async def _update_health_metrics(self, results: List[HealthCheckResult]):
         """Update health metrics in metrics collector"""
-        # This would update Prometheus metrics
-        # Implementation depends on metrics collector interface
-        pass
+        try:
+            for result in results:
+                service_name = result.service_name
+                health = result.health
+                
+                # Update service health status (0=unhealthy, 1=healthy)
+                health_status = 1 if health.status == HealthStatus.HEALTHY else 0
+                if self.metrics_collector:
+                    # Set health gauge for this service
+                    if hasattr(self.metrics_collector, 'set_gauge'):
+                        self.metrics_collector.set_gauge(
+                            'service_health_status',
+                            health_status,
+                            labels={'service': service_name, 'status': health.status.value}
+                        )
+                        
+                    # Set response time metric if available
+                    if health.response_time is not None:
+                        if hasattr(self.metrics_collector, 'observe_histogram'):
+                            self.metrics_collector.observe_histogram(
+                                'service_response_time_seconds',
+                                health.response_time,
+                                labels={'service': service_name}
+                            )
+                            
+                    # Set error count if available
+                    if health.error_count is not None:
+                        if hasattr(self.metrics_collector, 'set_gauge'):
+                            self.metrics_collector.set_gauge(
+                                'service_error_count',
+                                health.error_count,
+                                labels={'service': service_name}
+                            )
+                            
+                    # Set custom metrics
+                    for metric_name, value in health.custom_metrics.items():
+                        if hasattr(self.metrics_collector, 'set_gauge'):
+                            self.metrics_collector.set_gauge(
+                                f'service_{metric_name}',
+                                value,
+                                labels={'service': service_name}
+                            )
+                            
+        except Exception as e:
+            self.logger.error(f"Failed to update health metrics: {e}")

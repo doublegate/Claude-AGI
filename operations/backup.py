@@ -24,15 +24,19 @@ class BackupDestination:
     
     async def store(self, backup_package: 'BackupPackage') -> bool:
         """Store backup package"""
-        raise NotImplementedError
+        raise NotImplementedError("Subclasses must implement store method")
         
     async def retrieve(self, backup_id: str) -> Optional['BackupPackage']:
         """Retrieve backup package"""
-        raise NotImplementedError
+        raise NotImplementedError("Subclasses must implement retrieve method")
         
     async def list_backups(self) -> List[Dict[str, Any]]:
         """List available backups"""
-        raise NotImplementedError
+        raise NotImplementedError("Subclasses must implement list_backups method")
+        
+    async def delete(self, backup_id: str) -> bool:
+        """Delete backup package"""
+        raise NotImplementedError("Subclasses must implement delete method")
 
 
 class S3BackupDestination(BackupDestination):
@@ -96,6 +100,51 @@ class S3BackupDestination(BackupDestination):
         except Exception as e:
             logger.error(f"Failed to retrieve backup from S3: {e}")
             return None
+            
+    async def list_backups(self) -> List[Dict[str, Any]]:
+        """List available backups in S3"""
+        try:
+            session = aioboto3.Session()
+            async with session.client('s3', region_name=self.region) as s3:
+                response = await s3.list_objects_v2(
+                    Bucket=self.bucket_name,
+                    Prefix='backups/'
+                )
+                
+                backups = []
+                for obj in response.get('Contents', []):
+                    key = obj['Key']
+                    if key.endswith('.tar.gz'):
+                        backup_id = Path(key).stem.replace('.tar', '')
+                        backups.append({
+                            'backup_id': backup_id,
+                            'timestamp': obj['LastModified'],
+                            'size': obj['Size'],
+                            'location': f"s3://{self.bucket_name}/{key}"
+                        })
+                        
+                return backups
+                
+        except Exception as e:
+            logger.error(f"Failed to list S3 backups: {e}")
+            return []
+            
+    async def delete(self, backup_id: str) -> bool:
+        """Delete backup from S3"""
+        try:
+            session = aioboto3.Session()
+            async with session.client('s3', region_name=self.region) as s3:
+                await s3.delete_object(
+                    Bucket=self.bucket_name,
+                    Key=f"backups/{backup_id}.tar.gz"
+                )
+                
+                logger.info(f"Deleted S3 backup: {backup_id}")
+                return True
+                
+        except Exception as e:
+            logger.error(f"Failed to delete S3 backup: {e}")
+            return False
 
 
 class LocalBackupDestination(BackupDestination):
@@ -130,6 +179,44 @@ class LocalBackupDestination(BackupDestination):
         except Exception as e:
             logger.error(f"Failed to retrieve local backup: {e}")
             return None
+            
+    async def list_backups(self) -> List[Dict[str, Any]]:
+        """List available local backups"""
+        try:
+            backups = []
+            for tar_file in self.backup_dir.glob("*.tar.gz"):
+                backup_id = tar_file.stem.replace('.tar', '')
+                stat = tar_file.stat()
+                backups.append({
+                    'backup_id': backup_id,
+                    'timestamp': datetime.fromtimestamp(stat.st_mtime),
+                    'size': stat.st_size,
+                    'location': str(tar_file)
+                })
+                
+            # Sort by timestamp, newest first
+            backups.sort(key=lambda x: x['timestamp'], reverse=True)
+            return backups
+            
+        except Exception as e:
+            logger.error(f"Failed to list local backups: {e}")
+            return []
+            
+    async def delete(self, backup_id: str) -> bool:
+        """Delete local backup"""
+        try:
+            tar_path = self.backup_dir / f"{backup_id}.tar.gz"
+            if tar_path.exists():
+                tar_path.unlink()
+                logger.info(f"Deleted local backup: {backup_id}")
+                return True
+            else:
+                logger.warning(f"Local backup not found: {backup_id}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Failed to delete local backup: {e}")
+            return False
 
 
 class BackupPackage:

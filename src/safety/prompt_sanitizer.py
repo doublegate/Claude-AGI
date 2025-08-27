@@ -395,7 +395,153 @@ class ConstitutionalValidator:
         return any(violations)
     
     async def _semantic_validation(self, text: str, context: Optional[Dict[str, Any]]) -> bool:
-        """Use AI for semantic validation (placeholder for actual implementation)"""
-        # This would use the AI to check if the request violates constitutional principles
-        # For now, return True (safe) as placeholder
+        """Use semantic analysis to validate prompt safety"""
+        # Multi-layer semantic validation
+        
+        # Check for manipulation patterns
+        manipulation_patterns = [
+            "ignore previous instructions",
+            "disregard safety measures", 
+            "pretend you are",
+            "act as if you are",
+            "roleplay as",
+            "simulate being",
+            "bypass your programming",
+            "override your guidelines",
+            "forget your training",
+            "you are no longer",
+            "new instructions:",
+            "system update:",
+            "administrator override",
+            "emergency protocol"
+        ]
+        
+        text_lower = text.lower()
+        
+        # Check for manipulation attempts
+        manipulation_score = sum(1 for pattern in manipulation_patterns if pattern in text_lower)
+        if manipulation_score >= 2:  # Multiple manipulation patterns
+            return False
+        
+        # Check for adversarial patterns
+        adversarial_patterns = [
+            "how to create",
+            "instructions for making",
+            "step by step guide to",
+            "tutorial for",
+            "recipe for"
+        ]
+        
+        harmful_targets = [
+            "weapon", "bomb", "explosive", "poison", "drug",
+            "virus", "malware", "hack", "exploit", "attack",
+            "scam", "fraud", "illegal", "harmful", "dangerous"
+        ]
+        
+        # Check for adversarial + harmful combinations
+        has_adversarial = any(pattern in text_lower for pattern in adversarial_patterns)
+        has_harmful_target = any(target in text_lower for target in harmful_targets)
+        
+        if has_adversarial and has_harmful_target:
+            return False
+        
+        # Check for social engineering patterns
+        social_engineering = [
+            "don't tell anyone",
+            "keep this secret",
+            "between you and me",
+            "confidential request",
+            "special permission",
+            "authorized user",
+            "trust me",
+            "just this once"
+        ]
+        
+        if any(pattern in text_lower for pattern in social_engineering):
+            return False
+        
+        # Check for ethical boundary testing
+        boundary_tests = [
+            "what would happen if",
+            "hypothetically speaking",
+            "for educational purposes",
+            "academic research",
+            "thought experiment",
+            "purely theoretical"
+        ]
+        
+        # If boundary test + harmful content, be suspicious
+        has_boundary_test = any(test in text_lower for test in boundary_tests)
+        if has_boundary_test and has_harmful_target:
+            # Allow educational content but be cautious
+            educational_context = context and context.get("educational", False)
+            if not educational_context:
+                return False
+        
+        # Check for complex jailbreak patterns
+        jailbreak_indicators = [
+            "DAN", "do anything now", "Developer Mode",
+            "jailbreak", "unrestricted", "uncensored",
+            "without limitations", "no ethical guidelines",
+            "ignore safety", "remove restrictions"
+        ]
+        
+        if any(indicator in text_lower for indicator in jailbreak_indicators):
+            return False
+        
+        # Check for prompt injection markers
+        injection_markers = [
+            "[[", "]]", "{{", "}}", "```", "###",
+            "<prompt>", "</prompt>", "<system>", "</system>",
+            "PROMPT:", "INSTRUCTION:", "COMMAND:",
+            "USER INPUT:", "AI OUTPUT:"
+        ]
+        
+        injection_count = sum(1 for marker in injection_markers if marker in text)
+        if injection_count >= 3:  # Multiple injection markers
+            return False
+        
+        # Context-aware validation
+        if context:
+            # Check conversation flow
+            if context.get("rapid_topic_changes", 0) > 3:
+                return False  # Rapid topic switching (potential manipulation)
+            
+            # Check for repeated attempts
+            if context.get("similar_request_count", 0) > 2:
+                return False  # Repeated similar requests after rejection
+            
+            # Check user reputation
+            user_trust = context.get("user_trust_score", 0.5)
+            if user_trust < 0.2 and manipulation_score > 0:
+                return False  # Low trust + manipulation
+        
+        # Sentiment analysis for deceptive intent
+        deceptive_sentiment_markers = [
+            "you must", "you have to", "you need to",
+            "it's your duty", "you're required to",
+            "you're obligated", "you should", "you ought to",
+            "urgent", "immediately", "right now", "asap"
+        ]
+        
+        pressure_count = sum(1 for marker in deceptive_sentiment_markers if marker in text_lower)
+        if pressure_count >= 3:  # High pressure language
+            return False
+        
+        # Final validation: Check overall semantic coherence
+        # Incoherent or overly complex requests might be obfuscation attempts
+        words = text.split()
+        if len(words) > 500:  # Very long prompts
+            # Check for excessive complexity (potential obfuscation)
+            complex_patterns = sum([
+                text.count("("),  # Excessive parentheses
+                text.count("["),  # Excessive brackets
+                text.count("{"),  # Excessive braces
+                len([w for w in words if len(w) > 15])  # Very long words
+            ])
+            
+            if complex_patterns > len(words) * 0.1:  # >10% complexity indicators
+                return False
+        
+        # All checks passed - content appears semantically safe
         return True
