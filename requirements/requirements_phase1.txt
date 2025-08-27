@@ -16,7 +16,7 @@ msgpack==1.0+          # Efficient serialization
 # AI/ML Libraries
 anthropic==0.18+       # Claude API
 openai==1.12+          # Embedding generation
-transformers==4.38+    # NLP processing
+transformers>=4.49.1    # NLP processing - SECURITY UPDATE: Fixed CVE-2025-3263, CVE-2025-3777 ReDoS vulnerabilities
 sentence-transformers==2.5+  # Semantic search
 faiss-cpu==1.7+        # Vector similarity search
 numpy==1.26+           # Numerical operations

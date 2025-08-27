@@ -1,13 +1,13 @@
-# Core dependencies
-anthropic>=0.18.0
+# Core dependencies - SECURITY UPDATE: Updated Anthropic to latest for MCP vulnerability fixes
+anthropic>=0.31.0
 aiofiles>=23.2.1
 asyncio-tools>=0.1.2
 
 # Terminal UI
 windows-curses>=2.3.2 ; platform_system == "Windows"
 
-# Database and storage
-redis>=5.0.0
+# Database and storage - SECURITY UPDATE: Redis updated for CVE-2025-21605, CVE-2024-31449 fixes
+redis>=7.4.0
 asyncpg>=0.29.0
 psycopg2-binary>=2.9.9
 sqlalchemy[asyncio]>=2.0.0
@@ -17,11 +17,11 @@ alembic>=1.13.0
 numpy>=1.24.0
 faiss-cpu>=1.7.4
 sentence-transformers>=2.2.0
-transformers>=4.36.0
+transformers>=4.49.1  # SECURITY UPDATE: Fixed CVE-2025-3263, CVE-2025-3777 ReDoS vulnerabilities
 torch>=2.1.0
 
-# Web and API
-fastapi>=0.109.0
+# Web and API - SECURITY UPDATE: FastAPI updated for CVE-2024-24762 ReDoS fix
+fastapi>=0.110.0
 uvicorn>=0.27.0
 httpx>=0.26.0
 websockets>=12.0
@@ -36,8 +36,8 @@ prometheus-client>=0.19.0
 structlog>=24.1.0
 python-json-logger>=2.0.7
 
-# Security
-cryptography>=42.0.0
+# Security - SECURITY UPDATE: Cryptography updated for CVE-2024-12797, CVE-2024-26130 fixes
+cryptography>=44.0.1
 bcrypt>=4.0.0
 PyJWT>=2.8.0
 

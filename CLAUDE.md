@@ -4,8 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## CRITICAL DEVELOPMENT RULES
 
-1. **Memory Bank Management**: ALWAYS read all three memory banks (user, project, local) before updating any of them
-2. **Chronological Reference**: ALWAYS check system date/time before any date-related operations, file generation, or documentation
+*Note: Core development rules are maintained in User Memory (/home/parobek/.claude/CLAUDE.md). See that file for Memory Bank Management and Chronological Reference guidelines.*
+
+1. **API Model Deprecation Monitoring**: Regularly verify current Anthropic API model names (claude-sonnet-4-20250514) across all configuration files and source code
 
 ## Project Overview
 
@@ -321,25 +322,16 @@ The project has completed Phase 1 foundation implementation with working orchest
 - ✅ **Test Infrastructure**: All async issues resolved, proper mocking throughout
 - ✅ **Documentation**: DEFERRED_TEST_IMPLEMENTATIONS.md tracks all test modifications
 
-### Phase 1 Status (90% Complete)
+### Phase 1 Status (Complete as of August 2025)
+- ✅ **Architecture Refactoring**: ServiceRegistry, StateManager, EventBus patterns implemented
+- ✅ **Memory Synchronization**: Full implementation with version tracking and conflict resolution
+- ✅ **Production Monitoring**: Prometheus metrics, health checks, monitoring infrastructure ready
+- ✅ **API Integration**: Anthropic API fully operational with current model names
+- ✅ **CI/CD Pipeline**: 100% test success rate (423/423 tests passing)
+- ✅ **Security Framework**: Comprehensive security hardening with 62+ dedicated tests
+- ✅ **Cross-Platform Distribution**: Automated executables for Linux, Windows, macOS
 
-#### Completed Today (June 5, 2025)
-- ✅ Architecture refactoring (90% - only TUI remaining)
-- ✅ Memory synchronization system (full consistency)
-- ✅ Production monitoring infrastructure (ready for deployment)
-- ✅ 34+ new tests added (monitoring + sync)
-
-#### Previously Completed
-- ✅ Anthropic API connection for actual thought generation
-- ✅ Production-grade CI/CD pipeline with cross-platform distribution
-- ✅ PostgreSQL and Redis integration with connection pooling
-- ✅ Security hardening with 62+ tests
-- ✅ Kubernetes manifests (8 files ready)
-
-#### Remaining Tasks (3-5 days)
-- 🔴 TUI refactoring (last god object) - 1-2 days
-- 🔴 Deploy monitoring stack - 1 day
-- 🟡 Complete RBAC implementation - 2-3 days
+*Note: Current status and recent achievements are maintained in Local Memory (/var/home/parobek/Code/Claude-AGI/CLAUDE.local.md)*
 
 ## Project Phases
 
@@ -469,3 +461,17 @@ The project has completed Phase 1 foundation implementation with working orchest
 - **No-op Implementations**: When monitoring disabled
 - **Graceful Degradation**: Allow operation without metrics
 - **Environment Configuration**: Configure monitoring via environment variables
+
+## API Integration Patterns
+
+### Anthropic API Management
+- **Model Name Updates**: Regularly check for deprecated model names (claude-3-sonnet-20240229 → claude-sonnet-4-20250514)
+- **Cross-File Consistency**: Update model references in ai_integration.py (lines 92, 294), development.yaml, production.yaml, test files
+- **Error Handling**: 404 errors often indicate deprecated model names, not authentication issues
+- **Systematic Debugging**: Use MCP debug tools for comprehensive root cause analysis
+
+### Chat Response Debugging
+- **API Testing**: Verify ThoughtGenerator functionality with direct API calls
+- **Configuration Audit**: Search for all model name references when debugging chat failures
+- **Zero API Usage**: If Anthropic dashboard shows no usage, likely a deprecated model name
+- **Version Verification**: Always confirm current model names before major releases

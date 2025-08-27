@@ -4,7 +4,7 @@
 markovify==0.9+        # Text generation
 pytorch-transformers   # Advanced generation
 music21==9.1+          # Music composition
-pillow==10.2+          # Image manipulation
+pillow>=11.3.0          # Image manipulation - SECURITY UPDATE: Fixed CVE-2025-48379 buffer overflow
 ascii-art==2.3+        # ASCII art generation
 
 # Project Management

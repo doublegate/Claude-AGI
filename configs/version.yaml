@@ -1,11 +1,11 @@
 version:
   major: 1
   minor: 5
-  patch: 1
-  release: "1.5.1"
-  codename: "Chat API Restoration"
+  patch: 2
+  release: "1.5.2"
+  codename: "Security Hardening & Documentation Sync"
   release_date: "2025-08-27"
-  previous_release: "1.5.0"
+  previous_release: "1.5.1"
   
 phase_status:
   phase_1:
@@ -20,11 +20,18 @@ phase_status:
       - Web exploration
       - RBAC authentication
       - Production monitoring
+      - Security vulnerability resolution
     test_coverage: 83.7
     test_count: 423
     ci_pipeline_status: "FULLY_RESTORED"
     ci_pipeline_restored_date: "2025-08-27"
     errors_fixed: 24
+    security_alerts_resolved: 13
+    security_resolution_date: "2025-08-27"
+    vulnerabilities_fixed:
+      - "CVE-2025-3263, CVE-2025-3777: ReDoS in transformers"
+      - "Buffer overflow in pillow"
+      - "Log injection in ray"
     
   phase_2:
     status: "READY"

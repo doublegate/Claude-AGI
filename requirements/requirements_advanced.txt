@@ -11,5 +11,5 @@ higher==0.2+           # Higher-order optimization
 
 # Optimization
 optuna==3.5+           # Hyperparameter optimization
-ray==2.9+              # Distributed computing
+ray>=2.9.3              # Distributed computing - SECURITY UPDATE: Fixed log injection vulnerability
 dask==2024.2+          # Parallel computing

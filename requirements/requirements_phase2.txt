@@ -27,6 +27,7 @@ plotly>=5.17.0
 
 # Advanced embeddings
 sentence-transformers>=2.2.0
+transformers>=4.49.1  # SECURITY UPDATE: Fixed CVE-2025-3263, CVE-2025-3777 ReDoS vulnerabilities
 torch>=2.0.0
 
 # Graph databases
