@@ -256,7 +256,7 @@ class AGIOrchestrator:
         """Get state transition history"""
         return self.state_history.copy()
 
-    def register_service(self, name: str, service: Any):
+    def register(self, name: str, service: Any):
         """Register a new service"""
         self.services[name] = service
         

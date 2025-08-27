@@ -77,7 +77,7 @@ class EpisodicMemoryStore:
         
         # Register with service registry
         if self.service_registry:
-            await self.service_registry.register_service(
+            await self.service_registry.register(
                 "episodic_memory_store",
                 self,
                 {
@@ -93,7 +93,7 @@ class EpisodicMemoryStore:
         
         # Unregister from service registry
         if self.service_registry:
-            await self.service_registry.unregister_service("episodic_memory_store")
+            await self.service_registry.unregister("episodic_memory_store")
     
     async def store_memory(
         self,

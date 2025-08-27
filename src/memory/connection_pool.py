@@ -124,7 +124,7 @@ class ConnectionPoolManager:
         
         # Register with service registry
         if self.service_registry:
-            await self.service_registry.register_service(
+            await self.service_registry.register(
                 "connection_pool_manager",
                 self,
                 {
@@ -149,7 +149,7 @@ class ConnectionPoolManager:
         
         # Unregister from service registry
         if self.service_registry:
-            await self.service_registry.unregister_service("connection_pool_manager")
+            await self.service_registry.unregister("connection_pool_manager")
     
     @asynccontextmanager
     async def get_postgres_connection(self):

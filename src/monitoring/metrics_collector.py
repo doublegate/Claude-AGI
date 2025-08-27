@@ -394,7 +394,7 @@ class MetricsCollector:
         
         # Register with service registry
         if self.service_registry:
-            await self.service_registry.register_service(
+            await self.service_registry.register(
                 "metrics_collector",
                 self,
                 {"prometheus_available": HAS_PROMETHEUS}
@@ -413,7 +413,7 @@ class MetricsCollector:
         
         # Unregister from service registry
         if self.service_registry:
-            await self.service_registry.unregister_service("metrics_collector")
+            await self.service_registry.unregister("metrics_collector")
     
     async def collect_metrics(self):
         """

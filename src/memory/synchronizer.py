@@ -112,7 +112,7 @@ class MemorySynchronizer:
         
         # Register with service registry if available
         if self.service_registry:
-            await self.service_registry.register_service(
+            await self.service_registry.register(
                 "memory_synchronizer",
                 self,
                 {"sync_interval": self.sync_interval}
@@ -133,7 +133,7 @@ class MemorySynchronizer:
         
         # Unregister from service registry
         if self.service_registry:
-            await self.service_registry.unregister_service("memory_synchronizer")
+            await self.service_registry.unregister("memory_synchronizer")
     
     async def sync_memory(self, memory_id: str, memory_data: Dict[str, Any]) -> bool:
         """
