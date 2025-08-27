@@ -89,7 +89,7 @@ class ThoughtGenerator:
         
         # Call Claude API
         response = await self.client.messages.create(
-            model="claude-3-sonnet-20240229",
+            model="claude-sonnet-4-20250514",
             max_tokens=200,
             temperature=self._get_temperature(stream_type),
             messages=[
@@ -291,7 +291,7 @@ class ThoughtGenerator:
         
         # Generate response
         response = await self.client.messages.create(
-            model="claude-3-sonnet-20240229",
+            model="claude-sonnet-4-20250514",
             max_tokens=500,
             temperature=0.8,
             messages=messages,

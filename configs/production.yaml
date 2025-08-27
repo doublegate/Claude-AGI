@@ -76,7 +76,7 @@ database:
 # API configuration
 api:
   anthropic:
-    model: claude-3-opus-20240229
+    model: claude-sonnet-4-20250514
     max_tokens: 8192
     temperature: 0.7
     

@@ -23,7 +23,7 @@ from typing import Any, Dict, List, Optional
 from ..consciousness.stream import ConsciousnessStream
 from ..core.ai_integration import ThoughtGenerator
 from ..database.models import EmotionalState, Goal, Interest, StreamType
-from ..exploration.engine import WebExplorationEngine
+from ..exploration.engine import WebExplorer
 from ..memory.manager import MemoryManager
 
 logger = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ class AdvancedCommands:
         self.memory_manager: Optional[MemoryManager] = None
         self.consciousness_stream: Optional[ConsciousnessStream] = None
         self.thought_generator: Optional[ThoughtGenerator] = None
-        self.exploration_engine: Optional[WebExplorationEngine] = None
+        self.exploration_engine: Optional[WebExplorer] = None
         self.safety_framework = None
         
         # Command state

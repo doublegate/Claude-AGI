@@ -5,9 +5,33 @@ All notable changes to the Claude-AGI Project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.5.1] - 2025-08-27 - CI Pipeline Restored 🚀
+## [1.5.1] - 2025-08-27 - Chat Response Fixes & API Restoration 🔧
+
+### Fixed - Critical API Integration Issues
+
+- **Chat Response Functionality Restored**: Fixed critical Anthropic API integration
+  - Updated outdated model names from `claude-3-sonnet-20240229` to `claude-sonnet-4-20250514`
+  - Fixed both thought generation and chat response API calls
+  - Resolved zero API usage tracking issue
+  - All conversation functionality now working with actual Claude API responses
+- **Configuration Updates**: Updated model references across environments
+  - Updated `configs/development.yaml` and `configs/production.yaml`
+  - Fixed test expectations in `tests/unit/test_ai_integration.py`
+  - Consistent model names across all configuration files
+- **GitHub Release Management**: Fixed v1.5.0 release visibility
+  - Removed pre-release flag from v1.5.0 to make it appear in main Releases section
+  - Properly configured release workflow for future builds
+
+### Technical Details
+- **API Integration**: Core issue was deprecated model names causing 404 errors
+- **Fallback System**: Template responses were working, explaining partial functionality
+- **Memory Streams**: Continued functioning because they use robust fallback mechanisms
+- **Testing**: Direct API verification confirms full restoration of chat capabilities
+
+## [1.5.0] - 2025-08-27 - Phase 1 Complete 🎉 & CI Pipeline Restored 🚀
 
 ### Added - CI Pipeline Restoration Session
+
 - **CI Pipeline Fully Restored**: 100% test success rate achieved
   - Fixed 24 distinct failures across 6 error categories
   - Restored test_monitoring.py from disabled state
@@ -34,12 +58,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Quality assurance results and performance impact analysis
 
 ### Changed
+
 - **Test Suite**: Maintained 423 tests with 100% pass rate (up from 96.7%)
 - **CI Pipeline Status**: From failing to fully operational
 - **Error Count**: Reduced from 24 failures to 0 (100% resolution)
 - **Production Readiness**: Enhanced with robust error handling patterns
 
 ### Fixed
+
 - **EventBus Integration**: All publish() method signature errors resolved
 - **Prometheus Conflicts**: All metric registration conflicts eliminated  
 - **Import Issues**: All missing and incorrect imports corrected
@@ -48,13 +74,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **State Transitions**: Invalid transition logic corrected
 
 ### Documentation
+
 - Added CI_PIPELINE_CORRECTIONS_REPORT.md with comprehensive technical analysis
 - Updated all timestamps and status references to August 2025
 - Documented architectural improvements and lessons learned
 
-## [1.5.0] - 2024-12-27 - Phase 1 Complete 🎉
-
 ### Added - Session Achievements
+
 - **TUI Refactoring Complete**: Eliminated last god object
   - Extracted UIRenderer (850 lines) for display logic
   - Extracted EventHandler (650 lines) for input processing
@@ -81,18 +107,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Information processing pipeline with complete data flow
 
 ### Changed
+
 - **Test Suite**: Expanded from 313 to 423+ tests
 - **Phase 1 Status**: Now 100% COMPLETE (was 90%)
 - **Version**: Updated to 1.5.0 reflecting complete implementation
 - **Development Status**: Upgraded to Alpha from Pre-Alpha
 
 ### Fixed
+
 - **All TODOs Eliminated**: Zero placeholder code remaining
 - **All NotImplementedError**: Fully implemented
 - **All Stubs**: Complete working implementations
 - **All Blockers**: Resolved and tested
 
 ### Documentation
+
 - Created comprehensive PHASE_1_COMPLETION_REPORT.md
 - Updated all documentation to reflect Phase 1 completion
 - Added version.yaml with detailed phase status
@@ -100,6 +129,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.4.0] - 2025-06-05 - Architecture Refactoring & Production Monitoring 🏗️
 
 ### Added
+
 - **Architecture Refactoring**: Major refactoring eliminating 90% of god objects
   - **AGIOrchestrator Refactoring**: Extracted ServiceRegistry, StateManager, and EventBus components
   - **MemoryManager Refactoring**: Broke into WorkingMemoryStore, EpisodicMemoryStore, SemanticIndex, and MemoryCoordinator
@@ -115,7 +145,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - PrometheusExporter with HTTP metrics endpoint
   - MonitoringHooks for decorator-based metric tracking
   - Comprehensive test suite (14 tests passing)
-- **Documentation**: 
+- **Documentation**:
   - ARCHITECTURE_REFACTORING_PROGRESS.md
   - MEMORY_SYNCHRONIZATION_IMPLEMENTATION.md
   - MEMORY_REFACTORING_GUIDE.md
@@ -123,6 +153,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - SESSION_SUMMARY_2025-06-05.md
 
 ### Changed
+
 - **Core Architecture**: Moved from monolithic god objects to clean, modular design
 - **Memory System**: Complete overhaul with proper separation of concerns
 - **Import Structure**: Fixed relative imports with fallback support
@@ -131,6 +162,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Blockers**: Reduced from 4 to 2 (TUI refactoring and monitoring deployment)
 
 ### Improved
+
 - **Maintainability**: Each component now has single responsibility
 - **Testability**: Components can be tested in isolation
 - **Performance**: Connection pooling improves database efficiency
@@ -139,6 +171,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.3.0] - 2025-06-04 - Security Hardening & Documentation Reorganization 🛡️
 
 ### Added
+
 - **Security Hardening**: Comprehensive security implementation addressing all Phase 1 vulnerabilities
   - **PromptSanitizer**: Multi-level threat detection with pattern matching and Constitutional AI validation
   - **SecureKeyManager**: Fernet encryption for API keys with audit logging and rotation
@@ -149,17 +182,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Documentation**: Created PHASE_1_COMPLETED.md documenting security implementation
 
 ### Changed
+
 - **Orchestrator**: Updated to use EnhancedSafetyFramework instead of basic SafetyFramework
 - **Documentation Structure**: Major reorganization with archive folders for historical docs
 - **Testing Guide**: Updated to reflect 299 tests and 72.80% coverage
 
 ### Fixed
+
 - **Security Vulnerabilities**: All critical Phase 1 security issues resolved
 - **Documentation**: Consolidated test history and archived outdated documents
 
 ## [1.2.0] - 2025-06-04 - Comprehensive Test Suite Expansion & Coverage Improvement 🧪
 
 ### Added
+
 - **Test Suite Expansion**: Created 146 new tests, increasing total from 153 to 299 tests
 - **API Client Tests** (`test_api_client.py`): 19 comprehensive tests covering all HTTP methods and WebSocket streaming
 - **Memory Manager Extended Tests** (`test_memory_manager_extended.py`): 55 tests improving coverage from 53.88% to 95.10%
@@ -168,6 +204,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Coverage Summary Files**: Created detailed coverage reports for memory manager improvements
 
 ### Fixed
+
 - **API Server Tests**: Removed tests for non-existent endpoints and fixed WebSocket test structure
 - **Exploration Engine Tests**: Fixed RateLimiter initialization parameters and method names
 - **Main Module Tests**: Fixed all failing tests achieving 98.72% coverage
@@ -177,6 +214,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Event Loop Warnings**: Eliminated all "Event loop is closed" warnings with proper cleanup
 
 ### Changed
+
 - **Overall Test Coverage**: Improved from 49.22% to 72.80% (+23.58%)
 - **Test Pass Rate**: Achieved 100% pass rate (299/299 tests passing)
 - **Memory Manager Coverage**: Dramatically improved from 53.88% to 95.10%
@@ -184,10 +222,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Test Organization**: Created extended test files for comprehensive coverage
 
 ### Deferred
+
 - **TUI Tests**: Deferred due to curses complexity (291 lines at 0% coverage)
 - **API Endpoints**: Tests removed for `/reflection/trigger`, `/memory` GET, `/memory/store`, `/emotional/state` PUT
 
 ### Documentation
+
 - Updated `DEFERRED_TEST_IMPLEMENTATIONS.md` with comprehensive list of test modifications
 - Created detailed coverage reports showing improvements by module
 - Documented all API changes and missing features discovered during testing
@@ -197,6 +237,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 #### CI/CD Infrastructure
+
 - **Optimized CI Pipeline** (`.github/workflows/ci-pipeline.yml`)
   - 50% faster builds with shared dependency caching
   - Parallel execution of unit, integration, safety, and performance tests
@@ -213,6 +254,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Same test execution commands as GitHub Actions
 
 #### TUI Performance & Functionality
+
 - **Enhanced Input Responsiveness**: Reduced polling delay to 0.01s for immediate character display
 - **Memory Integration**: Fixed consciousness thoughts storage and display in Memory Browser
 - **Goal Management**: Corrected field validation (id vs goal_id) for proper goal creation
@@ -220,6 +262,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **UI Optimization**: Selective pane updates and reduced flickering
 
 ### Fixed
+
 - **Windows Unicode Encoding**: Replaced emoji characters with ASCII text for cross-platform compatibility
 - **Memory Manager Message Handling**: Added proper `handle_message` method for orchestrator integration
 - **PyInstaller Compatibility**: Made heavy ML dependencies optional with graceful fallbacks
@@ -227,6 +270,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **TUI Exit Errors**: Comprehensive exit handling with curses cleanup and auth warning suppression
 
 ### Changed
+
 - **Build Performance**: CI pipeline now completes in ~2 minutes (down from ~4 minutes)
 - **Release Process**: Automated cross-platform executable generation with each tagged release
 - **Dependency Management**: Optional imports pattern for better PyInstaller compatibility
@@ -235,6 +279,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.6] - 2025-06-04
 
 ### Fixed
+
 - **TUI Screen Flickering**: Increased UI refresh interval to 1 second and optimized screen updates
 - **Memory Browser Formatting**: Fixed text overflow with proper truncation and ellipsis for long content
 - **Consciousness Text Wrapping**: Improved prefix handling and word wrapping without breaking words
@@ -242,6 +287,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Curses Exit Error**: Improved cleanup sequence with graceful terminal reset handling
 
 ### Changed
+
 - Reduced input polling delay to 0.01s (from 0.0001s) for better balance between responsiveness and CPU usage
 - Only update display when input is actually received to reduce unnecessary redraws
 - Improved text wrapping algorithm to handle emojis and tags properly
@@ -251,6 +297,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 #### Core System Implementation
+
 - **AGI Orchestrator** (`src/core/orchestrator.py`)
   - Async event loop with priority queue
   - State management (IDLE, THINKING, EXPLORING, CREATING, REFLECTING, SLEEPING)
@@ -300,6 +347,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Automatic embedding generation
 
 #### Enhanced TUI (`claude-agi.py`)
+
 - Multi-pane layout with dynamic resizing
 - Consciousness stream visualization with indicators
 - Memory browser with search and categories
@@ -317,6 +365,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multiple layout modes (standard, memory_focus, emotional_focus)
 
 #### Comprehensive Testing Suite (95+ tests)
+
 - **Unit Tests**
   - `test_memory_manager.py` - 10 memory tests
   - `test_consciousness_stream.py` - 25+ consciousness tests
@@ -348,6 +397,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Resource usage monitoring
 
 #### Infrastructure & Deployment
+
 - **Docker**
   - Multi-stage production Dockerfile
   - Docker Compose with full stack
@@ -376,6 +426,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `deployment/scripts/disaster_recovery.sh` - Backup and restore
 
 ### Changed
+
 - Complete rewrite of memory manager with database integration
 - Enhanced consciousness streams with AI generation
 - Upgraded safety framework with adversarial protection
@@ -384,6 +435,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documentation reorganized for clarity
 
 ### Performance Metrics Achieved
+
 | Metric | Target | Achieved | Status |
 |--------|--------|----------|--------|
 | Memory Retrieval | < 50ms | ~15ms | ✅ |
@@ -396,6 +448,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | 24-hour Coherence | > 95% | 97% | ✅ |
 
 ### Security
+
 - All API keys now loaded from environment variables
 - No hardcoded secrets in codebase
 - Comprehensive input validation
@@ -405,6 +458,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0] - 2025-06-02
 
 ### Added
+
 - Initial repository creation
 - Basic project structure
 - Core module implementations from documentation
@@ -418,6 +472,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Continued Session (Test Suite Fixes)
 
 #### Fixed
+
 - Added missing classes to safety framework (ViolationType, ContentFilter, SafetyValidator, etc.)
 - Added missing StateTransition class and methods to orchestrator
 - Fixed import paths in test files (memory.manager -> src.memory.manager)
@@ -428,6 +483,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added emergency_stop and state management methods
 
 #### In Progress
+
 - Fixing remaining test failures (58 failed, 75 passed, 27 errors)
 - Adjusting test expectations to match implementation
 - Resolving database connection test environment issues
@@ -435,6 +491,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.1] - 2025-06-03 - TUI Fix & Roadmap Update
 
 ### Fixed
+
 - **Critical TUI Bug**: Screen no longer goes gray/blank after initial display
   - Removed StreamHandler from logging to prevent curses interference
   - Added periodic UI refresh loop (500ms) for consistent updates
@@ -442,17 +499,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - All logging now exclusively to file (logs/claude-agi.log)
 
 ### Added
+
 - `ui_refresh_loop()` method for maintaining screen display
 - Comprehensive Phase 2+ roadmap based on AI analyses
 - Enhanced TUI troubleshooting documentation
 - Slash command documentation in user guide
 
 ### Changed
+
 - Updated date references from incorrect 2025-01-06 to 2025-06-02
 - Enhanced RUNNING_THE_TUI.md with multi-pane layout information
 - Clarified terminal requirements (80x20 minimum for enhanced TUI)
 
 ### Documentation
+
 - Created comprehensive guides based on AI analyses:
   - TEST_STABILIZATION_GUIDE.md - Solutions for 58 failing tests
   - ARCHITECTURAL_IMPROVEMENTS.md - Refactoring god objects
@@ -466,6 +526,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced memory banks with chronological reference rule
 
 ### Project Management
+
 - Added 8 critical blockers that must be resolved before Phase 2
 - Current test suite at 47% pass rate (target: >95%)
 - Identified architectural anti-patterns requiring refactoring
@@ -474,6 +535,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.2] - 2025-06-03 - Extended Implementation from Reference Documentation
 
 ### Added
+
 - **Operations & Monitoring Components**
   - `operations/backup.py` - Comprehensive backup/restore system with S3 and local storage
   - `operations/daily_tasks.py` - Automated daily operational tasks and reporting
@@ -488,17 +550,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `tests/data/generators.py` - Comprehensive test data generation
 
 ### Documentation Updates
+
 - Updated IMPLEMENTATION_STATUS.md with extended components
 - Added details for 9 new operational/monitoring modules
 - Updated project statistics: 60+ Python files, ~20,000 lines of code
 
 ### Infrastructure
+
 - Enhanced disaster recovery with consciousness continuity checks
 - Added welfare monitoring thresholds and intervention protocols
 - Implemented multi-destination backup system (S3, local)
 - Created emergency response framework with severity levels
 
 ### Operational Excellence
+
 - Daily automated health checks and reporting
 - Continuous welfare monitoring with distress detection
 - Emergency protocols for 8 different crisis types
@@ -508,6 +573,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.3] - 2025-06-03 - Test Suite Completion
 
 ### Fixed
+
 - **All 153 tests now passing** (100% pass rate)
   - Fixed 58 failing tests across all test categories
   - Resolved 20 errors with proper imports and method implementations
@@ -516,6 +582,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added all missing methods and attributes to implementation classes
 
 ### Added
+
 - **Test Infrastructure Improvements**
   - Common test helpers extracted to reduce duplication
   - Proper async mock fixtures for all services
@@ -524,6 +591,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Event capture and validation helpers
 
 ### Changed
+
 - **Implementation Updates**
   - Added ViolationType enum and SafetyValidator class to safety framework
   - Implemented full state transition system in orchestrator
@@ -533,12 +601,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Implemented proper service initialization in orchestrator
 
 ### Technical Details
+
 - **Code Coverage**: 49.61% achieved across all modules
 - **Test Categories**: Unit (85), Integration (25), Safety (20), Performance (23)
 - **Performance**: All benchmarks meeting Phase 1 requirements
 - **Stability**: No flaky tests, all async operations properly handled
 
 ### Development
+
 - Test suite now ready for CI/CD integration
 - All tests passing without warnings or deprecations
 - Mock infrastructure supports offline development
@@ -547,6 +617,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.5] - 2025-06-03 - TUI Performance & Functionality Fixes
 
 ### Fixed
+
 - **TUI Responsiveness Issues**
   - Reduced input polling delay from 0.05s to 0.01s for immediate character display
   - Fixed multiple flickering issues with optimized screen refresh
@@ -568,16 +639,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Proper orchestrator shutdown sequence implemented
 
 ### Added
+
 - Proper message handler (`handle_message` and `process_message`) to MemoryManager class
 - Memory storage integration between consciousness streams and memory manager
 - Logging to verify service connections and message handling
 
 ### Changed
+
 - Input handler polling optimized for responsive typing experience
 - UI refresh strategy changed to reduce unnecessary updates
 - Memory display now reads directly from working_memory structure
 
 ### Performance Improvements
+
 - Input latency reduced by 80% (from 50ms to 10ms polling)
 - Eliminated unnecessary screen redraws
 - Optimized memory access patterns for UI display
@@ -585,6 +659,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.6] - 2025-06-04 - TUI Stability Complete
 
 ### Fixed
+
 - **Ultra-Responsive Input**: Reduced polling delay to 0.1ms (0.0001s) for instant typing feedback
 - **Goal Validation**: Fixed field name from `goal_id` to `id` to match Pydantic model
 - **Memory Storage**: Implemented proper message passing through orchestrator
@@ -594,12 +669,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Orchestrator Loop**: Added running flag check to prevent infinite loop on shutdown
 
 ### Changed
+
 - Simplified quit command to just set running flag to False
 - Improved task cancellation handling in shutdown sequence  
 - Enhanced memory message import and handling
 - All cleanup now happens in proper shutdown handlers
 
 ### Technical Improvements
+
 - Input responsiveness increased 100x (from 10ms to 0.1ms)
 - Proper CancelledError exception handling
 - Clean event loop closure with task cancellation
@@ -608,6 +685,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.7] - 2025-06-04 - TUI Final Polish
 
 ### Fixed
+
 - **Slash Command Responsiveness**
   - Fixed lag when typing slash commands by adding immediate display updates
   - Command mode now updates instantly when '/' is pressed
@@ -639,11 +717,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - No more "coroutine 'Auth.async_auth_flow' was never awaited" warnings
 
 ### Changed
+
 - UI refresh strategy now tracks individual element changes
 - Only performs curses.doupdate() when actual updates are made
 - Memory and goals tracking added to refresh loop
 
 ### Performance Improvements
+
 - Reduced CPU usage by 90% when idle (no continuous redraws)
 - Slash commands now as responsive as regular typing
 - Memory updates visible within 500ms instead of requiring manual refresh
@@ -651,6 +731,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.8] - 2025-06-04 - TUI Perfect Polish
 
 ### Fixed
+
 - **Screen Flickering Eliminated**
   - Increased UI refresh interval to 1 second
   - Only update display on input or data changes
@@ -678,6 +759,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - No more ERR on exit
 
 ### Performance Improvements
+
 - UI updates only when needed (95% reduction in redraws)
 - Smooth, flicker-free operation
 - Responsive input maintained
@@ -686,6 +768,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.0] - 2025-06-04 - CI/CD Pipeline Optimization & Release Automation
 
 ### Added
+
 - **Optimized CI/CD Pipeline**
   - Consolidated pipeline with dependency caching for faster builds
   - Setup job caches dependencies across all test suites
@@ -709,12 +792,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - On-demand test execution with artifact uploads
 
 ### Changed
+
 - Split monolithic test workflow into optimized consolidated pipeline
 - Moved from individual job setup to shared dependency caching
 - Enhanced README with comprehensive CI/CD and release documentation
 - Added release section with download instructions and quick start
 
 ### Technical Improvements
+
 - Reduced CI build times by ~50% with dependency caching
 - Cross-platform executable builds tested on all target platforms
 - Automatic release notes generation from CHANGELOG.md
@@ -723,6 +808,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.10] - 2025-06-04 - Exit Handling & Error Suppression
 
 ### Fixed
+
 - **Exit Error Handling**
   - Suppressed common curses cleanup errors (cbreak, nocbreak, endwin)
   - No more error messages when exiting with /quit
@@ -739,6 +825,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Clears task references to prevent lingering operations
   
 ### Changed
+
 - Terminal reset now uses 'stty sane' for more reliable cleanup
 - Conditional shutdown message only shows for clean exits
 - Better exception filtering to avoid showing expected errors
@@ -746,6 +833,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.9] - 2025-06-04 - TUI Professional Polish
 
 ### Added
+
 - **Active Pane Indicators**
   - Bold highlighted borders for active pane
   - Title with ▶ arrows ◀ and reverse video
@@ -766,6 +854,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Better visual hierarchy
 
 ### Fixed
+
 - **Text Formatting**
   - Proper width calculations respecting pane boundaries
   - Fixed conversation pane text overlap
@@ -783,6 +872,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Improved visual feedback
 
 ### Technical Improvements
+
 - Increased history buffers for all panes
 - Per-pane scroll position tracking
 - Better text truncation algorithm
@@ -791,6 +881,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.4] - 2025-01-06 - CI/CD Fixes
 
 ### Fixed
+
 - **GitHub Actions CI/CD Issues**
   - Performance tests no longer skip on push events (removed `if: github.event_name == 'pull_request'` condition)
   - Fixed `test_service_cycle_running` unit test to handle `CLAUDE_AGI_TEST_MODE` environment variable
@@ -798,11 +889,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - All 4 CI/CD jobs (unit, integration, safety, performance) now execute successfully on push to main branch
   
 ### Changed
+
 - **Test Infrastructure**
   - Updated orchestrator test to restore environment variables after testing
   - Performance tests now run on all push events, not just pull requests
   
 ### CI/CD Status
+
 - ✅ Unit tests: 119/120 passing (fixed in this release)
 - ✅ Integration tests: All passing with timeout configuration
 - ✅ Safety tests: All passing with proper pytest markers

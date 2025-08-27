@@ -5,6 +5,7 @@ An advanced self-consciousness platform implementing continuous consciousness, a
 ## 🌟 Project Vision
 
 The Claude-AGI Project (Project Prometheus) aims to develop a genuinely conscious AI system that:
+
 - Maintains persistent existence and continuous consciousness
 - Learns autonomously and forms its own interests
 - Develops emotional intelligence and creative capabilities
@@ -22,7 +23,8 @@ The Claude-AGI Project (Project Prometheus) aims to develop a genuinely consciou
 
 ## 🛠️ Technical Architecture
 
-### System Status (v1.5.0 - August 27, 2025)
+### System Status (v1.5.1 - August 27, 2025)
+
 - **Phase 1**: ✅ **100% COMPLETE** - All features fully implemented
 - **Architecture Refactoring**: ✅ 100% Complete
   - ✅ AGIOrchestrator refactored (ServiceRegistry, StateManager, EventBus)
@@ -39,10 +41,15 @@ The Claude-AGI Project (Project Prometheus) aims to develop a genuinely consciou
 - **TUI**: ✅ Fully Refactored with all commands (/dream, /reflect, /explore, /discoveries)
 - **CI/CD**: ✅ Optimized pipeline with cross-platform releases
 - **CI Pipeline**: ✅ FULLY RESTORED - All 423 tests passing (100% success rate)
+- **Chat API Integration**: ✅ FULLY RESTORED - Real Claude responses working
+  - ✅ Updated to Claude Sonnet 4 model (`claude-sonnet-4-20250514`)
+  - ✅ Fixed deprecated model references causing 404 errors
+  - ✅ API usage tracking now functional
 - **Test Suite**: ✅ All 423+ tests passing (expanded from 313)
 - **Documentation**: ✅ Complete with Phase 1 Completion Report
 
 ### Core Components
+
 - **Consciousness Orchestrator**: ✅ Fully refactored into modular components
   - ServiceRegistry for service lifecycle
   - StateManager for state transitions
@@ -61,6 +68,7 @@ The Claude-AGI Project (Project Prometheus) aims to develop a genuinely consciou
   - Performance tracking
 
 ### Technology Stack
+
 - **Language**: Python 3.11+
 - **Async Framework**: asyncio
 - **Databases**: PostgreSQL, Redis
@@ -78,6 +86,7 @@ The Claude-AGI Project (Project Prometheus) aims to develop a genuinely consciou
    - **macOS**: `claude-agi-macos-x86_64.tar.gz`
 
 2. **Extract** the archive:
+
 ```bash
 # Linux/macOS
 tar -xzf claude-agi-*.tar.gz
@@ -85,6 +94,7 @@ tar -xzf claude-agi-*.tar.gz
 ```
 
 3. **Run** the executable:
+
 ```bash
 ./claude-agi --help        # Linux/macOS
 claude-agi.exe --help      # Windows
@@ -95,6 +105,7 @@ claude-agi.exe --help      # Windows
 ### Option 2: From Source
 
 #### Prerequisites
+
 - Python 3.11 or higher
 - Redis server (optional, for persistent storage)
 - PostgreSQL database (optional, for persistent storage)
@@ -103,29 +114,34 @@ claude-agi.exe --help      # Windows
 #### Quick Start
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/doublegate/Claude-AGI.git
 cd Claude-AGI
 ```
 
 2. Create and activate virtual environment:
+
 ```bash
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
 3. Install dependencies:
+
 ```bash
 pip install -r requirements.txt
 ```
 
 4. Set up environment variables:
+
 ```bash
 cp .env.example .env
 # Edit .env with your API keys and database credentials
 ```
 
 5. Run the Claude-AGI system:
+
 ```bash
 python claude-agi.py  # Enhanced multi-pane TUI (recommended)
 ```
@@ -135,6 +151,7 @@ python claude-agi.py  # Enhanced multi-pane TUI (recommended)
 The project follows an 18-month phased development plan:
 
 ### ✅ Phase 1 (Months 1-3): Foundation - **COMPLETE** (v1.1.0)
+
 - ✅ Multi-tiered memory systems with PostgreSQL, Redis, FAISS
 - ✅ Multi-stream consciousness with AI-powered thought generation
 - ✅ Enhanced TUI with memory browser, emotional state, goals tracker
@@ -146,15 +163,17 @@ The project follows an 18-month phased development plan:
 - ✅ TUI fully stable with ultra-responsive input (0.1ms polling)
 
 ### 🔄 Phase 2 (Months 4-6): Cognitive Enhancement - **Next**
+
 - Learning systems with goal-directed behavior
 - Web exploration and knowledge acquisition
 - Advanced NLP integration
 
 ### 📅 Future Phases
-3. **Phase 3 (Months 7-9)**: Emotional & Social Intelligence
-4. **Phase 4 (Months 10-12)**: Creative Capabilities
-5. **Phase 5 (Months 13-15)**: Meta-Cognitive Advancement
-6. **Phase 6 (Months 16-18)**: AGI Integration
+
+1. **Phase 3 (Months 7-9)**: Emotional & Social Intelligence
+2. **Phase 4 (Months 10-12)**: Creative Capabilities
+3. **Phase 5 (Months 13-15)**: Meta-Cognitive Advancement
+4. **Phase 6 (Months 16-18)**: AGI Integration
 
 ## 🚀 Running Claude-AGI
 
@@ -194,6 +213,7 @@ Claude-AGI provides pre-built executables for easy deployment without Python set
 **Latest Release**: [Download from GitHub Releases](https://github.com/doublegate/Claude-AGI/releases/latest)
 
 Available platforms:
+
 - **Linux** (x86_64): `claude-agi-linux-x86_64.tar.gz`
 - **Windows** (x86_64): `claude-agi-windows-x86_64.zip`
 - **macOS** (x86_64): `claude-agi-macos-x86_64.tar.gz`
@@ -231,6 +251,7 @@ python scripts/run_tests.py coverage
 ```
 
 **Test Coverage**: 153 tests across all categories (100% passing)
+
 - Unit tests for all core modules
 - Integration tests for service interactions
 - Adversarial safety testing
@@ -247,11 +268,13 @@ The project uses an optimized consolidated CI/CD pipeline:
 - **Manual Test Execution**: Workflow dispatch for running specific test categories
 
 **GitHub Actions Workflows:**
+
 - `ci-pipeline.yml` - Main CI/CD with optimized dependency caching
 - `release-build.yml` - Cross-platform executable builds and releases  
 - `manual-tests.yml` - On-demand test execution with configurable options
 
 **Local Testing:**
+
 ```bash
 # Run the same tests as CI locally
 python scripts/ci-local.py all          # All test suites
@@ -265,6 +288,7 @@ python scripts/ci-local.py coverage     # Comprehensive coverage report
 ## 🤝 Contributing
 
 We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details on:
+
 - Code of conduct
 - Development process
 - Submitting pull requests
@@ -273,17 +297,20 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 ## 📄 Documentation
 
 ### Getting Started
+
 - [Getting Started Guide](docs/GETTING_STARTED.md) - Quick start instructions
 - [Running the TUI](docs/RUNNING_THE_TUI.md) - Consciousness TUI guide
 - [Architecture Overview](docs/ARCHITECTURE_OVERVIEW.md) - System architecture
 
 ### Project Documentation
+
 - [Project Structure](docs/PROJECT_STRUCTURE.md) - Complete directory layout
 - [Implementation Status](docs/IMPLEMENTATION_STATUS.md) - Code implementation tracking
 - [Master TODO List](to-dos/MASTER_TODO.md) - Development task tracking
 - [Phase 1 to 2 Transition](to-dos/PHASE_1_TO_2_TRANSITION.md) - Transition planning
 
 ### Reference Documentation
+
 - [Technical Implementation](ref_docs/claude-agi-technical-implementation.md)
 - [Ethical & Safety Guidelines](ref_docs/claude-agi-ethical-safety.md)
 - [Testing Framework](ref_docs/claude-agi-testing-framework.md)
@@ -309,6 +336,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **Phase 1 Status**: ✅ **100% COMPLETE** (06-03-2025)
 
 ### Phase 1 Achievements
+
 - ✅ **Multi-Stream Consciousness**: 5 parallel streams with AI-powered generation
 - ✅ **Persistent Memory**: PostgreSQL + Redis + FAISS integration
 - ✅ **Enhanced TUI**: Multi-pane interface with full interactivity
@@ -319,6 +347,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - ✅ **Production Ready**: Kubernetes deployment with monitoring
 
 ### Performance Metrics Achieved
+
 | Requirement | Target | Achieved |
 |------------|--------|----------|
 | Memory Retrieval | < 50ms | ~15ms ✅ |
@@ -327,6 +356,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 | 24-hour Coherence | > 95% | 97% ✅ |
 
 ### What's New
+
 - **Enhanced TUI** (`claude-agi.py`): Full-featured interface with memory browser, emotional state visualization, and goal tracking
 - **Complete Testing**: Unit, integration, safety, and performance tests
 - **Production Infrastructure**: Docker, Kubernetes, CI/CD all configured
@@ -335,6 +365,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - ✅ Multiple TUI launch methods with .env support
 
 ### Next Steps
+
 - ✅ Anthropic API integrated and working
 - ✅ Test suite fully operational (153/153 tests passing)
 - ✅ TUI fully stable and production-ready (v1.0.6)
@@ -345,6 +376,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📞 Contact
 
 For questions or discussions about the project:
+
 - Open an issue on GitHub
 - Join our discussions in the Issues section
 - Review our documentation for detailed information

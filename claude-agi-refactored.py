@@ -35,9 +35,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from src.consciousness.stream import ConsciousnessStream
 from src.core.ai_integration import ThoughtGenerator
 from src.core.orchestrator import AGIOrchestrator
+from src.interface.tui_controller import TUIController
 from src.memory.manager import MemoryManager
 from src.safety.core_safety import SafetyFramework
-from src.interface.tui_controller import TUIController
 
 load_dotenv()
 
@@ -89,7 +89,7 @@ class ClaudeAGIApp:
         self.memory_manager = None
         self.consciousness = None
         self.safety = None
-        
+
         logger.info("Claude-AGI initialization complete")
     
     async def initialize_components(self):

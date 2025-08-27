@@ -3,7 +3,7 @@ version:
   minor: 5
   patch: 1
   release: "1.5.1"
-  codename: "CI Pipeline Restored"
+  codename: "Chat API Restoration"
   release_date: "2025-08-27"
   previous_release: "1.5.0"
   

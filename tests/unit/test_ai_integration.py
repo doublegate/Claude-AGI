@@ -88,7 +88,7 @@ class TestThoughtGenerator:
         # Verify API was called
         mock_client.messages.create.assert_called_once()
         call_kwargs = mock_client.messages.create.call_args.kwargs
-        assert call_kwargs['model'] == "claude-3-sonnet-20240229"
+        assert call_kwargs['model'] == "claude-sonnet-4-20250514"
         assert call_kwargs['temperature'] == 0.7  # PRIMARY stream temperature
         
     @pytest.mark.asyncio
