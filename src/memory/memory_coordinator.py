@@ -154,7 +154,7 @@ class MemoryCoordinator:
         
         # Register with service registry
         if self.service_registry:
-            await self.service_registry.register(
+            self.service_registry.register(
                 "memory_coordinator",
                 self,
                 {
@@ -188,7 +188,7 @@ class MemoryCoordinator:
         
         # Unregister from service registry
         if self.service_registry:
-            await self.service_registry.unregister("memory_coordinator")
+            self.service_registry.unregister("memory_coordinator")
     
     def set_monitoring_hooks(self, monitoring_hooks):
         """Set monitoring hooks for instrumentation"""

@@ -107,7 +107,7 @@ class MonitoringSystem:
             await self.health_checker.initialize()
         
         # Register monitoring system itself
-        await self.service_registry.register(
+        self.service_registry.register(
             "monitoring_system",
             self,
             {
@@ -133,7 +133,7 @@ class MonitoringSystem:
             await self.metrics_collector.shutdown()
         
         # Unregister from service registry
-        await self.service_registry.unregister("monitoring_system")
+        self.service_registry.unregister("monitoring_system")
     
     def get_metrics_collector(self) -> Optional[MetricsCollector]:
         """Get the metrics collector instance"""

@@ -57,7 +57,7 @@ class WorkingMemoryStore:
         
         # Register with service registry
         if self.service_registry:
-            await self.service_registry.register(
+            self.service_registry.register(
                 "working_memory_store",
                 self,
                 {
@@ -72,7 +72,7 @@ class WorkingMemoryStore:
         
         # Unregister from service registry
         if self.service_registry:
-            await self.service_registry.unregister("working_memory_store")
+            self.service_registry.unregister("working_memory_store")
     
     async def store_thought(self, thought_id: str, thought_data: Dict[str, Any]) -> bool:
         """

@@ -98,7 +98,7 @@ class PrometheusExporter:
         
         # Register with service registry
         if self.service_registry:
-            await self.service_registry.register(
+            self.service_registry.register(
                 "prometheus_exporter",
                 self,
                 {
@@ -122,7 +122,7 @@ class PrometheusExporter:
         
         # Unregister from service registry
         if self.service_registry:
-            await self.service_registry.unregister("prometheus_exporter")
+            self.service_registry.unregister("prometheus_exporter")
     
     @web.middleware
     async def _auth_middleware(self, request: web.Request, handler):

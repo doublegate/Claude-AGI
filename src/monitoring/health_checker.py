@@ -112,7 +112,7 @@ class HealthChecker:
         
         # Register with service registry
         if self.service_registry:
-            await self.service_registry.register(
+            self.service_registry.register(
                 "health_checker",
                 self,
                 {"check_interval": self.check_interval}
@@ -128,7 +128,7 @@ class HealthChecker:
         
         # Unregister from service registry
         if self.service_registry:
-            await self.service_registry.unregister("health_checker")
+            self.service_registry.unregister("health_checker")
     
     def register_check(self, health_check: HealthCheck):
         """

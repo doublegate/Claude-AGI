@@ -101,7 +101,7 @@ class SemanticIndex:
         
         # Register with service registry
         if self.service_registry:
-            await self.service_registry.register(
+            self.service_registry.register(
                 "semantic_index",
                 self,
                 {
@@ -120,7 +120,7 @@ class SemanticIndex:
         
         # Unregister from service registry
         if self.service_registry:
-            await self.service_registry.unregister("semantic_index")
+            self.service_registry.unregister("semantic_index")
     
     async def add_vector(
         self,
