@@ -177,9 +177,7 @@ docker-compose restart alertmanager
 
 3. **Start Application**
    ```bash
-   python claude-agi.py
-   # or
-   python claude-agi-refactored.py
+   python claude-agi.py  # Refactored implementation with monitoring
    ```
 
 ### Verify Metrics Endpoint

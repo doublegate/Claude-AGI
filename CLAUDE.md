@@ -38,6 +38,10 @@ python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 
+# Run the main application (refactored implementation)
+./run_tui.sh                           # Optimized launcher with venv activation
+python claude-agi.py                   # Direct execution (requires manual venv)
+
 # Run the consciousness TUI demo
 python scripts/claude-consciousness-tui.py
 

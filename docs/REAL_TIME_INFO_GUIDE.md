@@ -65,7 +65,7 @@ The weather in New York, US is currently clear skies with a temperature of 22°C
    ```
 3. **Run the TUI:**
    ```bash
-   python claude-agi-refactored.py  # Enhanced version with real-time info
+   python claude-agi.py  # Enhanced version with real-time info
    ```
 
 ### Weather Information (Requires API Key)

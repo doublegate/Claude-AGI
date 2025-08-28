@@ -59,7 +59,7 @@ You have several options for running the system:
 
 #### Option A: Run the Enhanced TUI (Recommended for v1.5.4)
 ```bash
-python claude-agi-refactored.py  # NEW: Enhanced with real-time information
+python claude-agi.py  # NEW: Enhanced with real-time information
 ```
 
 #### Option B: Run the TUI Demo
@@ -183,7 +183,7 @@ When running with Docker Compose, monitoring services are available:
 
 ## Next Steps
 
-1. **NEW v1.5.4**: Try the enhanced TUI with real-time information capabilities (`python claude-agi-refactored.py`)
+1. **NEW v1.5.4**: Try the enhanced TUI with real-time information capabilities (`python claude-agi.py`)
 2. Explore the consciousness TUI to see the multi-stream consciousness in action
 3. Test real-time information queries: "What time is it?", "Search for AI news"
 4. Review the test suite to understand component behavior

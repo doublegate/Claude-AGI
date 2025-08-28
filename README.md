@@ -1,5 +1,24 @@
 # Claude-AGI: Project Prometheus
 
+<div align="center">
+  <img src="images/Claude-AGI_Logo.png" alt="Claude-AGI Logo" width="400"/>
+</div>
+
+<div align="center">
+
+[![Version](https://img.shields.io/badge/version-1.5.5-blue.svg)](CHANGELOG.md)
+[![Python Version](https://img.shields.io/badge/python-3.11%2B-brightgreen.svg)](https://www.python.org)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-423%20passing-success.svg)](.github/workflows/ci-pipeline.yml)
+[![Coverage](https://img.shields.io/badge/coverage-72.80%25-brightgreen.svg)](docs/TESTING.md)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/doublegate/Claude-AGI)
+[![AI Framework](https://img.shields.io/badge/AI-Anthropic%20Claude-purple.svg)](https://docs.anthropic.com/)
+[![Architecture](https://img.shields.io/badge/architecture-Multi--Stream%20Consciousness-orange.svg)](docs/ARCHITECTURE_OVERVIEW.md)
+[![Phase](https://img.shields.io/badge/Phase%201-Complete-success.svg)](docs/PHASE_1_COMPLETION_REPORT.md)
+[![Real-Time Info](https://img.shields.io/badge/Real--Time%20Info-Active-brightgreen.svg)](docs/REAL_TIME_INFO_GUIDE.md)
+
+</div>
+
 An advanced self-consciousness platform implementing continuous consciousness, autonomous learning, and meta-cognitive capabilities for Claude AI.
 
 ## 🌟 Project Vision
@@ -23,54 +42,34 @@ The Claude-AGI Project (Project Prometheus) aims to develop a genuinely consciou
 
 ## 🛠️ Technical Architecture
 
-### System Status (v1.5.5 - August 28, 2025 01:25 AM EDT)
+### System Status (v1.5.5 - August 28, 2025)
 
-- **Phase 1**: ✅ **100% COMPLETE** - All features fully implemented
-- **Architecture Refactoring**: ✅ 100% Complete with Full Parity
-  - ✅ AGIOrchestrator refactored (ServiceRegistry, StateManager, EventBus)
-  - ✅ MemoryManager refactored (WorkingMemoryStore, EpisodicMemoryStore, SemanticIndex)
-  - ✅ Memory Synchronization (MemorySynchronizer, ConnectionPoolManager)
-  - ✅ TUI refactored (UIRenderer, EventHandler, TUIController) - **COMPLETE PARITY ACHIEVED**
-- **Refactored Implementation**: ✅ **COMPLETE FEATURE PARITY** - claude-agi-refactored.py fully operational
-  - ✅ Visual Styling Match: All 8 color pairs, active pane indicators, typography hierarchy
-  - ✅ Event Handling Parity: Ultra-responsive input (0.01s polling), complete command system
-  - ✅ UI/UX Identity: Visually indistinguishable from original while maintaining modular architecture
-- **Production Monitoring**: ✅ Deployed and Operational
-  - ✅ MetricsCollector (Prometheus-compatible)
-  - ✅ HealthChecker (Service health monitoring)
-  - ✅ PrometheusExporter (HTTP metrics endpoint)
-  - ✅ MonitoringHooks (Decorator-based tracking)
-  - ✅ Docker Compose stack deployed
-- **Security**: ✅ Complete RBAC Implementation - JWT auth, 25+ permissions, 6 roles
-- **TUI**: ✅ Fully Refactored with all commands (/dream, /reflect, /explore, /discoveries)  
-- **Real-Time Information**: ✅ **v1.5.4** - Real-time web search, news, and information capabilities
-- **WebExplorer Service**: ✅ **v1.5.4** - Autonomous exploration with query preprocessing
-- **TUI Optimization**: ✅ **NEW v1.5.5** - Memory browser optimized with Rust-inspired safety patterns
-- **CI/CD**: ✅ Optimized pipeline with cross-platform releases
-- **CI Pipeline**: ✅ FULLY RESTORED - All 423 tests passing (100% success rate)
-- **Security Hardening**: ✅ ALL VULNERABILITIES RESOLVED - 13 GitHub alerts fixed
-  - ✅ Updated transformers 4.36.0→4.49.1 (CVE-2025-3263, CVE-2025-3777 ReDoS fixes)
-  - ✅ Updated pillow 10.2.0→11.3.0 (critical buffer overflow fix)
-  - ✅ Updated ray 2.9.0→2.9.3 (log injection vulnerability fix)
-- **Chat API Integration**: ✅ FULLY RESTORED - Real Claude responses working
-  - ✅ Updated to Claude Sonnet 4 model (`claude-sonnet-4-20250514`)
-  - ✅ Fixed deprecated model references causing 404 errors
-- **Consciousness Stream**: ✅ FULLY OPERATIONAL - AI-powered thoughts generating
-  - ✅ Fixed orchestrator service cycle execution - all 9 services running
-  - ✅ Implemented missing ServiceBase abstract methods across all cognitive services
-  - ✅ Boosted thought generation probability for reliable stream output
-  - ✅ Fixed import path errors in communication module
-- **Service Architecture**: ✅ COMPLETE IMPLEMENTATION - All cognitive capabilities active
-  - ✅ LearningEngine: Pattern recognition, skill tracking, knowledge graphs
-  - ✅ CreativeEngine: Multi-mode ideation, inspiration management, originality assessment
-  - ✅ WebExplorer: **v1.5.4 ENHANCED** - Real-time information access, query preprocessing, autonomous exploration
-  - ✅ SocialIntelligence: Relationship modeling, communication adaptation, social norms
-  - ✅ MetaCognitive: Self-monitoring, strategy optimization, performance assessment
-  - ✅ EmotionalProcessor: Emotion processing, valence/arousal tracking
-- **TUI Exit Handling**: ✅ FIXED - Clean /quit command shutdown without hanging
-  - ✅ API usage tracking now functional
-- **Test Suite**: ✅ All 423+ tests passing (expanded from 313)
-- **Documentation**: ✅ Complete with Phase 1 Completion Report
+#### 🎯 **Phase 1 Foundation: COMPLETE** ✅
+- **Multi-Stream Consciousness**: 5 parallel cognitive streams (primary, subconscious, emotional, creative, metacognitive)
+- **Persistent Memory Systems**: PostgreSQL (episodic) + Redis (working) + FAISS (semantic search)
+- **Enhanced Safety Framework**: Multi-layered validation with adversarial resistance
+- **Real-Time Information**: Web search, news access, and autonomous exploration capabilities
+
+#### 🏗️ **Architecture Status: FULLY REFACTORED** ✅
+- **Modular Design**: Complete parity achieved between refactored and original implementations
+  - `TUIController`: Orchestrates all UI interactions and service coordination
+  - `UIRenderer`: Handles all visual components with professional styling
+  - `EventHandler`: Ultra-responsive input processing (0.01s polling)
+  - `AdvancedCommands`: Full command suite (/dream, /reflect, /explore, /discoveries)
+- **Service Architecture**: Clean separation with ServiceRegistry, StateManager, EventBus
+- **Memory Optimization**: Rust-inspired safety patterns with 40% code reduction
+
+#### 🔒 **Security & Performance: HARDENED** ✅
+- **Vulnerability Resolution**: All 13 GitHub security alerts resolved
+- **API Integration**: Claude Sonnet 4 (`claude-sonnet-4-20250514`) fully operational
+- **Input Validation**: Comprehensive sanitization and bounds checking
+- **Test Coverage**: 423 tests passing (100% success rate) with 72.80% coverage
+
+#### 🚀 **Production Readiness: DEPLOYED** ✅
+- **Cross-Platform Releases**: Linux, Windows, macOS executables available
+- **CI/CD Pipeline**: Optimized with dependency caching and parallel execution  
+- **Monitoring Stack**: Prometheus metrics, health checks, performance tracking
+- **Container Support**: Docker Compose and Kubernetes deployment ready
 
 ### Core Components
 
@@ -170,7 +169,8 @@ cp .env.example .env
 5. Run the Claude-AGI system:
 
 ```bash
-python claude-agi.py  # Enhanced multi-pane TUI (recommended)
+./run_tui.sh          # Optimized launcher with automatic venv activation (recommended)
+python claude-agi.py  # Direct execution (requires manual venv activation)
 ```
 <!-- markdownlint-enable MD029 -->
 
@@ -210,15 +210,18 @@ The project follows an 18-month phased development plan:
 The main Claude-AGI interface provides a comprehensive multi-pane view:
 
 ```bash
-# Run the enhanced TUI with all features
-python claude-agi.py
+# Run with optimized launcher (recommended)
+./run_tui.sh
 
-# Run with specific configuration
-python claude-agi.py --config configs/development.yaml
+# Run with specific configuration  
+./run_tui.sh --config configs/development.yaml
+
+# Direct execution (manual venv activation required)
+python claude-agi.py
 
 # Setup databases first (optional but recommended)
 python scripts/setup/setup_databases.py
-python claude-agi.py
+./run_tui.sh
 ```
 
 ### Original Consciousness Demo
@@ -278,13 +281,13 @@ python scripts/run_tests.py performance   # Performance benchmarks
 python scripts/run_tests.py coverage
 ```
 
-**Test Coverage**: 153 tests across all categories (100% passing)
+**Test Coverage**: 423 tests across all categories (100% passing)
 
-- Unit tests for all core modules
+- Unit tests for all core modules (expanded coverage)
 - Integration tests for service interactions
-- Adversarial safety testing
+- Adversarial safety testing with enhanced scenarios
 - Performance benchmarks meeting Phase 1 requirements
-- Code coverage: 49.61% achieved
+- Code coverage: 72.80% achieved (up from 49.61%)
 
 ### CI/CD Pipeline
 
@@ -359,50 +362,51 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Contributors to the open-source AI/ML ecosystem
 - Ethical AI researchers and philosophers who've informed our approach
 
-## 📊 Phase 1 Complete! 🎉
+## 🎯 Current Status: Phase 1 Complete! 🎉
 
-**Phase 1 Status**: ✅ **100% COMPLETE + REAL-TIME INFORMATION** (August 28, 2025)
+**Phase 1 Status**: ✅ **100% COMPLETE WITH OPTIMIZATION** (v1.5.5 - August 28, 2025)
 
-### Phase 1 Achievements
+### Major Achievements
 
-- ✅ **Multi-Stream Consciousness**: 5 parallel streams with AI-powered generation
-- ✅ **Persistent Memory**: PostgreSQL + Redis + FAISS integration
-- ✅ **Enhanced TUI**: Multi-pane interface with full interactivity
-- ✅ **Safety Framework**: 4-layer validation with adversarial resistance
-- ✅ **AI Integration**: Full Anthropic Claude API with fallback
-- ✅ **Database Layer**: Async operations with dual-mode support
-- ✅ **Test Suite**: 423 tests all passing with performance benchmarks
-- ✅ **Production Ready**: Kubernetes deployment with monitoring
-- ✅ **Security Hardened**: All 13 GitHub Security alerts resolved
-- ✅ **CI Pipeline**: Fully restored with 100% test success rate
-- ✅ **Real-Time Information**: **NEW v1.5.4** Web search, news access, query processing
+- ✅ **Multi-Stream Consciousness**: 5 parallel cognitive streams with AI-powered thought generation
+- ✅ **Advanced Memory Systems**: PostgreSQL + Redis + FAISS with Rust-inspired optimization
+- ✅ **Professional TUI**: Complete refactored implementation with feature parity
+- ✅ **Real-Time Information**: Web search, news access, autonomous exploration capabilities
+- ✅ **Security Hardening**: All vulnerabilities resolved, comprehensive input validation
+- ✅ **Production Infrastructure**: CI/CD, monitoring, cross-platform releases
+- ✅ **Complete Test Coverage**: 423 tests passing (100% success rate, 72.80% coverage)
+
+### v1.5.5 Latest Enhancements
+
+- **Memory Browser Optimization**: MCP-powered optimization with security hardening
+- **Launcher Script Fix**: Resolved argument handling for seamless execution
+- **Feature Parity Achievement**: Current implementation matches archived original completely
+- **Rust-Inspired Safety**: Bounds checking, input sanitization, cached access patterns
 
 ### Performance Metrics Achieved
 
-| Requirement | Target | Achieved |
-|------------|--------|----------|
-| Memory Retrieval | < 50ms | ~15ms ✅ |
-| Thought Generation | 0.3-0.5/sec | 0.4/sec ✅ |
-| Safety Validation | < 10ms | ~8ms ✅ |
-| 24-hour Coherence | > 95% | 97% ✅ |
+| Requirement | Target | Achieved | Status |
+|------------|--------|----------|--------|
+| Memory Retrieval | < 50ms | ~15ms | ✅ Exceeded |
+| Thought Generation | 0.3-0.5/sec | 0.4/sec | ✅ Met |
+| Safety Validation | < 10ms | ~8ms | ✅ Exceeded |
+| 24-hour Coherence | > 95% | 97% | ✅ Exceeded |
+| Test Coverage | > 60% | 72.80% | ✅ Exceeded |
 
-### What's New
+### Production Ready Features
 
-- **Enhanced TUI** (`claude-agi.py`): Full-featured interface with memory browser, emotional state visualization, and goal tracking
-- **Complete Testing**: Unit, integration, safety, and performance tests
-- **Production Infrastructure**: Docker, Kubernetes, CI/CD all configured
-- **Dual-Mode Operation**: Works with or without external dependencies
-- ✅ Environment variable security for API keys
-- ✅ Multiple TUI launch methods with .env support
+- **Cross-Platform Support**: Native executables for Windows, macOS, Linux
+- **Containerized Deployment**: Docker Compose and Kubernetes ready
+- **Monitoring Stack**: Prometheus metrics, health checks, performance tracking
+- **Security Framework**: Multi-layered validation with adversarial resistance
+- **Real-Time Capabilities**: Live web search and information processing
 
-### Next Steps
+### Ready for Phase 2
 
-- ✅ Anthropic API integrated and working
-- ✅ Test suite fully operational (153/153 tests passing)
-- ✅ TUI fully stable and production-ready (v1.0.6)
-- 🔄 Connect to PostgreSQL and Redis for persistent storage
-- 🔄 Deploy to Kubernetes cluster
-- 🔄 Begin Phase 2: Learning and Knowledge Systems
+Phase 1 foundation is complete and robust. The system is ready for Phase 2 development:
+- **Learning Systems**: Knowledge acquisition and goal-directed behavior
+- **Advanced NLP**: Enhanced language understanding and generation
+- **Autonomous Exploration**: Expanded web exploration capabilities
 
 ## 📞 Contact
 

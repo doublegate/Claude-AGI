@@ -49,7 +49,7 @@ BRAVE_SEARCH_API_KEY=your-brave-search-key-here  # NEW v1.5.4 - Optional for web
 The latest enhanced TUI with real-time information capabilities:
 
 ```bash
-python claude-agi-refactored.py  # NEW: Enhanced with real-time web search
+python claude-agi.py  # NEW: Enhanced with real-time web search
 ```
 
 ### Enhanced Claude-AGI TUI

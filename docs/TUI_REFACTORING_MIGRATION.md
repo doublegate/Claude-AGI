@@ -68,7 +68,7 @@ The refactored architecture separates concerns into focused, single-responsibili
 - Comprehensive command system
 - Memory integration and management
 
-### 4. ClaudeAGIApp (`claude-agi-refactored.py`)
+### 4. ClaudeAGIApp (`claude-agi.py` - refactored entry point)
 **Responsibilities:**
 - Application initialization and configuration
 - AGI component setup and coordination
@@ -138,7 +138,7 @@ python -c "from src.interface.tui_controller import TUIController; print('TUICon
 ### 3. Integration Testing
 ```bash
 # Test refactored application
-python claude-agi-refactored.py
+python claude-agi.py
 
 # Compare functionality with original
 # Verify all features work as expected
@@ -148,7 +148,7 @@ python claude-agi-refactored.py
 ```bash
 # If refactored version is fully validated
 mv claude-agi.py claude-agi-legacy.py
-mv claude-agi-refactored.py claude-agi.py
+# Migration completed - claude-agi.py is now the refactored implementation
 ```
 
 ## Command Migration

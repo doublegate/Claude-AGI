@@ -9,6 +9,7 @@ Implements the controller pattern to separate concerns and manage interactions.
 import asyncio
 import logging
 import re
+import textwrap
 from collections import deque
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -200,24 +201,26 @@ class TUIController:
                                     thought_text = thought.get('content', '')
                                     importance = thought.get('importance', 5)
 
-                                    # Format with stream indicator
+                                    # Format with stream indicator (EXACT original)
                                     if stream_id == 'primary':
                                         prefix = "💭"
+                                        color = 1
                                     elif stream_id == 'creative':
                                         prefix = "🎨"
+                                        color = 4
                                     elif stream_id == 'subconscious':
                                         prefix = "🌊"
+                                        color = 7
                                     elif stream_id == 'meta':
                                         prefix = "🔍"
+                                        color = 3
                                     else:
                                         prefix = "•"
+                                        color = 8
 
-                                    # Add to consciousness pane
+                                    # Add to consciousness pane (EXACT original)
                                     display_text = f"{prefix} [{stream_id[:3].upper()}] {thought_text}"
-                                    self.ui_renderer.add_line_to_pane(
-                                        PaneType.CONSCIOUSNESS, 
-                                        display_text
-                                    )
+                                    self.add_consciousness_line(display_text, color)
 
                                     # Update metrics
                                     self.metrics['thoughts_generated'] += 1
@@ -1252,3 +1255,63 @@ class TUIController:
         except Exception as e:
             logger.error(f"Error handling terminal resize: {e}")
             self.add_system_line(f"Error handling resize: {str(e)}")
+    
+    def add_consciousness_line(self, text: str, color: int = 1):
+        """Add line to consciousness pane with word wrapping (EXACT original behavior)"""
+        if not self.ui_renderer:
+            return
+            
+        consciousness_pane = self.ui_renderer.panes.get(PaneType.CONSCIOUSNESS)
+        if not consciousness_pane:
+            return
+            
+        # Word wrap long lines
+        max_width = consciousness_pane.width - 4
+        if len(text) > max_width:
+            # Keep the prefix intact for wrapped lines
+            if text.startswith(('💭', '🎨', '🌊', '🔍', '•')):
+                # Find the first space after the prefix and tag
+                parts = text.split(' ', 2)  # Split into at most 3 parts
+                if len(parts) >= 3 and parts[1].startswith('[') and parts[1].endswith(']'):
+                    # We have emoji, tag, and content
+                    prefix = f"{parts[0]} {parts[1]}"
+                    rest = parts[2]
+                elif len(parts) >= 2:
+                    # Just emoji and content
+                    prefix = parts[0]
+                    rest = ' '.join(parts[1:])
+                else:
+                    # Just the emoji
+                    prefix = text
+                    rest = ""
+
+                if rest:
+                    # Calculate available width for text after prefix
+                    prefix_len = len(prefix) + 1  # +1 for space
+                    available_width = max_width - prefix_len
+                    if available_width > 10:  # Only wrap if we have reasonable space
+                        lines = textwrap.wrap(rest, available_width, break_long_words=False)
+                        if lines:
+                            # First line with prefix
+                            consciousness_pane.content.append((f"{prefix} {lines[0]}", color))
+                            # Subsequent lines with indent (matching prefix length)
+                            indent = ' ' * prefix_len
+                            for line in lines[1:]:
+                                consciousness_pane.content.append((f"{indent}{line}", color))
+                    else:
+                        # Not enough space, truncate
+                        consciousness_pane.content.append((text[:max_width-3] + "...", color))
+                else:
+                    consciousness_pane.content.append((prefix, color))
+            else:
+                # No special prefix, normal wrap
+                lines = textwrap.wrap(text, max_width, break_long_words=False)
+                for line in lines:
+                    consciousness_pane.content.append((line, color))
+        else:
+            consciousness_pane.content.append((text, color))
+
+        # Keep buffer manageable (match original buffer size)
+        max_buffer = 300
+        if len(consciousness_pane.content) > max_buffer:
+            consciousness_pane.content = consciousness_pane.content[-max_buffer:]
