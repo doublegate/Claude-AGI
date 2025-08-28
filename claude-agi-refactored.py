@@ -64,99 +64,99 @@ logger = logging.getLogger(__name__)
 class ClaudeAGIApp:
     """
     Main Claude-AGI Application (Refactored)
-    
+
     Uses modular architecture with separated concerns:
     - TUIController: Coordinates UI and AGI components
     - UIRenderer: Handles visual display
     - EventHandler: Processes user input
     """
-    
+
     def __init__(self, config_path: str = "configs/development.yaml"):
         """Initialize Claude-AGI with configuration"""
         logger.info(f"Initializing Claude-AGI with config: {config_path}")
-        
+
         # Load configuration
         with open(config_path, 'r') as f:
             self.config = yaml.safe_load(f)
-        
+
         # Initialize core AGI orchestrator
         self.orchestrator = AGIOrchestrator(self.config)
-        
+
         # Initialize TUI controller
         self.controller = TUIController(self.config, self.orchestrator)
-        
+
         # AGI components (will be initialized after orchestrator setup)
         self.memory_manager = None
         self.consciousness = None
         self.safety = None
 
         logger.info("Claude-AGI initialization complete")
-    
+
     async def initialize_components(self):
         """Initialize AGI components after orchestrator is ready"""
         logger.info("Initializing AGI components")
-        
+
         try:
             # Start the orchestrator
             await self.orchestrator.start()
-            
+
             # Get components from orchestrator
             self.memory_manager = getattr(self.orchestrator, 'memory_manager', None)
             self.consciousness = getattr(self.orchestrator, 'consciousness_streams', {}).get('primary')
             self.safety = getattr(self.orchestrator, 'safety_framework', None)
-            
+
             # Set components in controller
             if self.memory_manager:
                 self.controller.set_memory_manager(self.memory_manager)
-            
+
             if self.consciousness:
                 self.controller.set_consciousness_stream(self.consciousness)
-            
+
             if self.safety:
                 self.controller.set_safety_framework(self.safety)
-            
+
             logger.info("AGI components initialized successfully")
-            
+
         except Exception as e:
             logger.error(f"Error initializing AGI components: {e}")
             # Continue with basic functionality even if some components fail
-    
+
     def run(self, stdscr):
         """Main application entry point with curses"""
         try:
             # Initialize TUI components
             self.controller.initialize_ui(stdscr)
-            
+
             # Configure curses
             curses.curs_set(0)  # Hide cursor
             stdscr.clear()
             stdscr.refresh()
-            
+
             # Run the application
             asyncio.run(self._run_async())
-            
+
         except KeyboardInterrupt:
             logger.info("Application interrupted by user")
         except Exception as e:
             logger.error(f"Application error: {e}")
         finally:
             self._cleanup_curses()
-    
+
     async def _run_async(self):
         """Async main loop"""
         try:
             # Initialize AGI components
             await self.initialize_components()
-            
+
             # Start the controller
             await self.controller.run()
-            
+
         except Exception as e:
             logger.error(f"Error in async main loop: {e}")
         finally:
             # Cleanup
             await self._cleanup()
-    
+
     def _cleanup_curses(self):
         """Clean up curses state"""
         try:
@@ -166,18 +166,18 @@ class ClaudeAGIApp:
         except:
             # Ignore cleanup errors
             pass
-    
+
     async def _cleanup(self):
         """Clean up application resources"""
         logger.info("Cleaning up application resources")
-        
+
         try:
             # Stop orchestrator
             if self.orchestrator:
                 await self.orchestrator.stop()
-            
+
             logger.info("Application cleanup complete")
-            
+
         except Exception as e:
             logger.error(f"Error during cleanup: {e}")
 
@@ -194,9 +194,9 @@ def main():
         default='configs/development.yaml',
         help='Path to configuration file (default: configs/development.yaml)'
     )
-    
+
     args = parser.parse_args()
-    
+
     # Check if config file exists
     if not os.path.exists(args.config):
         print(f"Error: Configuration file '{args.config}' not found")
@@ -208,10 +208,10 @@ def main():
         else:
             print("  No configs directory found")
         sys.exit(1)
-    
+
     # Create and run application
     app = ClaudeAGIApp(args.config)
-    
+
     try:
         # Run with curses wrapper for proper cleanup
         curses.wrapper(app.run)

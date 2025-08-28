@@ -954,8 +954,9 @@ class ClaudeAGI:
                 if updates_made:
                     curses.doupdate()
 
-                # Slower refresh rate to reduce flickering
-                await asyncio.sleep(1.0)  # Increased to 1 second to reduce flicker
+                # Balanced refresh rate - responsive but not flickering
+                # Note: Critical updates use _force_ui_refresh() for immediate display
+                await asyncio.sleep(0.5)  # Reduced to 0.5 seconds for better responsiveness
             except Exception as e:
                 logger.error(f"UI refresh error: {e}")
                 needs_full_redraw = True  # Redraw everything on error
@@ -1265,6 +1266,37 @@ class ClaudeAGI:
             # Auto-scroll to bottom for chat
             if PaneType.CHAT not in self.scroll_positions or self.scroll_positions[PaneType.CHAT] == 0:
                 self.scroll_positions[PaneType.CHAT] = 0
+
+    def _force_ui_refresh(self):
+        """Force immediate UI refresh for critical updates like chat responses"""
+        try:
+            # Update all panes that need refreshing
+            if self.chat_needs_update and PaneType.CHAT in self.panes:
+                self._draw_pane(self.panes[PaneType.CHAT])
+                self.panes[PaneType.CHAT].window.noutrefresh()
+                self.chat_needs_update = False
+
+            # Also update any other pending panes for better UX
+            if self.consciousness_needs_update and PaneType.CONSCIOUSNESS in self.panes:
+                self._draw_pane(self.panes[PaneType.CONSCIOUSNESS])
+                self.panes[PaneType.CONSCIOUSNESS].window.noutrefresh()
+                self.consciousness_needs_update = False
+
+            if self.memory_needs_update and PaneType.MEMORY in self.panes:
+                self._draw_pane(self.panes[PaneType.MEMORY])
+                self.panes[PaneType.MEMORY].window.noutrefresh()
+                self.memory_needs_update = False
+
+            # Force screen refresh
+            curses.doupdate()
+            
+        except (curses.error, AttributeError) as e:
+            # Silently handle curses errors (terminal resize, etc.)
+            pass
+        except Exception as e:
+            # Log unexpected errors but don't crash
+            import sys
+            print(f"UI refresh error: {e}", file=sys.stderr)
 
     def add_system_line(self, text: str, color: int = 3):
         """Add system message to chat"""
@@ -2447,72 +2479,91 @@ class ClaudeAGI:
 
     async def handle_user_message(self, message: str):
         """Process user conversation message"""
-        self.in_conversation = True
+        try:
+            self.in_conversation = True
 
-        # Add to conversation history
-        self.conversation_history.append({
-            "role": "user",
-            "content": message,
-            "timestamp": datetime.now()
-        })
+            # Add to conversation history
+            self.conversation_history.append({
+                "role": "user",
+                "content": message,
+                "timestamp": datetime.now()
+            })
 
-        # Store in memory via orchestrator
-        if self.memory_manager:
-            message_obj = Message(
-                source='chat',
-                target='memory',
-                type='store_thought',
-                content={
-                    'type': 'conversation',
-                    'content': f"User said: {message}",
-                    'timestamp': datetime.now().isoformat(),
-                    'importance': 6,
-                    'stream_type': 'conversation'
-                }
-            )
-            await self.orchestrator.send_message(message_obj)
+            # Store in memory via orchestrator
+            if self.memory_manager:
+                try:
+                    message_obj = Message(
+                        source='chat',
+                        target='memory',
+                        type='store_thought',
+                        content={
+                            'type': 'conversation',
+                            'content': f"User said: {message}",
+                            'timestamp': datetime.now().isoformat(),
+                            'importance': 6,
+                            'stream_type': 'conversation'
+                        }
+                    )
+                    await self.orchestrator.send_message(message_obj)
+                except Exception as e:
+                    # Memory storage failure shouldn't block conversation
+                    self.add_system_line(f"Memory storage warning: {str(e)[:50]}...")
 
-        # Notify consciousness of user input
-        if self.consciousness:
-            await self.consciousness.handle_user_input({'message': message})
+            # Notify consciousness of user input
+            if self.consciousness:
+                try:
+                    await self.consciousness.handle_user_input({'message': message})
+                except Exception as e:
+                    # Consciousness notification failure shouldn't block conversation
+                    pass
 
-        # Generate response
-        response = await self._generate_response(message)
+            # Generate response
+            try:
+                response = await self._generate_response(message)
+            except Exception as e:
+                response = f"I apologize, I encountered an error processing your message: {str(e)[:100]}..."
+                self.add_system_line(f"Response generation error: {str(e)}")
 
-        # Display response
-        # Add response with proper formatting to prevent overlap
-        self.add_chat_line(f"Claude: {response}", 4)
+            # Display response immediately
+            self.add_chat_line(f"Claude: {response}", 4)
+            
+            # Force immediate UI refresh to show response instantly
+            self._force_ui_refresh()
 
-        # Force immediate update to prevent overlap
-        if PaneType.CHAT in self.panes:
-            self._draw_pane(self.panes[PaneType.CHAT])
-            self.panes[PaneType.CHAT].window.noutrefresh()
-            curses.doupdate()
+            # Add to conversation history
+            self.conversation_history.append({
+                "role": "assistant",
+                "content": response,
+                "timestamp": datetime.now()
+            })
 
-        # Add to conversation history
-        self.conversation_history.append({
-            "role": "assistant",
-            "content": response,
-            "timestamp": datetime.now()
-        })
+            # Store response in memory via orchestrator
+            if self.memory_manager:
+                try:
+                    message_obj = Message(
+                        source='chat',
+                        target='memory',
+                        type='store_thought',
+                        content={
+                            'type': 'conversation',
+                            'content': f"I responded: {response}",
+                            'timestamp': datetime.now().isoformat(),
+                            'importance': 5,
+                            'stream_type': 'conversation'
+                        }
+                    )
+                    await self.orchestrator.send_message(message_obj)
+                except Exception as e:
+                    # Memory storage failure shouldn't break the conversation
+                    pass
 
-        # Store response in memory via orchestrator
-        if self.memory_manager:
-            message_obj = Message(
-                source='chat',
-                target='memory',
-                type='store_thought',
-                content={
-                    'type': 'conversation',
-                    'content': f"I responded: {response}",
-                    'timestamp': datetime.now().isoformat(),
-                    'importance': 5,
-                    'stream_type': 'conversation'
-                }
-            )
-            await self.orchestrator.send_message(message_obj)
-
-        self.in_conversation = False
+        except Exception as e:
+            # Catch-all exception handler for any unexpected errors
+            error_msg = f"Conversation error: {str(e)[:100]}..."
+            self.add_system_line(error_msg)
+            self._force_ui_refresh()
+        finally:
+            self.in_conversation = False
 
     async def _generate_response(self, user_input: str) -> str:
         """Generate response using thought generator"""
