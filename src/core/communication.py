@@ -35,7 +35,7 @@ class ServiceBase(ABC):
         
     async def publish(self, topic: str, data: Any):
         """Publish message to topic"""
-        from core.orchestrator import Message
+        from src.core.orchestrator import Message
         
         message = Message(
             source=self.service_name,

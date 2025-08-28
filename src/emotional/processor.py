@@ -189,8 +189,7 @@ class EmotionalProcessor(ServiceBase):
     """
     
     def __init__(self, orchestrator=None):
-        super().__init__(orchestrator)
-        self.service_name = "emotional_processor"
+        super().__init__(orchestrator, "emotional_processor")
         
         # Core emotional state
         self.current_state = EmotionalState(valence=0.0, arousal=0.5, dominance=0.5)
@@ -224,53 +223,54 @@ class EmotionalProcessor(ServiceBase):
         
         logger.info("EmotionalProcessor initialized")
     
+    def get_subscriptions(self) -> List[str]:
+        """Subscribe to relevant topics"""
+        return ['thought', 'user_input', 'memory_formation', 'state_change']
+    
+    async def process_message(self, message: Any):
+        """Process incoming messages"""
+        if hasattr(message, 'type') and hasattr(message, 'content'):
+            if message.type == 'thought':
+                # Process emotional content of thoughts
+                await self.process_thought_emotion(message.content)
+            elif message.type == 'user_input':
+                # Process emotional triggers from user input
+                await self.process_emotional_trigger(message.content.get('message', ''))
+            elif message.type == 'state_change':
+                # Adjust emotional processing based on system state
+                if message.content.get('new_state') == 'sleeping':
+                    await self.stabilize_emotion()
+    
+    async def service_cycle(self):
+        """Service cycle - emotional processing updates"""
+        try:
+            # Update emotional state based on recent events
+            await self._update_emotional_state()
+            
+            # Process emotional memories
+            await self._process_emotional_memories()
+            
+            # Update mood dynamics
+            await self._update_mood_dynamics()
+            
+            # Apply emotional regulation if needed
+            await self._apply_emotional_regulation()
+            
+            # Generate emotional insights
+            await self._generate_emotional_insights()
+            
+        except Exception as e:
+            logger.error(f"Error in emotional service cycle: {e}", exc_info=True)
+    
     async def start(self):
         """Start emotional processing service"""
         await super().start()
-        
-        # Start background emotional processing
-        self._processing_task = asyncio.create_task(self._emotional_processing_loop())
         logger.info("Emotional processing started")
     
     async def stop(self):
         """Stop emotional processing service"""
-        if hasattr(self, '_processing_task'):
-            self._processing_task.cancel()
-            try:
-                await self._processing_task
-            except asyncio.CancelledError:
-                pass
-        
         await super().stop()
         logger.info("Emotional processing stopped")
-    
-    async def _emotional_processing_loop(self):
-        """Main emotional processing loop"""
-        while self.is_running:
-            try:
-                # Update emotional state based on recent events
-                await self._update_emotional_state()
-                
-                # Process emotional memories
-                await self._process_emotional_memories()
-                
-                # Update mood dynamics
-                await self._update_mood_dynamics()
-                
-                # Apply emotional regulation if needed
-                await self._apply_emotional_regulation()
-                
-                # Generate emotional insights
-                await self._generate_emotional_insights()
-                
-                # Sleep until next processing cycle
-                await asyncio.sleep(self.emotion_update_interval)
-                
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                logger.error(f"Error in emotional processing loop: {e}", exc_info=True)
-                await asyncio.sleep(1.0)  # Brief pause before retry
     
     async def process_emotional_trigger(self, trigger: str, context: Dict[str, Any] = None) -> EmotionalEvent:
         """Process an emotional trigger and update state"""

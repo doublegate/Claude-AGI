@@ -5,7 +5,7 @@ An advanced self-consciousness platform implementing continuous consciousness,
 autonomous learning, and meta-cognitive capabilities for Claude AI.
 """
 
-__version__ = "1.5.1"
+__version__ = "1.5.3"
 __author__ = "Claude-AGI Project Contributors"
 __email__ = "contact@claude-agi-project.org"
 __license__ = "MIT"

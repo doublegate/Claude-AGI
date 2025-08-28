@@ -1,12 +1,86 @@
-# Chat Response Display Fix - Implementation Summary
+# Chat Response Fixes - Implementation Summary
 
-## Problem Identified
-The Claude-AGI TUI had a timing issue where chat responses took up to 1 second to appear after generation due to the display loop only refreshing every 1 second.
+## Critical Fix: Asyncio Silent Task Failure (August 2025)
 
-### Root Cause
+### Problem Identified
+The Claude-AGI TUI conversation pane was not displaying chat responses at all, despite user input being received and other TUI panes working correctly. This was a recurring issue that caused complete chat response failure.
+
+### Root Cause - Asyncio Silent Task Failures
 - User input processing worked correctly ✓
 - Anthropic API integration worked perfectly ✓ 
-- Async task `handle_user_message()` completed successfully ✓
+- **CRITICAL ISSUE**: Fire-and-forget `asyncio.create_task()` pattern caused exceptions to be silently swallowed
+- When `handle_user_message()` failed internally, no error was displayed to the user
+
+**The Bug**: Line 2757 (original):
+```python
+# PROBLEMATIC - Fire-and-forget pattern:
+asyncio.create_task(self.handle_user_message(user_text))
+```
+
+### Solution Implemented - Asyncio Exception Handling
+
+#### 1. Added Task Exception Handler
+**Location**: `claude-agi.py`, lines 2593-2608
+
+```python
+def _handle_task_exception(self, task: asyncio.Task):
+    """Handle exceptions from async tasks to prevent silent failures"""
+    try:
+        if task.exception():
+            exc = task.exception()
+            error_msg = f"Async task error: {type(exc).__name__}: {str(exc)[:100]}..."
+            self.add_system_line(error_msg)
+            self._force_ui_refresh()
+            logger.error(f"Async task exception: {exc}", exc_info=exc)
+    except asyncio.CancelledError:
+        # Task was cancelled, this is normal
+        pass
+    except Exception as e:
+        # Error in exception handler itself
+        self.add_system_line(f"Exception handler error: {str(e)[:100]}...")
+        logger.error(f"Exception in task exception handler: {e}")
+```
+
+#### 2. Fixed Fire-and-Forget Pattern
+**Location**: `claude-agi.py`, lines 2773-2775
+
+```python
+# OLD (problematic):
+asyncio.create_task(self.handle_user_message(user_text))
+
+# NEW (fixed):
+task = asyncio.create_task(self.handle_user_message(user_text))
+task.add_done_callback(self._handle_task_exception)
+```
+
+#### 3. Added Asyncio Debug Logging
+**Location**: `claude-agi.py`, lines 71-74
+
+```python
+# Enable asyncio debug mode for better task exception tracking
+asyncio_logger = logging.getLogger('asyncio')
+asyncio_logger.setLevel(logging.DEBUG)
+asyncio_logger.addHandler(logging.FileHandler(log_dir / 'asyncio-debug.log'))
+```
+
+### Testing & Verification
+Created comprehensive test: `/tests/test_asyncio_fix.py`
+
+Test Results:
+```
+✅ OLD pattern failed silently (demonstrating the original bug)
+✅ NEW pattern caught exception successfully
+   Error message: Async task error: ValueError: Simulated API error...
+```
+
+---
+
+## Secondary Fix: Display Timing Issue
+
+### Previous Problem
+The Claude-AGI TUI had a timing issue where chat responses took up to 1 second to appear after generation due to the display loop only refreshing every 1 second.
+
+### Previous Root Cause
 - **Issue**: UI timing problem - `chat_needs_update = True` was only checked every 1 second in the main display loop
 
 ## Solution Implemented

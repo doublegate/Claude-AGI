@@ -94,17 +94,25 @@ class AGIOrchestrator:
         security_config = self.config.get('security', {})
         self.services['safety'] = EnhancedSafetyFramework(self, security_config)
         
-        # Comment out services that don't exist yet
-        # self.services['learning'] = LearningEngine(self)
-        # self.services['emotional'] = EmotionalFramework(self)
-        # self.services['creative'] = CreativeEngine(self)
-        # self.services['explorer'] = WebExplorer(self)
-        # self.services['social'] = SocialIntelligence(self)
-        # self.services['meta'] = MetaCognitive(self)
+        # Initialize all fully implemented services
+        from src.emotional.processor import EmotionalProcessor
+        from src.learning.engine import LearningEngine
+        from src.creative.engine import CreativeEngine
+        from src.web.explorer import WebExplorer
+        from src.social.intelligence import SocialIntelligence
+        from src.meta.cognitive import MetaCognitive
+        
+        self.services['emotional'] = EmotionalProcessor(self)
+        self.services['learning'] = LearningEngine(self)
+        self.services['creative'] = CreativeEngine(self)
+        self.services['explorer'] = WebExplorer(self)
+        self.services['social'] = SocialIntelligence(self)
+        self.services['meta'] = MetaCognitive(self)
         
     async def run(self):
         """Main event loop"""
         await self.initialize()
+        self.running = True  # Critical fix: Start the orchestrator loop
         
         while self.running:
             try:
@@ -144,6 +152,14 @@ class AGIOrchestrator:
             
     async def idle_cycle(self):
         """Activities during idle time"""
+        # Run service cycles for all services
+        for service_name, service in self.services.items():
+            if hasattr(service, 'service_cycle'):
+                try:
+                    await service.service_cycle()
+                except Exception as e:
+                    logger.error(f"Error in {service_name} service cycle: {e}")
+        
         if self.state == SystemState.IDLE:
             # Trigger exploration or contemplation
             if random.random() < 0.3:

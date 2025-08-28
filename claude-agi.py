@@ -68,6 +68,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Enable asyncio debug mode for better task exception tracking
+asyncio_logger = logging.getLogger('asyncio')
+asyncio_logger.setLevel(logging.DEBUG)
+asyncio_logger.addHandler(logging.FileHandler(log_dir / 'asyncio-debug.log'))
+
 
 class PaneType(Enum):
     """Types of panes in the TUI"""
@@ -1628,20 +1633,26 @@ class ClaudeAGI:
 
         # Cancel all running tasks to ensure clean shutdown
         try:
-            # Cancel UI refresh task
-            if hasattr(self, 'ui_refresh_task') and self.ui_refresh_task:
-                self.ui_refresh_task.cancel()
+            # First, shutdown the orchestrator gracefully
+            if hasattr(self, 'orchestrator') and self.orchestrator:
+                self.orchestrator.running = False
+                await self.orchestrator.shutdown()
 
-            # Cancel all consciousness tasks
-            for task in self.consciousness_tasks.values():
-                if task and not task.done():
-                    task.cancel()
+            # Cancel all main tasks (orchestrator, consciousness, input, ui_refresh)
+            if hasattr(self, 'tasks'):
+                for task in self.tasks:
+                    if task and not task.done():
+                        task.cancel()
 
-            # Clear task references
-            self.consciousness_tasks.clear()
+            # Cancel any remaining consciousness tasks
+            if hasattr(self, 'consciousness_tasks'):
+                for task in self.consciousness_tasks.values():
+                    if task and not task.done():
+                        task.cancel()
+                self.consciousness_tasks.clear()
 
             # Give tasks a moment to cancel
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.2)
         except Exception as e:
             logger.debug(f"Error during quit cleanup: {e}")
 
@@ -2590,6 +2601,23 @@ class ClaudeAGI:
             # Fallback response
             return "I'm reflecting on what you said. My thought generation capabilities are currently limited, but I'm still processing and learning from our interaction."
 
+    def _handle_task_exception(self, task: asyncio.Task):
+        """Handle exceptions from async tasks to prevent silent failures"""
+        try:
+            if task.exception():
+                exc = task.exception()
+                error_msg = f"Async task error: {type(exc).__name__}: {str(exc)[:100]}..."
+                self.add_system_line(error_msg)
+                self._force_ui_refresh()
+                logger.error(f"Async task exception: {exc}", exc_info=exc)
+        except asyncio.CancelledError:
+            # Task was cancelled, this is normal
+            pass
+        except Exception as e:
+            # Error in exception handler itself
+            self.add_system_line(f"Exception handler error: {str(e)[:100]}...")
+            logger.error(f"Exception in task exception handler: {e}")
+
     async def input_handler(self):
         """Handle user input asynchronously"""
         while self.running:
@@ -2753,8 +2781,9 @@ class ClaudeAGI:
                         self.history_index = -1
                         self.add_chat_line(f"You: {user_text}", 2)
 
-                        # Handle message asynchronously
-                        asyncio.create_task(self.handle_user_message(user_text))
+                        # Handle message asynchronously with proper exception handling
+                        task = asyncio.create_task(self.handle_user_message(user_text))
+                        task.add_done_callback(self._handle_task_exception)
 
                         # Force immediate update of input area
                         self._draw_input()
@@ -2791,6 +2820,7 @@ class ClaudeAGI:
             # Start the orchestrator
             logger.info("Starting AGI orchestrator...")
             orchestrator_task = asyncio.create_task(self.orchestrator.run())
+            orchestrator_task.add_done_callback(self._handle_task_exception)
 
             # Wait for services to initialize
             await asyncio.sleep(1)
@@ -2817,14 +2847,17 @@ class ClaudeAGI:
             # Start consciousness loop
             logger.info("Starting consciousness loop...")
             consciousness_task = asyncio.create_task(self.consciousness_loop())
+            consciousness_task.add_done_callback(self._handle_task_exception)
 
             # Start input handler
             logger.info("Starting input handler...")
             input_task = asyncio.create_task(self.input_handler())
+            input_task.add_done_callback(self._handle_task_exception)
 
             # Start UI refresh loop
             logger.info("Starting UI refresh loop...")
             ui_refresh_task = asyncio.create_task(self.ui_refresh_loop())
+            ui_refresh_task.add_done_callback(self._handle_task_exception)
 
             # Initial system messages
             self.add_system_line("Claude-AGI System v1.0 Initialized", 3)

@@ -214,8 +214,10 @@ class ConsciousnessStream(ServiceBase):
             attention_weight = self.attention_weights.get(stream_id, 0)
             
             if attention_weight > 0.1 and stream.should_generate():
-                # Adjust generation based on attention
-                if random.random() < attention_weight:
+                # Generate thought with probability based on attention (boosted for reliability)
+                # Boost attention weights to ensure more frequent generation
+                boosted_probability = min(1.0, attention_weight * 3.0)
+                if random.random() < boosted_probability:
                     thought = await self.generate_thought(stream)
                     if thought:
                         await self.process_thought(thought, stream)
