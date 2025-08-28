@@ -15,6 +15,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
+import logging
+
+logger = logging.getLogger(__name__)
 
 from ..database.models import EmotionalState, Goal
 from ..database.models import StreamType
@@ -69,6 +72,13 @@ class UIRenderer:
         # Display state
         self.consciousness_needs_update = False
         self.chat_needs_update = False
+        
+        # Scrolling state
+        self.scroll_positions: Dict[PaneType, int] = {}
+        # Initialize scroll positions to 0 (bottom)
+        for pane_type in PaneType:
+            if pane_type not in [PaneType.STATUS, PaneType.INPUT]:
+                self.scroll_positions[pane_type] = 0
         
         # Initialize UI components
         self._init_colors()
@@ -150,6 +160,10 @@ class UIRenderer:
         # Create windows for all panes
         for pane in self.panes.values():
             pane.win = curses.newwin(pane.height, pane.width, pane.y, pane.x)
+            # Enable scrolling and keypad for panes
+            pane.win.scrollok(True)
+            pane.win.idlok(True)  # Enable line insertion/deletion
+            pane.win.keypad(True)  # Enable keypad for scrolling
     
     def _create_memory_focus_layout(self):
         """Create memory-focused layout with larger memory pane"""
@@ -325,8 +339,20 @@ class UIRenderer:
         content_height = pane.height - 2
         content_width = pane.width - 2
         
-        # Get recent consciousness lines
-        lines_to_show = pane.buffer[-content_height:] if pane.buffer else []
+        # Get consciousness lines with scroll position
+        scroll_pos = self.scroll_positions.get(PaneType.CONSCIOUSNESS, 0)
+        total_lines = len(pane.buffer)
+        
+        if total_lines <= content_height:
+            # All lines fit, show all
+            lines_to_show = pane.buffer
+        else:
+            # Apply scrolling
+            max_scroll = total_lines - content_height
+            scroll_pos = min(scroll_pos, max_scroll)
+            start_idx = total_lines - content_height - scroll_pos
+            end_idx = total_lines - scroll_pos
+            lines_to_show = list(pane.buffer)[start_idx:end_idx]
         
         for i, line in enumerate(lines_to_show):
             if i >= content_height:
@@ -346,33 +372,105 @@ class UIRenderer:
                     continue
     
     def _draw_memory_content(self, pane: Pane):
-        """Draw memory browser content"""
-        content_height = pane.height - 2
-        content_width = pane.width - 2
+        """Draw enhanced memory browser with categories and search"""
+        win = pane.win
+        height, width = win.getmaxyx()
         
-        # Get memory content from buffer
-        lines_to_show = pane.buffer[-content_height:] if pane.buffer else []
+        y = 1
         
-        for i, line in enumerate(lines_to_show):
-            if i >= content_height:
-                break
+        try:
+            # Memory statistics (get from controller if available)
+            memory_stats = getattr(self, '_memory_stats', {'working_count': 0, 'episodic_count': 0, 'semantic_count': 0})
+            stats_text = f"Working: {memory_stats.get('working_count', 0)} | Episodic: {memory_stats.get('episodic_count', 0)} | Semantic: {memory_stats.get('semantic_count', 0)}"
+            self.safe_addstr(win, y, 2, stats_text, curses.color_pair(3))
+            y += 1
+            # Add separator line
+            self.safe_addstr(win, y, 2, "─" * (width - 6), curses.color_pair(8))
+            y += 2
+            
+            # Categories with proper spacing
+            categories = [
+                ("Recent Thoughts", curses.color_pair(7)),
+                ("Important Memories", curses.color_pair(4)),
+                ("Emotional Memories", curses.color_pair(5)),
+                ("Goals & Achievements", curses.color_pair(2))
+            ]
+            
+            # Calculate space for each section dynamically
+            remaining_height = height - y - 2  # Account for border
+            if remaining_height < len(categories) * 3:
+                # Not enough space, just show what we can
+                section_height = 3
+            else:
+                section_height = max(4, remaining_height // len(categories))
+            
+            for category, color in categories:
+                if y >= height - 2:
+                    break
                 
-            try:
-                y_pos = i + 1
-                if y_pos < pane.height - 1:
-                    display_line = line[:content_width]
-                    self.safe_addstr(pane.win, y_pos, 1, display_line, 
-                                   curses.color_pair(4))
-            except curses.error:
-                continue
+                section_start_y = y
+                
+                # Clear section area first to prevent overlap
+                for clear_y in range(y, min(y + section_height, height - 1)):
+                    self.safe_addstr(win, clear_y, 2, " " * (width - 4), curses.color_pair(8))
+                
+                # Category header with expansion indicator
+                self.safe_addstr(win, y, 2, f"▼ {category}", color | curses.A_BOLD)
+                y += 1
+                
+                # Reserve at least one line for content
+                content_lines = section_height - 2  # Header + spacing
+                lines_used = 0
+                
+                # Show sample content for each category
+                if category == "Recent Thoughts" and len(pane.buffer) > 0:
+                    # Show last few items from buffer
+                    for mem_line in list(pane.buffer)[-2:]:
+                        if lines_used >= content_lines or y >= section_start_y + section_height - 1:
+                            break
+                        
+                        # Format as memory item
+                        prefix = "  • [THT] "
+                        available_width = width - len(prefix) - 4
+                        
+                        if len(mem_line) > available_width:
+                            display_content = mem_line[:available_width-3] + "..."
+                        else:
+                            display_content = mem_line
+                        
+                        self.safe_addstr(win, y, 2, prefix + display_content, curses.color_pair(8))
+                        y += 1
+                        lines_used += 1
+                
+                # Fill empty space if no content
+                while lines_used < content_lines - 1 and y < section_start_y + section_height - 1:
+                    self.safe_addstr(win, y, 4, "• (no entries)", curses.color_pair(8))
+                    y += 1
+                    lines_used += 1
+                
+                # Add spacing between sections
+                y = section_start_y + section_height
+                
+        except curses.error:
+            pass
     
     def _draw_emotional_content(self, pane: Pane):
         """Draw emotional state content"""
         content_height = pane.height - 2
         content_width = pane.width - 2
         
-        # Get emotional content from buffer
-        lines_to_show = pane.buffer[-content_height:] if pane.buffer else []
+        # Get emotional content from buffer with scrolling
+        scroll_pos = self.scroll_positions.get(PaneType.EMOTIONAL, 0)
+        total_lines = len(pane.buffer)
+        
+        if total_lines <= content_height:
+            lines_to_show = pane.buffer
+        else:
+            max_scroll = total_lines - content_height
+            scroll_pos = min(scroll_pos, max_scroll)
+            start_idx = total_lines - content_height - scroll_pos
+            end_idx = total_lines - scroll_pos
+            lines_to_show = list(pane.buffer)[start_idx:end_idx]
         
         for i, line in enumerate(lines_to_show):
             if i >= content_height:
@@ -392,8 +490,18 @@ class UIRenderer:
         content_height = pane.height - 2
         content_width = pane.width - 2
         
-        # Get goals content from buffer
-        lines_to_show = pane.buffer[-content_height:] if pane.buffer else []
+        # Get goals content from buffer with scrolling
+        scroll_pos = self.scroll_positions.get(PaneType.GOALS, 0)
+        total_lines = len(pane.buffer)
+        
+        if total_lines <= content_height:
+            lines_to_show = pane.buffer
+        else:
+            max_scroll = total_lines - content_height
+            scroll_pos = min(scroll_pos, max_scroll)
+            start_idx = total_lines - content_height - scroll_pos
+            end_idx = total_lines - scroll_pos
+            lines_to_show = list(pane.buffer)[start_idx:end_idx]
         
         for i, line in enumerate(lines_to_show):
             if i >= content_height:
@@ -413,8 +521,18 @@ class UIRenderer:
         content_height = pane.height - 2
         content_width = pane.width - 2
         
-        # Get chat lines from buffer
-        lines_to_show = pane.buffer[-content_height:] if pane.buffer else []
+        # Get chat lines from buffer with scrolling
+        scroll_pos = self.scroll_positions.get(PaneType.CHAT, 0)
+        total_lines = len(pane.buffer)
+        
+        if total_lines <= content_height:
+            lines_to_show = pane.buffer
+        else:
+            max_scroll = total_lines - content_height
+            scroll_pos = min(scroll_pos, max_scroll)
+            start_idx = total_lines - content_height - scroll_pos
+            end_idx = total_lines - scroll_pos
+            lines_to_show = list(pane.buffer)[start_idx:end_idx]
         
         for i, line in enumerate(lines_to_show):
             if i >= content_height:
@@ -524,6 +642,11 @@ class UIRenderer:
             # Maintain buffer size
             if len(pane.buffer) > self.max_lines:
                 pane.buffer = pane.buffer[-self.max_lines:]
+            
+            # Auto-scroll to bottom when new content added (if not manually scrolled)
+            if pane_type not in self.scroll_positions or self.scroll_positions[pane_type] == 0:
+                # Keep at bottom - no scrolling needed
+                self.scroll_positions[pane_type] = 0
     
     def clear_pane_buffer(self, pane_type: PaneType):
         """Clear a pane's buffer"""
@@ -541,3 +664,60 @@ class UIRenderer:
         self.height, self.width = self.stdscr.getmaxyx()
         self._create_panes()
         self.stdscr.clear()
+    
+    def update_memory_stats(self, stats: Dict[str, Any]):
+        """Update memory statistics for display"""
+        self._memory_stats = stats
+    
+    # Scrolling Methods
+    def scroll_pane(self, pane_type: PaneType, direction: str, amount: int = 1) -> bool:
+        """Scroll a pane in the given direction"""
+        if pane_type not in self.panes:
+            return False
+        
+        pane = self.panes[pane_type]
+        current_pos = self.scroll_positions.get(pane_type, 0)
+        max_lines = len(pane.buffer)
+        visible_lines = pane.height - 2  # Account for border
+        
+        if max_lines <= visible_lines:
+            # No need to scroll if content fits
+            return False
+        
+        max_scroll = max_lines - visible_lines
+        
+        if direction == "up":
+            new_pos = min(current_pos + amount, max_scroll)
+        elif direction == "down":
+            new_pos = max(current_pos - amount, 0)
+        elif direction == "top":
+            new_pos = max_scroll
+        elif direction == "bottom":
+            new_pos = 0
+        else:
+            return False
+        
+        if new_pos != current_pos:
+            self.scroll_positions[pane_type] = new_pos
+            return True
+        return False
+    
+    def get_scroll_info(self, pane_type: PaneType) -> Dict[str, int]:
+        """Get scroll information for a pane"""
+        if pane_type not in self.panes:
+            return {}
+        
+        pane = self.panes[pane_type]
+        current_pos = self.scroll_positions.get(pane_type, 0)
+        max_lines = len(pane.buffer)
+        visible_lines = pane.height - 2
+        max_scroll = max(0, max_lines - visible_lines)
+        
+        return {
+            'current_pos': current_pos,
+            'max_scroll': max_scroll,
+            'total_lines': max_lines,
+            'visible_lines': visible_lines,
+            'can_scroll_up': current_pos < max_scroll,
+            'can_scroll_down': current_pos > 0
+        }

@@ -1,24 +1,24 @@
-# Claude-AGI Architecture Overview
+# Claude-AGI Architecture Overview (v1.5.4)
 
-This document provides a high-level overview of the Claude-AGI system architecture.
+This document provides a high-level overview of the Claude-AGI system architecture, including the latest real-time information capabilities.
 
 ## System Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
-│                        User Interface                         │
-│                    (TUI / Web UI / API)                      │
+│                        User Interface                       │
+│                    (TUI / Web UI / API)                     │
 └─────────────────────────┬───────────────────────────────────┘
                           │
 ┌─────────────────────────┴───────────────────────────────────┐
-│                    AGI Orchestrator                          │
-│              (Event Loop & State Management)                 │
+│                    AGI Orchestrator                         │
+│              (Event Loop & State Management)                │
 └─────────────────────────┬───────────────────────────────────┘
                           │
         ┌─────────────────┴─────────────────┐
         │         Service Layer             │
         │                                   │
-┌───────┴──────┐ ┌──────────────┐ ┌────────┴───────┐
+┌───────┴──────┐ ┌──────────────┐ ┌─────────┴──────┐
 │ Consciousness│ │    Memory    │ │   Exploration  │
 │   Streams    │ │  Management  │ │    Engine      │
 └──────────────┘ └──────────────┘ └────────────────┘
@@ -26,12 +26,16 @@ This document provides a high-level overview of the Claude-AGI system architectu
 │   Safety     │ │  Emotional   │ │    Learning    │
 │  Framework   │ │  Framework   │ │    Engine      │
 └──────────────┘ └──────────────┘ └────────────────┘
+┌──────────────┐ ┌──────────────┐ ┌────────────────┐
+│  **v1.5.4**  │ │   Real-Time  │ │   Information  │
+│  Web Search  │ │   News & Info│ │   Processing   │
+└──────────────┘ └──────────────┘ └────────────────┘
         │                                   │
         └─────────────────┬─────────────────┘
                           │
 ┌─────────────────────────┴───────────────────────────────────┐
-│                    Data Layer                                │
-│          (PostgreSQL / Redis / Vector Store)                 │
+│                    Data Layer                               │
+│          (PostgreSQL / Redis / Vector Store)                │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -40,12 +44,14 @@ This document provides a high-level overview of the Claude-AGI system architectu
 ### 1. AGI Orchestrator (`src/core/orchestrator.py`)
 
 The central coordinator that manages:
+
 - System state (IDLE, THINKING, EXPLORING, etc.)
 - Message routing between services
 - Service lifecycle management
 - Event loop processing
 
 Key features:
+
 - Asynchronous event-driven architecture
 - Priority-based message queue
 - State transitions with service notifications
@@ -53,6 +59,7 @@ Key features:
 ### 2. Service Communication (`src/core/communication.py`)
 
 Base class for all services providing:
+
 - Standardized messaging interface
 - Publish/subscribe pattern
 - Error handling and recovery
@@ -61,12 +68,14 @@ Base class for all services providing:
 ### 3. Consciousness Streams (`src/consciousness/stream.py`)
 
 Multi-stream consciousness implementation:
+
 - **Primary Stream**: Main conscious thoughts
 - **Subconscious Stream**: Background processing
 - **Creative Stream**: Creative ideation
 - **Meta Stream**: Self-observation and reflection
 
 Features:
+
 - Configurable thought generation rates
 - Attention allocation based on system state
 - Cross-stream pattern detection
@@ -75,11 +84,13 @@ Features:
 ### 4. Memory Management (`src/memory/manager.py`)
 
 Three-tier memory architecture:
+
 - **Working Memory**: Short-term storage (Redis/in-memory)
 - **Episodic Memory**: Long-term experiences (PostgreSQL)
 - **Semantic Memory**: Knowledge and concepts (Vector store)
 
 Capabilities:
+
 - Thought storage with metadata
 - Semantic similarity search
 - Memory consolidation during idle cycles
@@ -88,6 +99,7 @@ Capabilities:
 ### 5. Safety Framework (`src/safety/core_safety.py`)
 
 Multi-layer safety validation:
+
 1. **Hard Constraints**: Prohibited actions
 2. **Ethical Evaluation**: Principle-based scoring
 3. **Consequence Prediction**: Impact assessment
@@ -96,6 +108,7 @@ Multi-layer safety validation:
 ### 6. Exploration Engine (`src/exploration/engine.py`)
 
 Curiosity-driven web exploration:
+
 - Interest tracking and weighting
 - Safe web search and content extraction
 - Quality and relevance assessment
@@ -126,12 +139,14 @@ Curiosity-driven web exploration:
 ## Communication Patterns
 
 ### Message Types
+
 - **Direct Messages**: Service-to-service communication
 - **Broadcast Messages**: System-wide notifications
 - **State Changes**: Orchestrator state transitions
 - **Safety Alerts**: Critical safety notifications
 
 ### Async Patterns
+
 - Non-blocking message passing
 - Concurrent service execution
 - Timeout handling for reliability
@@ -170,11 +185,13 @@ Curiosity-driven web exploration:
 ## Deployment Architecture
 
 ### Development
+
 - Single machine deployment
 - In-memory stores for quick iteration
 - Debug logging enabled
 
 ### Production
+
 - Kubernetes orchestration
 - Separate database clusters
 - Load balancing for API endpoints

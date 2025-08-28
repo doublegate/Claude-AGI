@@ -1,6 +1,6 @@
-# Contributing to Claude-AGI
+# Contributing to Claude-AGI (v1.5.4)
 
-First off, thank you for considering contributing to the Claude-AGI Project! This project aims to push the boundaries of AI consciousness and your contributions can help shape the future of artificial general intelligence.
+First off, thank you for considering contributing to the Claude-AGI Project! This project aims to push the boundaries of AI consciousness and your contributions can help shape the future of artificial general intelligence. With our latest v1.5.4 real-time information capabilities, we're actively expanding into new frontiers of AI-human collaboration.
 
 ## Table of Contents
 

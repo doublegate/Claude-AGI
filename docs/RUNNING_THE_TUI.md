@@ -1,6 +1,6 @@
-# Running the Claude-AGI TUI
+# Running the Claude-AGI TUI (v1.5.4)
 
-This guide explains how to run both the basic Claude Consciousness TUI and the enhanced Claude-AGI Terminal User Interface.
+This guide explains how to run both the basic Claude Consciousness TUI and the enhanced Claude-AGI Terminal User Interface, including the new real-time information capabilities.
 
 ## Prerequisites
 
@@ -33,19 +33,28 @@ Create a `.env` file in the project root by copying the example:
 cp .env.example .env
 ```
 
-Edit `.env` and add your Anthropic API key:
+Edit `.env` and add your API keys:
 
 ```
-ANTHROPIC_API_KEY=your-actual-api-key-here
+ANTHROPIC_API_KEY=your-actual-anthropic-key-here
+BRAVE_SEARCH_API_KEY=your-brave-search-key-here  # NEW v1.5.4 - Optional for web search
 ```
 
 **Important**: The `.env` file is already in `.gitignore`, so your API key won't be accidentally committed to Git.
 
 ## Running the TUI
 
-### Enhanced Claude-AGI TUI (Recommended)
+### **NEW v1.5.4** Enhanced Refactored TUI (Recommended)
 
-The enhanced TUI provides multiple panes for consciousness streams, memory, emotional state, and goals:
+The latest enhanced TUI with real-time information capabilities:
+
+```bash
+python claude-agi-refactored.py  # NEW: Enhanced with real-time web search
+```
+
+### Enhanced Claude-AGI TUI
+
+The standard enhanced TUI provides multiple panes for consciousness streams, memory, emotional state, and goals:
 
 ```bash
 python claude-agi.py

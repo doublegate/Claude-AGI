@@ -89,6 +89,7 @@ class ClaudeAGIApp:
         self.memory_manager = None
         self.consciousness = None
         self.safety = None
+        self.orchestrator_task = None
 
         logger.info("Claude-AGI initialization complete")
 
@@ -97,13 +98,23 @@ class ClaudeAGIApp:
         logger.info("Initializing AGI components")
 
         try:
-            # Start the orchestrator
-            await self.orchestrator.start()
+            # Initialize orchestrator services first
+            await self.orchestrator.initialize()
+            
+            # Start the orchestrator as a background task (like original implementation)
+            orchestrator_task = asyncio.create_task(self.orchestrator.run())
+            orchestrator_task.add_done_callback(self._handle_orchestrator_exception)
+            # Store the task reference to prevent it from being garbage collected
+            self.orchestrator_task = orchestrator_task
+            
+            # Wait for services to be fully initialized
+            await asyncio.sleep(1)
 
-            # Get components from orchestrator
-            self.memory_manager = getattr(self.orchestrator, 'memory_manager', None)
-            self.consciousness = getattr(self.orchestrator, 'consciousness_streams', {}).get('primary')
-            self.safety = getattr(self.orchestrator, 'safety_framework', None)
+            # Get components from orchestrator services using correct pattern
+            self.memory_manager = self.orchestrator.services.get('memory')
+            self.consciousness = self.orchestrator.services.get('consciousness')
+            self.safety = self.orchestrator.services.get('safety')
+            self.exploration_engine = self.orchestrator.services.get('explorer')
 
             # Set components in controller
             if self.memory_manager:
@@ -114,6 +125,9 @@ class ClaudeAGIApp:
 
             if self.safety:
                 self.controller.set_safety_framework(self.safety)
+                
+            if self.exploration_engine:
+                self.controller.set_exploration_engine(self.exploration_engine)
 
             logger.info("AGI components initialized successfully")
 
@@ -172,14 +186,27 @@ class ClaudeAGIApp:
         logger.info("Cleaning up application resources")
 
         try:
-            # Stop orchestrator
+            # Cancel orchestrator background task first
+            if self.orchestrator_task and not self.orchestrator_task.done():
+                self.orchestrator_task.cancel()
+                try:
+                    await self.orchestrator_task
+                except asyncio.CancelledError:
+                    pass
+            
+            # Shutdown orchestrator
             if self.orchestrator:
-                await self.orchestrator.stop()
+                await self.orchestrator.shutdown()
 
             logger.info("Application cleanup complete")
 
         except Exception as e:
             logger.error(f"Error during cleanup: {e}")
+
+    def _handle_orchestrator_exception(self, task: asyncio.Task):
+        """Handle exceptions from orchestrator background task"""
+        if task.exception():
+            logger.error(f"Orchestrator task error: {task.exception()}")
 
 
 def main():

@@ -64,13 +64,17 @@ class EventHandler:
             ord('\t'): self._handle_tab,           # Tab for pane navigation
             27: self._handle_escape,               # Escape key
             ord('\n'): self._handle_enter,         # Enter key
-            curses.KEY_UP: self._handle_up_arrow,  # History navigation
+            curses.KEY_UP: self._handle_up_arrow,  # History navigation or scrolling
             curses.KEY_DOWN: self._handle_down_arrow,
             curses.KEY_LEFT: self._handle_left_arrow,
             curses.KEY_RIGHT: self._handle_right_arrow,
             curses.KEY_BACKSPACE: self._handle_backspace,
             127: self._handle_backspace,           # Delete key
             ord('/'): self._handle_slash,          # Command mode
+            curses.KEY_PPAGE: self._handle_page_up,      # Page Up
+            curses.KEY_NPAGE: self._handle_page_down,    # Page Down
+            curses.KEY_HOME: self._handle_home,          # Home - go to top
+            curses.KEY_END: self._handle_end,            # End - go to bottom
         }
         
         # Configure curses for non-blocking input
@@ -165,47 +169,65 @@ class EventHandler:
         self.history_index = -1
     
     async def _handle_up_arrow(self):
-        """Handle up arrow - navigate command history"""
-        if self.command_history:
-            if self.history_index == -1:
-                self.history_index = len(self.command_history) - 1
-            elif self.history_index > 0:
-                self.history_index -= 1
-            
-            if 0 <= self.history_index < len(self.command_history):
-                historical_command = self.command_history[self.history_index]
+        """Handle up arrow - navigate command history or scroll up"""
+        if self.command_mode or self.input_buffer:
+            # Command/input history navigation
+            if self.command_history:
+                if self.history_index == -1:
+                    self.history_index = len(self.command_history) - 1
+                elif self.history_index > 0:
+                    self.history_index -= 1
                 
-                if historical_command.startswith('/'):
-                    self.command_mode = True
-                    self.command_buffer = historical_command[1:]
-                    self.input_buffer = ""
-                else:
-                    self.command_mode = False
-                    self.command_buffer = ""
-                    self.input_buffer = historical_command
+                if 0 <= self.history_index < len(self.command_history):
+                    historical_command = self.command_history[self.history_index]
+                    
+                    if historical_command.startswith('/'):
+                        self.command_mode = True
+                        self.command_buffer = historical_command[1:]
+                        self.input_buffer = ""
+                    else:
+                        self.command_mode = False
+                        self.command_buffer = ""
+                        self.input_buffer = historical_command
+        else:
+            # Scroll up in current pane
+            await self._emit_event('scroll_pane', {
+                'pane': self.current_focus,
+                'direction': 'up',
+                'amount': 1
+            })
     
     async def _handle_down_arrow(self):
-        """Handle down arrow - navigate command history"""
-        if self.command_history and self.history_index != -1:
-            self.history_index += 1
-            
-            if self.history_index >= len(self.command_history):
-                # Clear input when going past end
-                self.history_index = -1
-                self.input_buffer = ""
-                self.command_buffer = ""
-                self.command_mode = False
-            else:
-                historical_command = self.command_history[self.history_index]
+        """Handle down arrow - navigate command history or scroll down"""
+        if self.command_mode or self.input_buffer:
+            # Command/input history navigation
+            if self.command_history and self.history_index != -1:
+                self.history_index += 1
                 
-                if historical_command.startswith('/'):
-                    self.command_mode = True
-                    self.command_buffer = historical_command[1:]
+                if self.history_index >= len(self.command_history):
+                    # Clear input when going past end
+                    self.history_index = -1
                     self.input_buffer = ""
-                else:
-                    self.command_mode = False
                     self.command_buffer = ""
-                    self.input_buffer = historical_command
+                    self.command_mode = False
+                else:
+                    historical_command = self.command_history[self.history_index]
+                    
+                    if historical_command.startswith('/'):
+                        self.command_mode = True
+                        self.command_buffer = historical_command[1:]
+                        self.input_buffer = ""
+                    else:
+                        self.command_mode = False
+                        self.command_buffer = ""
+                        self.input_buffer = historical_command
+        else:
+            # Scroll down in current pane
+            await self._emit_event('scroll_pane', {
+                'pane': self.current_focus,
+                'direction': 'down',
+                'amount': 1
+            })
     
     async def _handle_left_arrow(self):
         """Handle left arrow - cursor movement (future enhancement)"""
@@ -365,3 +387,34 @@ class EventHandler:
     def stop(self):
         """Stop the event handler"""
         self.running = False
+    
+    # New scrolling key handlers
+    async def _handle_page_up(self):
+        """Handle Page Up - scroll up by page"""
+        await self._emit_event('scroll_pane', {
+            'pane': self.current_focus,
+            'direction': 'up',
+            'amount': 10  # Page size
+        })
+    
+    async def _handle_page_down(self):
+        """Handle Page Down - scroll down by page"""
+        await self._emit_event('scroll_pane', {
+            'pane': self.current_focus,
+            'direction': 'down',
+            'amount': 10  # Page size
+        })
+    
+    async def _handle_home(self):
+        """Handle Home - go to top"""
+        await self._emit_event('scroll_pane', {
+            'pane': self.current_focus,
+            'direction': 'top'
+        })
+    
+    async def _handle_end(self):
+        """Handle End - go to bottom"""
+        await self._emit_event('scroll_pane', {
+            'pane': self.current_focus,
+            'direction': 'bottom'
+        })

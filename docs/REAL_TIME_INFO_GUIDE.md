@@ -1,8 +1,8 @@
-# Real-Time Information Capabilities - User Guide
+# Real-Time Information Capabilities - User Guide (v1.5.4)
 
-## 🎯 New Features Added
+## 🎯 Enhanced Real-Time Information Access
 
-The Claude-AGI TUI now supports **real-time information queries** for system time and weather data!
+The Claude-AGI system now supports **comprehensive real-time information capabilities** including web search, news access, and advanced query processing!
 
 ### ✅ System Time & Date Queries
 
@@ -16,6 +16,23 @@ You can now ask Claude for current system information:
 **Example Response:**
 ```
 The current time is 2025-08-27 23:24:08 on Wednesday. Today's date is 2025-08-27.
+```
+
+### ✅ **NEW v1.5.4** - Web Search & Information Access
+
+Ask Claude about current events, search for information, and get real-time news:
+
+- **"What's happening in the news today?"**
+- **"Search for information about AI developments"**
+- **"What are the latest tech trends?"**
+- **"Find news about space exploration"**
+
+**Example Response:**
+```
+Based on current web search results, here are the latest AI developments:
+- Major breakthrough in large language models announced by leading tech companies
+- New research in autonomous systems showing significant progress
+- AI safety frameworks being implemented across the industry
 ```
 
 ### ✅ Weather Information Queries
@@ -38,6 +55,18 @@ The weather in New York, US is currently clear skies with a temperature of 22°C
 ### System Time (Works Immediately)
 - ✅ No setup required - works out of the box
 - ✅ Uses local system clock for accurate time/date
+
+### **NEW v1.5.4** - Web Search & Information (Requires API Key)
+
+1. **Get API access** from [Brave Search API](https://brave.com/search/api/) or configure alternative search providers
+2. **Set the environment variable:**
+   ```bash
+   export BRAVE_SEARCH_API_KEY=your_api_key_here
+   ```
+3. **Run the TUI:**
+   ```bash
+   python claude-agi-refactored.py  # Enhanced version with real-time info
+   ```
 
 ### Weather Information (Requires API Key)
 

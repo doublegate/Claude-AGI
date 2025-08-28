@@ -1,6 +1,6 @@
-# Getting Started with Claude-AGI
+# Getting Started with Claude-AGI (v1.5.4)
 
-This guide will help you get the Claude-AGI system up and running on your local machine.
+This guide will help you get the Claude-AGI system up and running on your local machine, including the new real-time information capabilities.
 
 ## Prerequisites
 
@@ -8,6 +8,7 @@ This guide will help you get the Claude-AGI system up and running on your local 
 - Git
 - Docker and Docker Compose (optional, for containerized deployment)
 - Anthropic API key
+- **NEW v1.5.4**: Brave Search API key (optional, for real-time web search)
 
 ## Quick Start
 
@@ -40,8 +41,9 @@ pip install -r requirements.txt
 # Copy the example environment file
 cp .env.example .env
 
-# Edit .env and add your Anthropic API key
-# ANTHROPIC_API_KEY=your_api_key_here
+# Edit .env and add your API keys
+# ANTHROPIC_API_KEY=your_anthropic_api_key_here
+# BRAVE_SEARCH_API_KEY=your_brave_api_key_here  # NEW v1.5.4 - Optional for web search
 ```
 
 ### 4. Run Phase 1 Setup
@@ -55,17 +57,22 @@ python scripts/setup/setup_phase1.py
 
 You have several options for running the system:
 
-#### Option A: Run the TUI Demo
+#### Option A: Run the Enhanced TUI (Recommended for v1.5.4)
+```bash
+python claude-agi-refactored.py  # NEW: Enhanced with real-time information
+```
+
+#### Option B: Run the TUI Demo
 ```bash
 python scripts/claude-consciousness-tui.py
 ```
 
-#### Option B: Run the Full System
+#### Option C: Run the Full System
 ```bash
 python src/main.py
 ```
 
-#### Option C: Use Docker Compose
+#### Option D: Use Docker Compose
 ```bash
 docker-compose -f deployment/docker/docker-compose.yml up
 ```
@@ -165,7 +172,7 @@ When running with Docker Compose, monitoring services are available:
 ### Common Issues
 
 1. **Import errors**: Ensure you're in the virtual environment and have installed all dependencies
-2. **API key errors**: Check that your `.env` file contains a valid Anthropic API key
+2. **API key errors**: Check that your `.env` file contains valid Anthropic API key (required) and Brave Search API key (optional for v1.5.4 web search)
 3. **Memory errors**: The system uses in-memory stores by default. For production, configure PostgreSQL and Redis
 
 ### Getting Help
@@ -176,7 +183,9 @@ When running with Docker Compose, monitoring services are available:
 
 ## Next Steps
 
-1. Explore the consciousness TUI to see the multi-stream consciousness in action
-2. Review the test suite to understand component behavior
-3. Check the reference documentation for deeper architectural understanding
-4. Consider contributing to Phase 2 implementations (learning and exploration enhancements)
+1. **NEW v1.5.4**: Try the enhanced TUI with real-time information capabilities (`python claude-agi-refactored.py`)
+2. Explore the consciousness TUI to see the multi-stream consciousness in action
+3. Test real-time information queries: "What time is it?", "Search for AI news"
+4. Review the test suite to understand component behavior
+5. Check the reference documentation for deeper architectural understanding
+6. Consider contributing to Phase 2 implementations (learning and exploration enhancements)

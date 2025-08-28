@@ -1,6 +1,6 @@
-# Claude-AGI Project Structure
+# Claude-AGI Project Structure (v1.5.4)
 
-This document describes the complete directory structure of the Claude-AGI project.
+This document describes the complete directory structure of the Claude-AGI project, including recent real-time information enhancements.
 
 ## Directory Overview
 
