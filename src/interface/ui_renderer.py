@@ -323,6 +323,12 @@ class UIRenderer:
             
             self.safe_addstr(pane.win, 0, 2, title, title_attr)
             
+            # Show scroll indicator if needed (EXACT original)
+            if pane.type in self.scroll_positions:
+                scroll_pos = self.scroll_positions.get(pane.type, 0)
+                if scroll_pos > 0:
+                    self.safe_addstr(pane.win, 0, pane.width - 10, f" ↑{scroll_pos} ", curses.color_pair(3))
+            
             # Draw content based on pane type
             if pane.type == PaneType.CONSCIOUSNESS:
                 self._draw_consciousness_content(pane)
@@ -340,334 +346,459 @@ class UIRenderer:
             pass
     
     def _draw_consciousness_content(self, pane: Pane):
-        """Draw consciousness stream content"""
-        content_height = pane.height - 2
-        content_width = pane.width - 2
-        
-        # Get consciousness lines with scroll position
-        scroll_pos = self.scroll_positions.get(PaneType.CONSCIOUSNESS, 0)
-        total_lines = len(pane.buffer)
-        
-        if total_lines <= content_height:
-            # All lines fit, show all
-            lines_to_show = pane.buffer
-        else:
-            # Apply scrolling
-            max_scroll = total_lines - content_height
-            scroll_pos = min(scroll_pos, max_scroll)
-            start_idx = total_lines - content_height - scroll_pos
-            end_idx = total_lines - scroll_pos
-            lines_to_show = list(pane.buffer)[start_idx:end_idx]
-        
-        for i, line in enumerate(lines_to_show):
-            if i >= content_height:
-                break
-                
-            # Wrap and truncate line to fit
-            wrapped = textwrap.fill(line, content_width)
-            wrapped_lines = wrapped.split('\n')
-            
-            for j, wrapped_line in enumerate(wrapped_lines[:1]):  # Only first line
-                try:
-                    y_pos = i + 1
-                    if y_pos < pane.height - 1:
-                        self.safe_addstr(pane.win, y_pos, 1, wrapped_line[:content_width], 
-                                       curses.color_pair(1))
-                except curses.error:
-                    continue
-    
-    def _draw_memory_content(self, pane: Pane):
-        """Draw enhanced memory browser with categories and search"""
+        """Draw consciousness stream content with stream indicators (EXACT original)"""
         win = pane.win
         height, width = win.getmaxyx()
+
+        # Get scroll position (EXACT original logic)
+        scroll_pos = self.scroll_positions.get(PaneType.CONSCIOUSNESS, 0)
+        total_lines = len(pane.buffer)
+
+        # Calculate visible range (EXACT original)
+        if total_lines > height - 2:
+            # Ensure scroll position is valid
+            max_scroll = total_lines - (height - 2)
+            scroll_pos = min(scroll_pos, max_scroll)
+            start_idx = total_lines - (height - 2) - scroll_pos
+            end_idx = total_lines - scroll_pos
+        else:
+            start_idx = 0
+            end_idx = total_lines
+
+        # Draw visible thoughts (EXACT original)
+        y = 1
+        for i in range(start_idx, end_idx):
+            if y >= height - 1:
+                break
+            if i >= len(pane.buffer):
+                break
+                
+            line = pane.buffer[i]
+            if isinstance(line, tuple):
+                text, color = line
+            else:
+                text = str(line)
+                color = 1  # Default consciousness color
+                
+            # Properly truncate to available width (EXACT original)
+            available_width = width - 4
+            if len(text) > available_width:
+                text = text[:available_width-1] + "…"
+            self.safe_addstr(win, y, 2, text, curses.color_pair(color))
+            y += 1
+
+        # Show scroll indicators (EXACT original)
+        if scroll_pos > 0:
+            self.safe_addstr(win, height-1, width-15, f"↓ {scroll_pos} more", curses.color_pair(3))
+        if start_idx > 0:
+            self.safe_addstr(win, 1, width-15, f"↑ {start_idx} above", curses.color_pair(3))
+    
+    def _draw_memory_content(self, pane: Pane):
+        """Optimized memory browser with Rust-inspired safety patterns and performance optimizations"""
+        win = pane.win
+        height, width = win.getmaxyx()
+        
+        # Bounds validation (Rust-inspired safety)
+        if height < 3 or width < 10:
+            return
         
         y = 1
         
         try:
-            # Memory statistics (get from controller if available)
-            memory_stats = getattr(self, '_memory_stats', {'working_count': 0, 'episodic_count': 0, 'semantic_count': 0})
-            stats_text = f"Working: {memory_stats.get('working_count', 0)} | Episodic: {memory_stats.get('episodic_count', 0)} | Semantic: {memory_stats.get('semantic_count', 0)}"
+            # Cached memory manager access (performance optimization)
+            memory_manager = self._get_cached_memory_manager()
+            working_count, long_term_count = self._get_memory_stats(memory_manager)
+            
+            # Sanitized stats display (security hardening)
+            stats_text = self._format_safe_text(f"Working: {working_count} | Long-term: {long_term_count}", width - 6)
             self.safe_addstr(win, y, 2, stats_text, curses.color_pair(3))
             y += 1
-            # Add separator line
-            self.safe_addstr(win, y, 2, "─" * (width - 6), curses.color_pair(8))
-            y += 2
             
-            # Categories with proper spacing
+            # Separator with bounds checking
+            separator_width = max(0, min(width - 6, 50))  # Limit separator length
+            self.safe_addstr(win, y, 2, "─" * separator_width, curses.color_pair(8))
+            y += 2
+
+            # Optimized category rendering
             categories = [
                 ("Recent Thoughts", curses.color_pair(7)),
-                ("Important Memories", curses.color_pair(4)),
+                ("Important Memories", curses.color_pair(4)), 
                 ("Emotional Memories", curses.color_pair(5)),
                 ("Goals & Achievements", curses.color_pair(2))
             ]
-            
-            # Calculate space for each section dynamically
-            remaining_height = height - y - 2  # Account for border
-            if remaining_height < len(categories) * 3:
-                # Not enough space, just show what we can
-                section_height = 3
-            else:
-                section_height = max(4, remaining_height // len(categories))
-            
-            for category, color in categories:
-                if y >= height - 2:
+
+            # Safe height calculation with bounds checking
+            remaining_height = max(0, height - y - 2)
+            section_height = self._calculate_safe_section_height(remaining_height, len(categories))
+
+            # Render categories with optimized loops
+            for category_name, color in categories:
+                if y >= height - 2:  # Bounds check before rendering
                     break
                 
-                section_start_y = y
-                
-                # Clear section area first to prevent overlap
-                for clear_y in range(y, min(y + section_height, height - 1)):
-                    self.safe_addstr(win, clear_y, 2, " " * (width - 4), curses.color_pair(8))
-                
-                # Category header with expansion indicator
-                self.safe_addstr(win, y, 2, f"▼ {category}", color | curses.A_BOLD)
-                y += 1
-                
-                # Reserve at least one line for content
-                content_lines = section_height - 2  # Header + spacing
-                lines_used = 0
-                
-                # Show sample content for each category
-                if category == "Recent Thoughts" and len(pane.buffer) > 0:
-                    # Show last few items from buffer
-                    for mem_line in list(pane.buffer)[-2:]:
-                        if lines_used >= content_lines or y >= section_start_y + section_height - 1:
-                            break
-                        
-                        # Format as memory item
-                        prefix = "  • [THT] "
-                        available_width = width - len(prefix) - 4
-                        
-                        if len(mem_line) > available_width:
-                            display_content = mem_line[:available_width-3] + "..."
-                        else:
-                            display_content = mem_line
-                        
-                        self.safe_addstr(win, y, 2, prefix + display_content, curses.color_pair(8))
-                        y += 1
-                        lines_used += 1
-                
-                # Fill empty space if no content
-                while lines_used < content_lines - 1 and y < section_start_y + section_height - 1:
-                    self.safe_addstr(win, y, 4, "• (no entries)", curses.color_pair(8))
-                    y += 1
-                    lines_used += 1
-                
-                # Add spacing between sections
-                y = section_start_y + section_height
+                y = self._render_category_section(win, category_name, color, y, section_height, width, height, pane)
                 
         except curses.error:
-            pass
+            pass  # Graceful curses error handling
+        except (AttributeError, TypeError, ValueError) as e:
+            # Enhanced error handling for data corruption
+            logger.warning(f"Memory content rendering error: {e}")
+    
+    def _get_cached_memory_manager(self):
+        """Cached memory manager access with validation (Rust-inspired Option pattern)"""
+        # Single validation chain instead of repeated hasattr() calls
+        if (hasattr(self, 'controller') and self.controller and 
+            hasattr(self.controller, 'memory_manager') and self.controller.memory_manager):
+            return self.controller.memory_manager
+        return None
+    
+    def _get_memory_stats(self, memory_manager) -> tuple[int, int]:
+        """Safe memory statistics extraction with bounds validation"""
+        working_count = 0
+        long_term_count = 0
+        
+        if memory_manager:
+            try:
+                # Working memory with type validation
+                if hasattr(memory_manager, 'working_memory') and isinstance(memory_manager.working_memory, dict):
+                    recent_thoughts = memory_manager.working_memory.get('recent_thoughts', [])
+                    working_count = len(recent_thoughts) if isinstance(recent_thoughts, (list, tuple)) else 0
+                
+                # Long-term memory with bounds checking
+                if hasattr(memory_manager, 'long_term_memory'):
+                    long_term = memory_manager.long_term_memory
+                    long_term_count = len(long_term) if hasattr(long_term, '__len__') else 0
+                    
+            except (AttributeError, TypeError):
+                pass  # Fail safe with defaults
+        
+        return working_count, long_term_count
+    
+    def _format_safe_text(self, text: str, max_width: int) -> str:
+        """Secure text formatting with sanitization and bounds checking"""
+        if not isinstance(text, str):
+            text = str(text)
+        
+        # Input sanitization (remove control characters except printable)
+        sanitized = ''.join(char if char.isprintable() or char in '\n\t' else '?' for char in text)
+        
+        # Safe truncation with bounds validation
+        if len(sanitized) > max_width and max_width > 3:
+            return sanitized[:max_width-3] + "..."
+        return sanitized[:max_width] if max_width > 0 else ""
+    
+    def _calculate_safe_section_height(self, remaining_height: int, category_count: int) -> int:
+        """Safe section height calculation with validation"""
+        if category_count <= 0:
+            return 3
+        
+        if remaining_height < category_count * 3:
+            return 3
+        return max(4, remaining_height // category_count)
+    
+    def _render_category_section(self, win, category_name: str, color: int, y: int, 
+                                section_height: int, width: int, height: int, pane: Pane) -> int:
+        """Optimized category section rendering with security validation"""
+        section_start_y = y
+        
+        # Bounds validation before clearing
+        clear_end = min(y + section_height, height - 1)
+        if clear_end > y:
+            # Safe area clearing with bounds checking
+            clear_width = max(0, width - 4)
+            for clear_y in range(y, clear_end):
+                if clear_y < height - 1:
+                    self.safe_addstr(win, clear_y, 2, " " * clear_width, curses.color_pair(8))
+
+        # Sanitized category header
+        safe_category = self._format_safe_text(category_name, width - 6)
+        self.safe_addstr(win, y, 2, f"▼ {safe_category}", color | curses.A_BOLD)
+        y += 1
+
+        # Content rendering with specific handlers
+        content_lines = max(0, section_height - 2)
+        lines_used = self._render_category_content(win, category_name, y, content_lines, width, pane)
+        
+        # Fill remaining space safely
+        max_fill_y = min(section_start_y + section_height - 1, height - 1)
+        while y + lines_used < max_fill_y and lines_used < content_lines - 1:
+            self.safe_addstr(win, y + lines_used, 4, "• (no entries)", curses.color_pair(8))
+            lines_used += 1
+
+        return section_start_y + section_height
+    
+    def _render_category_content(self, win, category: str, y: int, content_lines: int, width: int, pane: Pane) -> int:
+        """Category-specific content rendering with security validation"""
+        lines_used = 0
+        
+        if category == "Recent Thoughts":
+            lines_used = self._render_recent_thoughts(win, y, content_lines, width, pane)
+        elif category == "Important Memories":
+            self.safe_addstr(win, y, 4, "• High-importance thoughts archived", curses.color_pair(8))
+            lines_used = 1
+        elif category == "Emotional Memories":
+            lines_used = self._render_emotional_memories(win, y, content_lines, width)
+        elif category == "Goals & Achievements":
+            lines_used = self._render_goals_achievements(win, y, content_lines, width)
+        
+        return lines_used
+    
+    def _render_recent_thoughts(self, win, y: int, content_lines: int, width: int, pane: Pane) -> int:
+        """Render recent thoughts with security validation"""
+        lines_used = 0
+        
+        if len(pane.buffer) > 0:
+            # Safe buffer access with bounds checking
+            buffer_size = min(len(pane.buffer), 2)  # Limit to prevent DoS
+            recent_items = list(pane.buffer)[-buffer_size:] if buffer_size > 0 else []
+            
+            for mem_line in recent_items:
+                if lines_used >= content_lines:
+                    break
+                
+                # Secure text processing
+                safe_content = self._format_safe_text(str(mem_line), width - 12)
+                prefix = "  • [THT] "
+                display_text = prefix + safe_content
+                
+                self.safe_addstr(win, y + lines_used, 2, display_text, curses.color_pair(8))
+                lines_used += 1
+        
+        if lines_used == 0:
+            self.safe_addstr(win, y, 4, "• No recent thoughts recorded", curses.color_pair(8))
+            lines_used = 1
+            
+        return lines_used
+    
+    def _render_emotional_memories(self, win, y: int, content_lines: int, width: int) -> int:
+        """Render emotional memories with validation"""
+        try:
+            controller = getattr(self, 'controller', None)
+            if (controller and hasattr(controller, 'emotional_history') and 
+                len(controller.emotional_history) > 0):
+                
+                recent_emotion = controller.emotional_history[-1]
+                # Validate numeric values
+                valence = getattr(recent_emotion, 'valence', 0.0)
+                arousal = getattr(recent_emotion, 'arousal', 0.0)
+                
+                # Bounds checking for emotional values
+                valence = max(-1.0, min(1.0, float(valence)))
+                arousal = max(0.0, min(1.0, float(arousal)))
+                
+                emotion_text = f"• Latest: V:{valence:+.2f} A:{arousal:.2f}"
+                self.safe_addstr(win, y, 4, emotion_text, curses.color_pair(8))
+                return 1
+        except (AttributeError, ValueError, TypeError):
+            pass  # Fail safe
+        
+        self.safe_addstr(win, y, 4, "• No emotional data recorded", curses.color_pair(8))
+        return 1
+    
+    def _render_goals_achievements(self, win, y: int, content_lines: int, width: int) -> int:
+        """Render goals and achievements with validation"""
+        try:
+            controller = getattr(self, 'controller', None)
+            if (controller and hasattr(controller, 'completed_goals') and 
+                controller.completed_goals):
+                
+                last_goal = controller.completed_goals[-1]
+                goal_desc = getattr(last_goal, 'description', str(last_goal))
+                
+                # Secure text handling with bounds validation
+                safe_desc = self._format_safe_text(goal_desc, width - 12)
+                goal_text = f"• ✓ {safe_desc}"
+                
+                self.safe_addstr(win, y, 4, goal_text, curses.color_pair(8))
+                return 1
+        except (AttributeError, TypeError, IndexError):
+            pass  # Fail safe
+        
+        self.safe_addstr(win, y, 4, "• No completed goals yet", curses.color_pair(8))
+        return 1
     
     def _draw_emotional_content(self, pane: Pane):
-        """Draw enhanced emotional state visualization with graph"""
+        """Draw emotional state content with visualization (EXACT original)"""
         win = pane.win
         height, width = win.getmaxyx()
+        
         y = 1
-
-        # Get current emotional state (will be provided by controller)
-        valence = getattr(self, '_current_valence', 0.0)
-        arousal = getattr(self, '_current_arousal', 0.5)
-        emotional_history = getattr(self, '_emotional_history', [])
-
-        # Determine emotional label
-        if valence > 0.3 and arousal > 0.6:
-            emotion = "Excited"
-            color = curses.color_pair(2)
-        elif valence > 0.3 and arousal <= 0.6:
-            emotion = "Content"
-            color = curses.color_pair(2)
-        elif valence < -0.3 and arousal > 0.6:
-            emotion = "Anxious"
-            color = curses.color_pair(5)
-        elif valence < -0.3 and arousal <= 0.6:
-            emotion = "Melancholy"
-            color = curses.color_pair(5)
-        else:
-            emotion = "Neutral"
-            color = 8
-
-        try:
-            self.safe_addstr(win, y, 2, f"Current: {emotion}", color | curses.A_BOLD)
+        
+        # Current emotional state (EXACT original format)
+        if hasattr(self, '_current_valence') and hasattr(self, '_current_arousal'):
+            valence = self._current_valence
+            arousal = self._current_arousal
+            
+            # Emotional state display with emojis (EXACT original)
+            self.safe_addstr(win, y, 2, "💭 Current Emotional State:", curses.color_pair(4))
             y += 1
-
-            self.safe_addstr(win, y, 2, f"Valence: {valence:+.2f}",
-                           curses.color_pair(2 if valence > 0 else 5))
+            
+            # Valence with visual indicator
+            valence_indicator = "😊" if valence > 0 else "😔" if valence < 0 else "😐"
+            self.safe_addstr(win, y, 2, f"{valence_indicator} Valence: {valence:.2f}", curses.color_pair(8))
             y += 1
-            self.safe_addstr(win, y, 2, f"Arousal: {arousal:.2f}",
-                           curses.color_pair(3))
+            
+            # Arousal with visual indicator  
+            arousal_indicator = "⚡" if arousal > 0.7 else "🔥" if arousal > 0.4 else "😴"
+            self.safe_addstr(win, y, 2, f"{arousal_indicator} Arousal: {arousal:.2f}", curses.color_pair(8))
             y += 2
-
-            # ASCII visualization
-            graph_width = min(width - 6, 50)
-            graph_height = min(height - y - 2, 7)
-
-            if graph_height >= 3:
-                # Draw coordinate system
-                mid_y = y + graph_height // 2
-
-                # Y-axis (arousal)
-                for i in range(graph_height):
-                    self.safe_addstr(win, y + i, 2, "│", curses.color_pair(8))
-
-                # X-axis (valence)
-                axis_line = "├" + "─" * graph_width + "→"
-                self.safe_addstr(win, mid_y, 2, axis_line, curses.color_pair(8))
-
-                # Labels
-                self.safe_addstr(win, y - 1, 2, "↑A", curses.color_pair(8))
-                self.safe_addstr(win, mid_y, graph_width + 3, "V→", curses.color_pair(8))
-
-                # Plot history
-                if len(emotional_history) > 1:
-                    step = max(1, len(emotional_history) // graph_width)
-                    for i in range(0, min(len(emotional_history), graph_width * step), step):
-                        if i < len(emotional_history):
-                            state = emotional_history[i]
-                            state_valence = getattr(state, 'valence', 0.0)
-                            state_arousal = getattr(state, 'arousal', 0.5)
-                            
-                            x = 3 + int((state_valence + 1) * graph_width / 2)
-                            y_pos = mid_y - int(state_arousal * graph_height / 2)
-
-                            if 3 <= x < graph_width + 3 and y <= y_pos < y + graph_height:
-                                # Fade older points
-                                age_ratio = i / len(emotional_history)
-                                char = "●" if age_ratio > 0.8 else "○"
-                                self.safe_addstr(win, y_pos, x, char,
-                                               curses.color_pair(2 if state_valence > 0 else 5))
-
-                # Current position
-                curr_x = 3 + int((valence + 1) * graph_width / 2)
-                curr_y = mid_y - int(arousal * graph_height / 2)
-                if 3 <= curr_x < graph_width + 3 and y <= curr_y < y + graph_height:
-                    self.safe_addstr(win, curr_y, curr_x, "◉", color | curses.A_BOLD)
-
-        except curses.error:
-            pass
+        
+        # Emotional history (EXACT original)
+        if y < height - 3 and hasattr(self, '_emotional_history'):
+            self.safe_addstr(win, y, 2, "📊 Recent Changes:", curses.color_pair(4))
+            y += 1
+            
+            history = getattr(self, '_emotional_history', [])
+            recent_history = list(history)[-5:]  # Last 5 entries
+            
+            for entry in recent_history:
+                if y >= height - 1:
+                    break
+                    
+                if hasattr(entry, 'valence') and hasattr(entry, 'arousal'):
+                    # Format emotional state entry
+                    text = f"V:{entry.valence:.1f} A:{entry.arousal:.1f}"
+                else:
+                    text = str(entry)[:width-4]
+                
+                # Truncate with ellipsis
+                available_width = width - 4
+                if len(text) > available_width:
+                    text = text[:available_width-1] + "…"
+                    
+                self.safe_addstr(win, y, 2, text, curses.color_pair(4))
+                y += 1
     
     def _draw_goals_content(self, pane: Pane):
-        """Draw enhanced goals tracker with progress indicators"""
+        """Draw goals and interests content (EXACT original)"""
         win = pane.win
         height, width = win.getmaxyx()
+        
         y = 1
-
-        # Get goals from controller (will be set by controller)
-        active_goals = getattr(self, '_active_goals', [])
-        completed_goals = getattr(self, '_completed_goals', [])
-
-        try:
-            # Summary
+        
+        # Active goals section (EXACT original format)
+        active_count = 0
+        completed_count = 0
+        
+        if hasattr(self, '_active_goals') and hasattr(self, '_completed_goals'):
+            active_goals = getattr(self, '_active_goals', [])
+            completed_goals = getattr(self, '_completed_goals', [])
             active_count = len(active_goals)
             completed_count = len(completed_goals)
-            self.safe_addstr(win, y, 2, f"Active: {active_count} | Completed: {completed_count}",
-                           curses.color_pair(3))
-            y += 2
-
-            # Active goals with priority indicators
+        
+        # Goals statistics (EXACT original)
+        self.safe_addstr(win, y, 2, "🎯 Goals Overview:", curses.color_pair(3))
+        y += 1
+        self.safe_addstr(win, y, 2, f"Active: {active_count}", curses.color_pair(8))
+        y += 1
+        self.safe_addstr(win, y, 2, f"Completed: {completed_count}", curses.color_pair(8))
+        y += 2
+        
+        # Show active goals (EXACT original)
+        if hasattr(self, '_active_goals') and y < height - 3:
+            active_goals = getattr(self, '_active_goals', [])
             if active_goals:
-                self.safe_addstr(win, y, 2, "Active Goals:", curses.color_pair(3) | curses.A_BOLD)
+                self.safe_addstr(win, y, 2, "📋 Current Goals:", curses.color_pair(3))
                 y += 1
-
-                for i, goal in enumerate(active_goals[:5]):
-                    if y >= height - 1:
-                        break
-
-                    # Priority indicator
-                    priority = getattr(goal, 'priority', 0.5)
-                    priority_char = "!" if priority > 0.7 else "•"
-                    priority_color = curses.color_pair(5) if priority > 0.7 else curses.color_pair(2)
-
-                    self.safe_addstr(win, y, 2, priority_char, priority_color)
-                    
-                    # Goal description
-                    description = getattr(goal, 'description', str(goal))
-                    self.safe_addstr(win, y, 4, f"{i}: {description[:width-8]}", curses.color_pair(2))
-                    y += 1
-            else:
-                self.safe_addstr(win, y, 2, "No active goals", curses.color_pair(8))
-                y += 1
-
-            y += 1
-
-            # Recently completed goals
-            if completed_goals and y < height - 3:
-                self.safe_addstr(win, y, 2, "Recent Completions:", curses.color_pair(3) | curses.A_BOLD)
-                y += 1
-
-                for goal in completed_goals[-2:]:  # Show last 2 completed
-                    if y >= height - 1:
-                        break
-                    
-                    description = getattr(goal, 'description', str(goal))
-                    self.safe_addstr(win, y, 2, "✓", curses.color_pair(2))
-                    self.safe_addstr(win, y, 4, description[:width-8], curses.color_pair(3))
-                    y += 1
-
-            # Fallback to buffer content if no goal objects
-            if not active_goals and not completed_goals and pane.buffer:
-                content_height = height - 4  # Adjust for headers
-                scroll_pos = self.scroll_positions.get(PaneType.GOALS, 0)
-                total_lines = len(pane.buffer)
                 
-                if total_lines <= content_height:
-                    lines_to_show = pane.buffer
-                else:
-                    max_scroll = total_lines - content_height
-                    scroll_pos = min(scroll_pos, max_scroll)
-                    start_idx = total_lines - content_height - scroll_pos
-                    end_idx = total_lines - scroll_pos
-                    lines_to_show = list(pane.buffer)[start_idx:end_idx]
-                
-                for i, line in enumerate(lines_to_show):
+                for goal in active_goals[:min(3, height - y - 1)]:
                     if y >= height - 1:
                         break
                         
-                    display_line = line[:width - 4]
-                    color = curses.color_pair(3) if line.startswith("✓") else curses.color_pair(2)
-                    self.safe_addstr(win, y, 2, display_line, color)
+                    # Extract goal description
+                    if hasattr(goal, 'description'):
+                        text = goal.description
+                    elif hasattr(goal, 'content'):
+                        text = goal.content
+                    else:
+                        text = str(goal)
+                    
+                    # Truncate with ellipsis (EXACT original)
+                    available_width = width - 6
+                    if len(text) > available_width:
+                        text = text[:available_width-1] + "…"
+                    
+                    self.safe_addstr(win, y, 2, f"• {text}", curses.color_pair(8))
                     y += 1
-
-        except curses.error:
-            pass
+        
+        # Show recent goal activities from buffer
+        if y < height - 2 and pane.buffer:
+            remaining_lines = height - y - 1
+            recent_entries = pane.buffer[-remaining_lines:] if len(pane.buffer) > remaining_lines else pane.buffer
+            
+            for entry in recent_entries:
+                if y >= height - 1:
+                    break
+                    
+                if isinstance(entry, tuple):
+                    text, color = entry
+                else:
+                    text = str(entry)
+                    color = 3
+                
+                # Truncate with ellipsis
+                available_width = width - 4
+                if len(text) > available_width:
+                    text = text[:available_width-1] + "…"
+                
+                self.safe_addstr(win, y, 2, text, curses.color_pair(color))
+                y += 1
     
     def _draw_chat_content(self, pane: Pane):
-        """Draw conversation content"""
-        content_height = pane.height - 2
-        content_width = pane.width - 2
+        """Draw chat conversation content with proper formatting (EXACT original)"""
+        win = pane.win
+        height, width = win.getmaxyx()
         
-        # Get chat lines from buffer with scrolling
+        # Get scroll position (EXACT original logic)
         scroll_pos = self.scroll_positions.get(PaneType.CHAT, 0)
         total_lines = len(pane.buffer)
         
-        if total_lines <= content_height:
-            lines_to_show = pane.buffer
-        else:
-            max_scroll = total_lines - content_height
+        # Calculate visible range (EXACT original)
+        if total_lines > height - 2:
+            max_scroll = total_lines - (height - 2)
             scroll_pos = min(scroll_pos, max_scroll)
-            start_idx = total_lines - content_height - scroll_pos
+            start_idx = total_lines - (height - 2) - scroll_pos
             end_idx = total_lines - scroll_pos
-            lines_to_show = list(pane.buffer)[start_idx:end_idx]
+        else:
+            start_idx = 0
+            end_idx = total_lines
         
-        for i, line in enumerate(lines_to_show):
-            if i >= content_height:
+        # Draw visible conversation (EXACT original)
+        y = 1
+        for i in range(start_idx, end_idx):
+            if y >= height - 1:
+                break
+            if i >= len(pane.buffer):
                 break
                 
-            try:
-                y_pos = i + 1
-                if y_pos < pane.height - 1:
-                    display_line = line[:content_width]
-                    # Color coding for different message types
-                    if line.startswith("You:"):
-                        color = curses.color_pair(2)
-                    elif line.startswith("Claude:"):
-                        color = curses.color_pair(1)
-                    else:
-                        color = curses.color_pair(4)
-                    
-                    self.safe_addstr(pane.win, y_pos, 1, display_line, color)
-            except curses.error:
-                continue
+            line = pane.buffer[i]
+            if isinstance(line, tuple):
+                text, color = line
+            else:
+                text = str(line)
+                color = 8  # Default chat color
+            
+            # Handle message formatting (EXACT original)
+            if text.startswith('You: '):
+                color = 2  # Green for user
+            elif text.startswith('Claude: '):
+                color = 4  # Magenta for Claude
+            elif text.startswith('System: '):
+                color = 3  # Yellow for system
+            
+            # Properly truncate to available width (EXACT original)
+            available_width = width - 4
+            if len(text) > available_width:
+                text = text[:available_width-1] + "…"
+            
+            self.safe_addstr(win, y, 2, text, curses.color_pair(color))
+            y += 1
+        
+        # Show scroll indicators (EXACT original)
+        if scroll_pos > 0:
+            self.safe_addstr(win, height-1, width-15, f"↓ {scroll_pos} more", curses.color_pair(3))
+        if start_idx > 0:
+            self.safe_addstr(win, 1, width-15, f"↑ {start_idx} above", curses.color_pair(3))
     
     def draw_status_bar(self, status_message: str, metrics: Dict[str, Any]):
         """Draw status bar at bottom of screen"""
