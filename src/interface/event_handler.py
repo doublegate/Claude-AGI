@@ -50,6 +50,16 @@ class EventHandler:
         self.command_history = deque(maxlen=50)
         self.history_index = -1
         
+        # Exit confirmation state
+        self.exit_confirmation = False
+        self.last_escape_time = 0
+        
+        # UI update callback for immediate responsiveness
+        self.ui_update_callback: Optional[Callable] = None
+        
+        # Scrolling state for complex position management
+        self.scroll_positions: Dict[PaneType, int] = {}
+        
         # Event handlers registry
         self.event_handlers: Dict[str, Callable] = {
             'quit': self._handle_quit,
@@ -59,10 +69,10 @@ class EventHandler:
             'help': self._handle_help_request,
         }
         
-        # Key bindings
+        # Key bindings - COMPLETE PARITY with original claude-agi.py
         self.key_bindings = {
             ord('\t'): self._handle_tab,           # Tab for pane navigation
-            27: self._handle_escape,               # Escape key
+            27: self._handle_escape,               # Escape key with confirmation
             ord('\n'): self._handle_enter,         # Enter key
             curses.KEY_UP: self._handle_up_arrow,  # History navigation or scrolling
             curses.KEY_DOWN: self._handle_down_arrow,
@@ -75,11 +85,13 @@ class EventHandler:
             curses.KEY_NPAGE: self._handle_page_down,    # Page Down
             curses.KEY_HOME: self._handle_home,          # Home - go to top
             curses.KEY_END: self._handle_end,            # End - go to bottom
+            curses.KEY_RESIZE: self._handle_resize,      # Terminal resize
+            12: self._handle_ctrl_l,                     # Ctrl+L - Clear current pane
         }
         
-        # Configure curses for non-blocking input
+        # Configure curses for non-blocking input - match original exactly
         self.stdscr.nodelay(True)
-        self.stdscr.timeout(100)  # 100ms timeout
+        self.stdscr.timeout(-1)  # Non-blocking getch() like original
     
     async def input_loop(self):
         """Main input processing loop"""
@@ -108,11 +120,13 @@ class EventHandler:
         logger.info("Input event loop ended")
     
     async def _process_key(self, key: int):
-        """Process a single key press"""
+        """Process a single key press (EXACT original behavior)"""
         try:
             # Check for special key bindings first
             if key in self.key_bindings:
                 await self.key_bindings[key]()
+                # Trigger immediate UI update after special keys (like original)
+                await self._trigger_immediate_ui_update()
                 return
             
             # Handle printable characters
@@ -123,6 +137,12 @@ class EventHandler:
                     self.command_buffer += char
                 else:
                     self.input_buffer += char
+                
+                # Clear exit confirmation on any input
+                self.exit_confirmation = False
+                
+                # Trigger immediate UI update for character input (like original)
+                await self._trigger_immediate_ui_update()
                     
         except Exception as e:
             logger.error(f"Error processing key {key}: {e}")
@@ -138,13 +158,31 @@ class EventHandler:
         await self._emit_event('focus_changed', {'pane': self.current_focus})
     
     async def _handle_escape(self):
-        """Handle escape key - exit command mode or quit"""
+        """Handle escape key - exit command mode or confirm exit (EXACT original behavior)"""
         if self.command_mode:
             self.command_mode = False
             self.command_buffer = ""
+            await self._emit_event('system_message', {'message': 'Command mode exited'})
+            await self._trigger_immediate_ui_update()
         else:
-            # Double-escape to quit
-            await self._handle_quit()
+            # Implement double-ESC confirmation like original
+            import time
+            current_time = time.time()
+            
+            if not self.exit_confirmation:
+                # First ESC - show confirmation
+                self.exit_confirmation = True
+                self.last_escape_time = current_time
+                await self._emit_event('system_message', {
+                    'message': 'Press ESC again to exit, or any other key to continue'
+                })
+                await self._trigger_immediate_ui_update()
+            elif current_time - self.last_escape_time < 2.0:  # 2 second window
+                # Second ESC within time window - exit
+                await self._handle_quit()
+            else:
+                # Reset confirmation if too much time passed
+                self.exit_confirmation = False
     
     async def _handle_enter(self):
         """Handle enter key - execute command or send message"""
@@ -169,58 +207,44 @@ class EventHandler:
         self.history_index = -1
     
     async def _handle_up_arrow(self):
-        """Handle up arrow - navigate command history or scroll up"""
+        """Handle up arrow - navigate command history or scroll up (EXACT original behavior)"""
         if self.command_mode or self.input_buffer:
-            # Command/input history navigation
-            if self.command_history:
-                if self.history_index == -1:
-                    self.history_index = len(self.command_history) - 1
-                elif self.history_index > 0:
-                    self.history_index -= 1
-                
-                if 0 <= self.history_index < len(self.command_history):
-                    historical_command = self.command_history[self.history_index]
+            # Command history navigation - EXACT match to original logic
+            if self.command_history and self.history_index < len(self.command_history) - 1:
+                self.history_index += 1
+                if self.command_mode:
+                    self.command_buffer = self.command_history[-(self.history_index + 1)]
+                else:
+                    self.input_buffer = self.command_history[-(self.history_index + 1)]
                     
-                    if historical_command.startswith('/'):
-                        self.command_mode = True
-                        self.command_buffer = historical_command[1:]
-                        self.input_buffer = ""
-                    else:
-                        self.command_mode = False
-                        self.command_buffer = ""
-                        self.input_buffer = historical_command
+                await self._trigger_immediate_ui_update()
         else:
-            # Scroll up in current pane
+            # Scroll up in current pane - match original complex logic
             await self._emit_event('scroll_pane', {
                 'pane': self.current_focus,
                 'direction': 'up',
                 'amount': 1
             })
+        
+        # Clear exit confirmation on any input
+        self.exit_confirmation = False
     
     async def _handle_down_arrow(self):
-        """Handle down arrow - navigate command history or scroll down"""
+        """Handle down arrow - navigate command history or scroll down (EXACT original behavior)"""
         if self.command_mode or self.input_buffer:
-            # Command/input history navigation
-            if self.command_history and self.history_index != -1:
-                self.history_index += 1
-                
-                if self.history_index >= len(self.command_history):
-                    # Clear input when going past end
-                    self.history_index = -1
-                    self.input_buffer = ""
-                    self.command_buffer = ""
-                    self.command_mode = False
-                else:
-                    historical_command = self.command_history[self.history_index]
-                    
-                    if historical_command.startswith('/'):
-                        self.command_mode = True
-                        self.command_buffer = historical_command[1:]
-                        self.input_buffer = ""
+            # Command history navigation - EXACT match to original logic
+            if self.history_index > -1:
+                self.history_index -= 1
+                if self.history_index >= 0:
+                    if self.command_mode:
+                        self.command_buffer = self.command_history[-(self.history_index + 1)]
                     else:
-                        self.command_mode = False
-                        self.command_buffer = ""
-                        self.input_buffer = historical_command
+                        self.input_buffer = self.command_history[-(self.history_index + 1)]
+                else:
+                    self.command_buffer = "/" if self.command_mode else ""
+                    self.input_buffer = ""
+                    
+                await self._trigger_immediate_ui_update()
         else:
             # Scroll down in current pane
             await self._emit_event('scroll_pane', {
@@ -228,6 +252,21 @@ class EventHandler:
                 'direction': 'down',
                 'amount': 1
             })
+        
+        # Clear exit confirmation on any input
+        self.exit_confirmation = False
+    
+    async def _trigger_immediate_ui_update(self):
+        """Trigger immediate UI update for ultra-responsive feel (EXACT original behavior)"""
+        if self.ui_update_callback:
+            try:
+                await self.ui_update_callback()
+            except Exception as e:
+                logger.error(f"Error in immediate UI update: {e}")
+    
+    def set_ui_update_callback(self, callback: Callable):
+        """Set callback for immediate UI updates"""
+        self.ui_update_callback = callback
     
     async def _handle_left_arrow(self):
         """Handle left arrow - cursor movement (future enhancement)"""
@@ -240,19 +279,22 @@ class EventHandler:
         pass
     
     async def _handle_backspace(self):
-        """Handle backspace - delete character"""
-        if self.command_mode:
-            if self.command_buffer:
-                self.command_buffer = self.command_buffer[:-1]
-        else:
-            if self.input_buffer:
-                self.input_buffer = self.input_buffer[:-1]
+        """Handle backspace - delete character (EXACT original behavior)"""
+        if self.command_mode and len(self.command_buffer) > 1:
+            # Don't delete the '/' prefix in command mode
+            self.command_buffer = self.command_buffer[:-1]
+        elif not self.command_mode and self.input_buffer:
+            self.input_buffer = self.input_buffer[:-1]
+        # Clear exit confirmation on any input
+        self.exit_confirmation = False
     
     async def _handle_slash(self):
-        """Handle slash key - enter command mode"""
+        """Handle slash key - enter command mode (EXACT original behavior)"""
         if not self.command_mode and not self.input_buffer:
             self.command_mode = True
-            self.command_buffer = ""
+            self.command_buffer = "/"  # Preserve '/' prefix like original
+            # Immediate UI update for slash commands
+            await self._trigger_immediate_ui_update()
     
     async def _execute_command(self, command: str):
         """Execute a slash command"""
@@ -418,3 +460,31 @@ class EventHandler:
             'pane': self.current_focus,
             'direction': 'bottom'
         })
+    
+    async def _handle_resize(self):
+        """Handle terminal resize (EXACT original behavior)"""
+        # Get new dimensions
+        try:
+            new_height, new_width = self.stdscr.getmaxyx()
+            
+            # Emit resize event to recreate panes with new dimensions
+            await self._emit_event('terminal_resize', {
+                'width': new_width,
+                'height': new_height
+            })
+            
+            # Force immediate UI refresh
+            await self._trigger_immediate_ui_update()
+            
+        except Exception as e:
+            logger.error(f"Error handling terminal resize: {e}")
+    
+    async def _handle_ctrl_l(self):
+        """Handle Ctrl+L - Clear current pane (EXACT original behavior)"""
+        if self.current_focus in [PaneType.CONSCIOUSNESS, PaneType.MEMORY, 
+                                 PaneType.EMOTIONAL, PaneType.GOALS, PaneType.CHAT]:
+            await self._emit_event('clear_pane', {'pane': self.current_focus})
+            await self._trigger_immediate_ui_update()
+        
+        # Clear exit confirmation on any input
+        self.exit_confirmation = False

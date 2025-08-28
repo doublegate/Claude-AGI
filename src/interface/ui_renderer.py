@@ -85,18 +85,19 @@ class UIRenderer:
         self._create_panes()
         
     def _init_colors(self):
-        """Initialize color pairs for the UI"""
+        """Initialize color pairs for the UI - exact match to original claude-agi.py"""
         curses.start_color()
         curses.use_default_colors()
         
-        # Define color pairs
-        curses.init_pair(1, curses.COLOR_CYAN, -1)    # Consciousness
-        curses.init_pair(2, curses.COLOR_GREEN, -1)   # Chat/User
-        curses.init_pair(3, curses.COLOR_YELLOW, -1)  # System
-        curses.init_pair(4, curses.COLOR_WHITE, -1)   # Memory
-        curses.init_pair(5, curses.COLOR_RED, -1)     # Errors
-        curses.init_pair(6, curses.COLOR_MAGENTA, -1) # Dreams/Insights
-        curses.init_pair(7, curses.COLOR_BLUE, -1)    # Emotional
+        # Define color pairs - EXACT MATCH to original
+        curses.init_pair(1, curses.COLOR_CYAN, curses.COLOR_BLACK)     # Thoughts
+        curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)    # User input
+        curses.init_pair(3, curses.COLOR_YELLOW, curses.COLOR_BLACK)   # System
+        curses.init_pair(4, curses.COLOR_MAGENTA, curses.COLOR_BLACK)  # Claude
+        curses.init_pair(5, curses.COLOR_RED, curses.COLOR_BLACK)      # Alerts
+        curses.init_pair(6, curses.COLOR_WHITE, curses.COLOR_BLUE)     # Headers
+        curses.init_pair(7, curses.COLOR_BLUE, curses.COLOR_BLACK)     # Memory
+        curses.init_pair(8, curses.COLOR_WHITE, curses.COLOR_BLACK)    # Normal
         
     def _create_panes(self):
         """Create UI panes based on current layout mode"""
@@ -298,25 +299,29 @@ class UIRenderer:
             self._draw_pane(pane)
     
     def _draw_pane(self, pane: Pane):
-        """Draw a single pane with border and content"""
+        """Draw a single pane with border and content - EXACT MATCH to original"""
         if not pane.win:
             return
             
         try:
             pane.win.clear()
             
-            # Draw border
+            # Draw border with highlighting for active pane - EXACT MATCH
             if pane.type == self._get_active_pane():
-                pane.win.attron(curses.A_BOLD)
-                pane.win.box()
-                pane.win.attroff(curses.A_BOLD)
-            else:
-                pane.win.box()
+                pane.win.attron(curses.color_pair(6) | curses.A_BOLD)
+            pane.win.box()
+            if pane.type == self._get_active_pane():
+                pane.win.attroff(curses.color_pair(6) | curses.A_BOLD)
             
-            # Draw title
-            if len(pane.title) < pane.width - 4:
-                title_x = max(2, (pane.width - len(pane.title)) // 2)
-                pane.win.addstr(0, title_x, pane.title)
+            # Draw title with active indicator - EXACT MATCH
+            title = f" {pane.title.replace('▶ ', '').replace(' ◀', '')} "
+            if pane.type == self._get_active_pane():
+                title = f"▶ {pane.title.replace('▶ ', '').replace(' ◀', '')} ◀"
+                title_attr = curses.color_pair(6) | curses.A_BOLD | curses.A_REVERSE
+            else:
+                title_attr = curses.color_pair(6)
+            
+            self.safe_addstr(pane.win, 0, 2, title, title_attr)
             
             # Draw content based on pane type
             if pane.type == PaneType.CONSCIOUSNESS:
@@ -455,66 +460,176 @@ class UIRenderer:
             pass
     
     def _draw_emotional_content(self, pane: Pane):
-        """Draw emotional state content"""
-        content_height = pane.height - 2
-        content_width = pane.width - 2
-        
-        # Get emotional content from buffer with scrolling
-        scroll_pos = self.scroll_positions.get(PaneType.EMOTIONAL, 0)
-        total_lines = len(pane.buffer)
-        
-        if total_lines <= content_height:
-            lines_to_show = pane.buffer
+        """Draw enhanced emotional state visualization with graph"""
+        win = pane.win
+        height, width = win.getmaxyx()
+        y = 1
+
+        # Get current emotional state (will be provided by controller)
+        valence = getattr(self, '_current_valence', 0.0)
+        arousal = getattr(self, '_current_arousal', 0.5)
+        emotional_history = getattr(self, '_emotional_history', [])
+
+        # Determine emotional label
+        if valence > 0.3 and arousal > 0.6:
+            emotion = "Excited"
+            color = curses.color_pair(2)
+        elif valence > 0.3 and arousal <= 0.6:
+            emotion = "Content"
+            color = curses.color_pair(2)
+        elif valence < -0.3 and arousal > 0.6:
+            emotion = "Anxious"
+            color = curses.color_pair(5)
+        elif valence < -0.3 and arousal <= 0.6:
+            emotion = "Melancholy"
+            color = curses.color_pair(5)
         else:
-            max_scroll = total_lines - content_height
-            scroll_pos = min(scroll_pos, max_scroll)
-            start_idx = total_lines - content_height - scroll_pos
-            end_idx = total_lines - scroll_pos
-            lines_to_show = list(pane.buffer)[start_idx:end_idx]
-        
-        for i, line in enumerate(lines_to_show):
-            if i >= content_height:
-                break
-                
-            try:
-                y_pos = i + 1
-                if y_pos < pane.height - 1:
-                    display_line = line[:content_width]
-                    self.safe_addstr(pane.win, y_pos, 1, display_line, 
-                                   curses.color_pair(7))
-            except curses.error:
-                continue
+            emotion = "Neutral"
+            color = 8
+
+        try:
+            self.safe_addstr(win, y, 2, f"Current: {emotion}", color | curses.A_BOLD)
+            y += 1
+
+            self.safe_addstr(win, y, 2, f"Valence: {valence:+.2f}",
+                           curses.color_pair(2 if valence > 0 else 5))
+            y += 1
+            self.safe_addstr(win, y, 2, f"Arousal: {arousal:.2f}",
+                           curses.color_pair(3))
+            y += 2
+
+            # ASCII visualization
+            graph_width = min(width - 6, 50)
+            graph_height = min(height - y - 2, 7)
+
+            if graph_height >= 3:
+                # Draw coordinate system
+                mid_y = y + graph_height // 2
+
+                # Y-axis (arousal)
+                for i in range(graph_height):
+                    self.safe_addstr(win, y + i, 2, "│", curses.color_pair(8))
+
+                # X-axis (valence)
+                axis_line = "├" + "─" * graph_width + "→"
+                self.safe_addstr(win, mid_y, 2, axis_line, curses.color_pair(8))
+
+                # Labels
+                self.safe_addstr(win, y - 1, 2, "↑A", curses.color_pair(8))
+                self.safe_addstr(win, mid_y, graph_width + 3, "V→", curses.color_pair(8))
+
+                # Plot history
+                if len(emotional_history) > 1:
+                    step = max(1, len(emotional_history) // graph_width)
+                    for i in range(0, min(len(emotional_history), graph_width * step), step):
+                        if i < len(emotional_history):
+                            state = emotional_history[i]
+                            state_valence = getattr(state, 'valence', 0.0)
+                            state_arousal = getattr(state, 'arousal', 0.5)
+                            
+                            x = 3 + int((state_valence + 1) * graph_width / 2)
+                            y_pos = mid_y - int(state_arousal * graph_height / 2)
+
+                            if 3 <= x < graph_width + 3 and y <= y_pos < y + graph_height:
+                                # Fade older points
+                                age_ratio = i / len(emotional_history)
+                                char = "●" if age_ratio > 0.8 else "○"
+                                self.safe_addstr(win, y_pos, x, char,
+                                               curses.color_pair(2 if state_valence > 0 else 5))
+
+                # Current position
+                curr_x = 3 + int((valence + 1) * graph_width / 2)
+                curr_y = mid_y - int(arousal * graph_height / 2)
+                if 3 <= curr_x < graph_width + 3 and y <= curr_y < y + graph_height:
+                    self.safe_addstr(win, curr_y, curr_x, "◉", color | curses.A_BOLD)
+
+        except curses.error:
+            pass
     
     def _draw_goals_content(self, pane: Pane):
-        """Draw goals and interests content"""
-        content_height = pane.height - 2
-        content_width = pane.width - 2
-        
-        # Get goals content from buffer with scrolling
-        scroll_pos = self.scroll_positions.get(PaneType.GOALS, 0)
-        total_lines = len(pane.buffer)
-        
-        if total_lines <= content_height:
-            lines_to_show = pane.buffer
-        else:
-            max_scroll = total_lines - content_height
-            scroll_pos = min(scroll_pos, max_scroll)
-            start_idx = total_lines - content_height - scroll_pos
-            end_idx = total_lines - scroll_pos
-            lines_to_show = list(pane.buffer)[start_idx:end_idx]
-        
-        for i, line in enumerate(lines_to_show):
-            if i >= content_height:
-                break
+        """Draw enhanced goals tracker with progress indicators"""
+        win = pane.win
+        height, width = win.getmaxyx()
+        y = 1
+
+        # Get goals from controller (will be set by controller)
+        active_goals = getattr(self, '_active_goals', [])
+        completed_goals = getattr(self, '_completed_goals', [])
+
+        try:
+            # Summary
+            active_count = len(active_goals)
+            completed_count = len(completed_goals)
+            self.safe_addstr(win, y, 2, f"Active: {active_count} | Completed: {completed_count}",
+                           curses.color_pair(3))
+            y += 2
+
+            # Active goals with priority indicators
+            if active_goals:
+                self.safe_addstr(win, y, 2, "Active Goals:", curses.color_pair(3) | curses.A_BOLD)
+                y += 1
+
+                for i, goal in enumerate(active_goals[:5]):
+                    if y >= height - 1:
+                        break
+
+                    # Priority indicator
+                    priority = getattr(goal, 'priority', 0.5)
+                    priority_char = "!" if priority > 0.7 else "•"
+                    priority_color = curses.color_pair(5) if priority > 0.7 else curses.color_pair(2)
+
+                    self.safe_addstr(win, y, 2, priority_char, priority_color)
+                    
+                    # Goal description
+                    description = getattr(goal, 'description', str(goal))
+                    self.safe_addstr(win, y, 4, f"{i}: {description[:width-8]}", curses.color_pair(2))
+                    y += 1
+            else:
+                self.safe_addstr(win, y, 2, "No active goals", curses.color_pair(8))
+                y += 1
+
+            y += 1
+
+            # Recently completed goals
+            if completed_goals and y < height - 3:
+                self.safe_addstr(win, y, 2, "Recent Completions:", curses.color_pair(3) | curses.A_BOLD)
+                y += 1
+
+                for goal in completed_goals[-2:]:  # Show last 2 completed
+                    if y >= height - 1:
+                        break
+                    
+                    description = getattr(goal, 'description', str(goal))
+                    self.safe_addstr(win, y, 2, "✓", curses.color_pair(2))
+                    self.safe_addstr(win, y, 4, description[:width-8], curses.color_pair(3))
+                    y += 1
+
+            # Fallback to buffer content if no goal objects
+            if not active_goals and not completed_goals and pane.buffer:
+                content_height = height - 4  # Adjust for headers
+                scroll_pos = self.scroll_positions.get(PaneType.GOALS, 0)
+                total_lines = len(pane.buffer)
                 
-            try:
-                y_pos = i + 1
-                if y_pos < pane.height - 1:
-                    display_line = line[:content_width]
+                if total_lines <= content_height:
+                    lines_to_show = pane.buffer
+                else:
+                    max_scroll = total_lines - content_height
+                    scroll_pos = min(scroll_pos, max_scroll)
+                    start_idx = total_lines - content_height - scroll_pos
+                    end_idx = total_lines - scroll_pos
+                    lines_to_show = list(pane.buffer)[start_idx:end_idx]
+                
+                for i, line in enumerate(lines_to_show):
+                    if y >= height - 1:
+                        break
+                        
+                    display_line = line[:width - 4]
                     color = curses.color_pair(3) if line.startswith("✓") else curses.color_pair(2)
-                    self.safe_addstr(pane.win, y_pos, 1, display_line, color)
-            except curses.error:
-                continue
+                    self.safe_addstr(win, y, 2, display_line, color)
+                    y += 1
+
+        except curses.error:
+            pass
     
     def _draw_chat_content(self, pane: Pane):
         """Draw conversation content"""
@@ -577,7 +692,7 @@ class UIRenderer:
             if len(status) > self.width - 1:
                 status = status[:self.width-4] + "..."
             
-            self.stdscr.addstr(status_y, 0, status, curses.color_pair(3))
+            self.stdscr.addstr(status_y, 0, status, curses.color_pair(6))
         except curses.error:
             pass
     
@@ -633,6 +748,20 @@ class UIRenderer:
         except curses.error:
             pass
     
+    def refresh_status_and_input(self):
+        """Refresh only status and input areas for immediate responsiveness (EXACT original behavior)"""
+        try:
+            # Only refresh status and input areas for ultra-responsive input
+            if PaneType.STATUS in self.panes and self.panes[PaneType.STATUS].win:
+                self.panes[PaneType.STATUS].win.noutrefresh()
+            if PaneType.INPUT in self.panes and self.panes[PaneType.INPUT].win:
+                self.panes[PaneType.INPUT].win.noutrefresh()
+            
+            # Use doupdate() for immediate display like original
+            curses.doupdate()
+        except curses.error:
+            pass
+    
     def add_line_to_pane(self, pane_type: PaneType, text: str):
         """Add a line to specific pane's buffer"""
         if pane_type in self.panes:
@@ -668,6 +797,18 @@ class UIRenderer:
     def update_memory_stats(self, stats: Dict[str, Any]):
         """Update memory statistics for display"""
         self._memory_stats = stats
+    
+    def update_emotional_state(self, emotional_state, emotional_history: List):
+        """Update emotional state data for display"""
+        if emotional_state:
+            self._current_valence = emotional_state.valence
+            self._current_arousal = emotional_state.arousal
+        self._emotional_history = emotional_history
+    
+    def update_goals_data(self, active_goals: List, completed_goals: List):
+        """Update goals data for display"""
+        self._active_goals = active_goals
+        self._completed_goals = completed_goals
     
     # Scrolling Methods
     def scroll_pane(self, pane_type: PaneType, direction: str, amount: int = 1) -> bool:

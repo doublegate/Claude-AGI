@@ -114,6 +114,9 @@ class TUIController:
         # Set up event handling
         self.event_handler.set_event_callback(self.handle_event)
         
+        # Set up immediate UI update callback for ultra-responsive input
+        self.event_handler.set_ui_update_callback(self._immediate_ui_update)
+        
         # Initialize AGI components
         self._initialize_agi_components()
         
@@ -173,12 +176,67 @@ class TUIController:
         self.background_tasks.append(refresh_task)
     
     async def _consciousness_loop(self):
-        """Process consciousness streams continuously"""
+        """Advanced consciousness generation loop with stream processing"""
         logger.info("Starting consciousness processing loop")
+        stream_thought_counts = {}
         
         while self.running:
             try:
-                if self.thought_generator and hasattr(self.thought_generator, 'generate_thought'):
+                # Check if consciousness service is running and get thoughts
+                if self.consciousness and hasattr(self.consciousness, 'streams'):
+                    # Collect thoughts from all streams
+                    for stream_id, stream in self.consciousness.streams.items():
+                        if hasattr(stream, 'content_buffer'):
+                            # Track thoughts per stream
+                            current_count = len(stream.content_buffer)
+                            last_count = stream_thought_counts.get(stream_id, 0)
+
+                            if current_count > last_count:
+                                # Get new thoughts since last check
+                                new_thoughts = list(stream.content_buffer)[last_count:current_count]
+                                stream_thought_counts[stream_id] = current_count
+
+                                for thought in new_thoughts:
+                                    thought_text = thought.get('content', '')
+                                    importance = thought.get('importance', 5)
+
+                                    # Format with stream indicator
+                                    if stream_id == 'primary':
+                                        prefix = "💭"
+                                    elif stream_id == 'creative':
+                                        prefix = "🎨"
+                                    elif stream_id == 'subconscious':
+                                        prefix = "🌊"
+                                    elif stream_id == 'meta':
+                                        prefix = "🔍"
+                                    else:
+                                        prefix = "•"
+
+                                    # Add to consciousness pane
+                                    display_text = f"{prefix} [{stream_id[:3].upper()}] {thought_text}"
+                                    self.ui_renderer.add_line_to_pane(
+                                        PaneType.CONSCIOUSNESS, 
+                                        display_text
+                                    )
+
+                                    # Update metrics
+                                    self.metrics['thoughts_generated'] += 1
+                                    self.total_thoughts += 1
+
+                                    # Store thought in memory if meaningful
+                                    if self.memory_manager and importance > 3:
+                                        await self._store_thought_in_memory(thought_text, stream_id, importance)
+                                        self.metrics['memories_stored'] += 1
+
+                                    # Update emotional state based on thought tone
+                                    tone = thought.get('emotional_tone', 'neutral')
+                                    self._update_emotional_state_from_tone(tone)
+
+                    # Process any cross-stream insights
+                    await self._process_consciousness_insights()
+                
+                # Fallback to basic thought generation if no consciousness streams
+                elif self.thought_generator and hasattr(self.thought_generator, 'generate_thought'):
                     # Generate a thought
                     thought = await self.thought_generator.generate_thought(
                         "continuous_consciousness",
@@ -191,7 +249,7 @@ class TUIController:
                         
                         # Add to consciousness pane
                         timestamp = datetime.now().strftime("%H:%M:%S")
-                        formatted_thought = f"[{timestamp}] {thought}"
+                        formatted_thought = f"💭 [{timestamp}] {thought}"
                         
                         self.ui_renderer.add_line_to_pane(
                             PaneType.CONSCIOUSNESS, 
@@ -202,15 +260,16 @@ class TUIController:
                         if self.memory_manager:
                             await self._store_thought_in_memory(thought)
                 
-                # Wait before next thought (human-like pacing)
-                await asyncio.sleep(2.0)
+                # Small delay
+                await asyncio.sleep(0.1)
                 
             except asyncio.CancelledError:
                 logger.info("Consciousness loop cancelled")
                 break
             except Exception as e:
                 logger.error(f"Error in consciousness loop: {e}")
-                await asyncio.sleep(5)
+                self.add_system_line(f"Consciousness error: {str(e)}")
+                await asyncio.sleep(1)
         
         logger.info("Consciousness processing loop ended")
     
@@ -240,6 +299,18 @@ class TUIController:
                     self.ui_renderer.update_memory_stats(stats)
                 except Exception as e:
                     logger.debug(f"Error updating memory stats: {e}")
+            
+            # Update emotional state data
+            self.ui_renderer.update_emotional_state(
+                self.current_emotional_state,
+                list(self.emotional_history)
+            )
+            
+            # Update goals data
+            self.ui_renderer.update_goals_data(
+                self.active_goals,
+                self.completed_goals
+            )
             
             # Update active pane
             current_focus = self.event_handler.get_current_focus()
@@ -315,6 +386,13 @@ class TUIController:
                         # Pane was scrolled, redraw it
                         self.ui_renderer.draw_all_panes()
                         self.ui_renderer.refresh_all()
+                        
+            elif event_type == 'terminal_resize':
+                # Handle terminal resize - recreate panes with new dimensions
+                width = data.get('width')
+                height = data.get('height')
+                if width and height:
+                    await self._handle_terminal_resize(width, height)
                 
         except Exception as e:
             logger.error(f"Error handling event {event_type}: {e}")
@@ -405,8 +483,8 @@ class TUIController:
             logger.error(f"Error generating response: {e}")
             return "I encountered an error processing your message."
     
-    async def _store_thought_in_memory(self, thought: str):
-        """Store thought in memory system"""
+    async def _store_thought_in_memory(self, thought: str, stream_id: str = "primary", importance: int = 5):
+        """Store thought in memory system with enhanced metadata"""
         try:
             if self.memory_manager:
                 # Create memory entry
@@ -414,16 +492,108 @@ class TUIController:
                     'content': thought,
                     'timestamp': datetime.now(),
                     'type': 'thought',
-                    'importance': 0.5,
-                    'source': 'consciousness_stream'
+                    'importance': importance / 10.0,  # Normalize to 0-1
+                    'source': 'consciousness_stream',
+                    'stream': stream_id,
+                    'emotional_tone': 'neutral'
                 }
                 
                 # Store in memory
                 await self.memory_manager.store_memory(memory_data)
-                self.metrics['memories_stored'] += 1
+                
+                # Also store in working memory for immediate access
+                if hasattr(self.memory_manager, 'working_memory'):
+                    if 'recent_thoughts' not in self.memory_manager.working_memory:
+                        self.memory_manager.working_memory['recent_thoughts'] = []
+                    
+                    self.memory_manager.working_memory['recent_thoughts'].append({
+                        'content': thought,
+                        'stream': stream_id,
+                        'timestamp': datetime.now().isoformat(),
+                        'importance': importance
+                    })
                 
         except Exception as e:
             logger.error(f"Error storing thought in memory: {e}")
+    
+    def _update_emotional_state_from_tone(self, tone: str):
+        """Update emotional state based on thought tone"""
+        try:
+            # Map emotional tones to valence/arousal changes
+            tone_mappings = {
+                'positive': (0.1, 0.05),
+                'negative': (-0.1, 0.05),
+                'excited': (0.2, 0.2),
+                'calm': (0.05, -0.1),
+                'anxious': (-0.1, 0.3),
+                'content': (0.1, -0.05),
+                'frustrated': (-0.15, 0.1),
+                'curious': (0.05, 0.1)
+            }
+            
+            if tone in tone_mappings:
+                valence_change, arousal_change = tone_mappings[tone]
+                
+                # Apply changes with bounds checking
+                self.current_emotional_state.valence = max(-1, min(1, 
+                    self.current_emotional_state.valence + valence_change))
+                self.current_emotional_state.arousal = max(0, min(1, 
+                    self.current_emotional_state.arousal + arousal_change))
+                
+                # Add to emotional history
+                self.emotional_history.append(EmotionalState(
+                    valence=self.current_emotional_state.valence,
+                    arousal=self.current_emotional_state.arousal
+                ))
+                
+        except Exception as e:
+            logger.error(f"Error updating emotional state: {e}")
+    
+    async def _process_consciousness_insights(self):
+        """Process cross-stream insights and emergent patterns"""
+        try:
+            # Analyze patterns across consciousness streams
+            if not hasattr(self, 'consciousness') or not self.consciousness:
+                return
+                
+            # Look for recurring themes across streams
+            recent_thoughts = []
+            if hasattr(self.consciousness, 'streams'):
+                for stream_id, stream in self.consciousness.streams.items():
+                    if hasattr(stream, 'content_buffer') and len(stream.content_buffer) > 0:
+                        # Get recent thoughts from this stream
+                        recent = list(stream.content_buffer)[-5:]  # Last 5 thoughts
+                        recent_thoughts.extend([t.get('content', '') for t in recent])
+            
+            # Simple pattern analysis - look for word frequency
+            if len(recent_thoughts) >= 3:
+                word_frequency = {}
+                for thought in recent_thoughts:
+                    words = thought.lower().split()
+                    for word in words:
+                        if len(word) > 3 and word not in ['that', 'this', 'with', 'have', 'they', 'will', 'from', 'been']:
+                            word_frequency[word] = word_frequency.get(word, 0) + 1
+            
+                # Find significant patterns (words appearing 3+ times)
+                significant_patterns = {word: count for word, count in word_frequency.items() if count >= 3}
+                
+                if significant_patterns:
+                    # Generate insight
+                    theme_words = list(significant_patterns.keys())[:3]
+                    
+                    insight = {
+                        'content': f"Emerging pattern detected: Focus on themes around {', '.join(theme_words)}",
+                        'timestamp': datetime.now(),
+                        'type': 'cross_stream_insight',
+                        'confidence': min(0.9, len(theme_words) * 0.3),
+                        'patterns': significant_patterns
+                    }
+                    
+                    # Display insight
+                    self.add_system_line(f"💡 Insight: {insight['content']}")
+                
+        except Exception as e:
+            logger.error(f"Error processing consciousness insights: {e}")
     
     async def _check_system_information_query(self, user_input: str) -> Optional[str]:
         """Check if query requires system information and handle it accordingly"""
@@ -726,26 +896,196 @@ class TUIController:
         
         return []
     
-    # Additional command stubs (to be implemented)
+    # Complete command implementations
     async def stream_command(self, args: List[str]):
         """Handle consciousness stream commands"""
-        self.add_system_line("Stream commands not yet implemented")
+        if not args:
+            self.add_system_line("Stream commands: pause, resume, focus <stream>, list")
+            return
+
+        subcmd = args[0]
+
+        if subcmd == "pause":
+            if self.consciousness:
+                if hasattr(self.consciousness, 'is_conscious'):
+                    self.consciousness.is_conscious = False
+                self.add_system_line("Consciousness streams paused")
+            else:
+                self.add_system_line("Consciousness stream not available")
+
+        elif subcmd == "resume":
+            if self.consciousness:
+                if hasattr(self.consciousness, 'is_conscious'):
+                    self.consciousness.is_conscious = True
+                self.add_system_line("Consciousness streams resumed")
+            else:
+                self.add_system_line("Consciousness stream not available")
+
+        elif subcmd == "focus" and len(args) > 1:
+            stream_name = args[1]
+            if self.consciousness and hasattr(self.consciousness, 'streams'):
+                if stream_name in self.consciousness.streams:
+                    # Adjust attention weights if available
+                    if hasattr(self.consciousness, 'attention_weights'):
+                        for stream in self.consciousness.attention_weights:
+                            self.consciousness.attention_weights[stream] = 0.2
+                        self.consciousness.attention_weights[stream_name] = 0.9
+                    self.add_system_line(f"Focusing on {stream_name} stream")
+                else:
+                    self.add_system_line(f"Unknown stream: {stream_name}")
+            else:
+                self.add_system_line("Consciousness streams not available")
+
+        elif subcmd == "list":
+            if self.consciousness and hasattr(self.consciousness, 'attention_weights'):
+                self.add_system_line("Active consciousness streams:")
+                for stream_id, weight in self.consciousness.attention_weights.items():
+                    status = "●" if weight > 0.5 else "○"
+                    self.add_chat_line(f"  {status} {stream_id}: attention={weight:.2f}")
+            else:
+                self.add_system_line("No consciousness stream information available")
     
     async def emotional_command(self, args: List[str]):
         """Handle emotional state commands"""
-        self.add_system_line("Emotional commands not yet implemented")
+        if not args:
+            self.add_system_line("Emotional commands: set <valence> <arousal>, reset, history")
+            return
+
+        subcmd = args[0]
+
+        if subcmd == "set" and len(args) >= 3:
+            try:
+                valence = float(args[1])
+                arousal = float(args[2])
+                self.current_emotional_state.valence = max(-1, min(1, valence))
+                self.current_emotional_state.arousal = max(0, min(1, arousal))
+                
+                # Add to history
+                self.emotional_history.append(self.current_emotional_state)
+                
+                self.add_system_line(f"Emotional state set to V:{valence:+.2f} A:{arousal:.2f}")
+                
+                # Force UI update to show new emotional graph
+                self._force_ui_update()
+                
+            except ValueError:
+                self.add_system_line("Invalid values. Use numbers: valence (-1 to 1), arousal (0 to 1)")
+
+        elif subcmd == "reset":
+            self.current_emotional_state.valence = 0.0
+            self.current_emotional_state.arousal = 0.5
+            self.emotional_history.clear()
+            self.add_system_line("Emotional state reset to neutral")
+            self._force_ui_update()
+
+        elif subcmd == "history":
+            if self.emotional_history:
+                recent = list(self.emotional_history)[-5:]
+                self.add_system_line("Recent emotional states:")
+                for i, state in enumerate(recent):
+                    self.add_chat_line(f"  {i+1}. V:{state.valence:+.2f} A:{state.arousal:.2f}")
+            else:
+                self.add_system_line("No emotional history recorded")
     
     async def goals_command(self, args: List[str]):
         """Handle goals commands"""
-        self.add_system_line("Goals commands not yet implemented")
+        if not args:
+            self.add_system_line("Goals commands: add <desc>, complete <idx>, priority <idx> <0-1>, list")
+            return
+
+        subcmd = args[0]
+
+        if subcmd == "add" and len(args) > 1:
+            description = " ".join(args[1:])
+            goal = Goal(
+                id=f"goal_{datetime.now().timestamp()}",
+                description=description,
+                priority=0.5,
+                created_at=datetime.now(),
+                status="active"
+            )
+            self.active_goals.append(goal)
+            self.add_system_line(f"Added goal: {description}")
+            self._force_ui_update()
+
+        elif subcmd == "complete" and len(args) > 1:
+            try:
+                index = int(args[1])
+                if 0 <= index < len(self.active_goals):
+                    goal = self.active_goals.pop(index)
+                    goal.status = "completed"
+                    goal.updated_at = datetime.now()
+                    self.completed_goals.append(goal)
+                    self.metrics['goals_completed'] += 1
+                    self.add_system_line(f"Completed goal: {goal.description}")
+
+                    # Generate achievement thought
+                    if self.consciousness and hasattr(self.consciousness, 'streams'):
+                        achievement_thought = {
+                            'content': f"I've completed a goal: {goal.description}. This gives me a sense of accomplishment.",
+                            'stream': 'primary',
+                            'timestamp': datetime.now(),
+                            'emotional_tone': 'content',
+                            'importance': 7
+                        }
+                        # Add to consciousness stream if available
+                        if 'primary' in self.consciousness.streams:
+                            self.consciousness.streams['primary'].append(achievement_thought)
+                    
+                    self._force_ui_update()
+                else:
+                    self.add_system_line(f"Invalid goal index: {index}")
+            except ValueError:
+                self.add_system_line("Invalid index. Use goal number from list.")
+
+        elif subcmd == "priority" and len(args) >= 3:
+            try:
+                index = int(args[1])
+                priority = float(args[2])
+                if 0 <= index < len(self.active_goals) and 0 <= priority <= 1:
+                    self.active_goals[index].priority = priority
+                    self.add_system_line(f"Updated goal priority to {priority}")
+                    # Resort by priority
+                    self.active_goals.sort(key=lambda g: g.priority, reverse=True)
+                    self._force_ui_update()
+                else:
+                    self.add_system_line("Invalid index or priority (use 0-1)")
+            except (ValueError, IndexError):
+                self.add_system_line("Invalid arguments. Use: priority <index> <0-1>")
+
+        elif subcmd == "list":
+            self.add_system_line(f"Active goals ({len(self.active_goals)}):")
+            for i, goal in enumerate(self.active_goals):
+                priority_indicator = "!" if goal.priority > 0.7 else "•"
+                self.add_chat_line(f"  {i}: [{priority_indicator}] {goal.description}")
     
     async def layout_command(self, args: List[str]):
         """Handle layout commands - already handled by event system"""
         pass
     
     async def state_command(self, args: List[str]):
-        """Handle state commands"""
-        self.add_system_line("State commands not yet implemented")
+        """Handle system state commands"""
+        if not args:
+            current = self.orchestrator.state if self.orchestrator else "unknown"
+            self.add_system_line(f"Current state: {current}")
+            self.add_system_line("Available states: thinking, exploring, creating, reflecting, sleeping")
+            return
+
+        new_state = args[0].upper()
+        try:
+            # Try to get the state enum if available
+            from ..core.orchestrator import SystemState
+            state_enum = SystemState[new_state]
+            if self.orchestrator:
+                await self.orchestrator.transition_to(state_enum)
+                self.add_system_line(f"Transitioned to {new_state} state")
+        except (KeyError, ImportError):
+            self.add_system_line(f"Unknown state: {new_state}")
+            
+    def _force_ui_update(self):
+        """Force immediate UI update"""
+        # This will be called by the main update loop
+        pass
     
     async def metrics_command(self, args: List[str]):
         """Handle metrics commands"""
@@ -872,3 +1212,43 @@ class TUIController:
             self.event_handler.stop()
         
         logger.info("TUI controller cleanup complete")
+    
+    async def _immediate_ui_update(self):
+        """Immediate UI update for ultra-responsive input (EXACT original behavior)"""
+        try:
+            if not self.ui_renderer or not self.event_handler:
+                return
+            
+            # Update input display immediately
+            input_text, is_command_mode = self.event_handler.get_current_input()
+            self.ui_renderer.draw_input_line(input_text, is_command_mode)
+            
+            # Update status bar 
+            self.ui_renderer.draw_status_bar(self.status_message, self.metrics)
+            
+            # Refresh only the changed parts (status and input)
+            self.ui_renderer.refresh_status_and_input()
+            
+        except Exception as e:
+            logger.error(f"Error in immediate UI update: {e}")
+    
+    async def _handle_terminal_resize(self, width: int, height: int):
+        """Handle terminal resize event (EXACT original behavior)"""
+        try:
+            if self.ui_renderer:
+                # Update renderer dimensions
+                self.ui_renderer.height = height
+                self.ui_renderer.width = width
+                
+                # Recreate panes with new dimensions
+                self.ui_renderer._create_panes()
+                
+                # Redraw everything
+                self.ui_renderer.draw_all_panes()
+                self.ui_renderer.refresh_all()
+                
+                self.status_message = f"Terminal resized to {width}x{height}"
+                
+        except Exception as e:
+            logger.error(f"Error handling terminal resize: {e}")
+            self.add_system_line(f"Error handling resize: {str(e)}")
