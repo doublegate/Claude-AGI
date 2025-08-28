@@ -19,6 +19,9 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Set
 import json
 import hashlib
+import os
+import aiohttp
+import time
 
 from ..core.communication import ServiceBase
 from ..database.models import Memory, StreamType
@@ -124,6 +127,10 @@ class WebExplorer(ServiceBase):
         self.active_sessions: Dict[str, ExplorationSession] = {}
         self.exploration_queue = asyncio.Queue()
         
+        # HTTP client for real web requests
+        self.http_session: Optional[aiohttp.ClientSession] = None
+        self.weather_api_key = os.environ.get('OPENWEATHERMAP_API_KEY', '')
+        
         # Initialize with base curiosity topics
         self._initialize_base_topics()
     
@@ -172,6 +179,10 @@ class WebExplorer(ServiceBase):
             return await self._get_exploration_insights()
         elif message_type == 'monitor_topic':
             return await self._monitor_topic(content)
+        elif message_type == 'get_weather_info':
+            return await self.get_weather_info(content.get('location', ''))
+        elif message_type == 'get_system_time':
+            return await self.get_system_time()
         else:
             logger.warning(f"Unknown message type: {message_type}")
     
@@ -766,6 +777,113 @@ class WebExplorer(ServiceBase):
             self.curiosity_topics[topic_name].content_discovered.append(content_id)
             self.curiosity_topics[topic_name].last_explored = datetime.now()
 
+    async def get_system_time(self) -> Dict[str, Any]:
+        """Get current system date and time"""
+        try:
+            current_time = datetime.now()
+            return {
+                'success': True,
+                'current_time': current_time.strftime('%Y-%m-%d %H:%M:%S'),
+                'date': current_time.strftime('%Y-%m-%d'),
+                'time': current_time.strftime('%H:%M:%S'),
+                'day_of_week': current_time.strftime('%A'),
+                'timezone': str(current_time.astimezone().tzinfo),
+                'timestamp': current_time.timestamp()
+            }
+        except Exception as e:
+            logger.error(f"Error getting system time: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'fallback_time': time.time()
+            }
+
+    async def get_weather_info(self, location: str) -> Dict[str, Any]:
+        """Get weather information for a location using OpenWeatherMap API"""
+        if not location:
+            return {
+                'success': False,
+                'error': 'Location is required for weather information'
+            }
+
+        if not self.weather_api_key:
+            return {
+                'success': False,
+                'error': 'Weather API key not configured. Please set OPENWEATHERMAP_API_KEY environment variable.'
+            }
+
+        try:
+            # Initialize HTTP session if not exists
+            if not self.http_session:
+                timeout = aiohttp.ClientTimeout(total=10)
+                self.http_session = aiohttp.ClientSession(
+                    timeout=timeout,
+                    headers={'User-Agent': 'Claude-AGI/1.0 Weather Service'}
+                )
+
+            # OpenWeatherMap API endpoint
+            base_url = "http://api.openweathermap.org/data/2.5/weather"
+            params = {
+                'q': location,
+                'appid': self.weather_api_key,
+                'units': 'metric'  # Celsius, m/s, etc.
+            }
+
+            async with self.http_session.get(base_url, params=params) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    
+                    # Extract relevant weather information
+                    weather_info = {
+                        'success': True,
+                        'location': f"{data['name']}, {data['sys']['country']}",
+                        'temperature': data['main']['temp'],
+                        'feels_like': data['main']['feels_like'],
+                        'humidity': data['main']['humidity'],
+                        'pressure': data['main']['pressure'],
+                        'description': data['weather'][0]['description'].title(),
+                        'main': data['weather'][0]['main'],
+                        'wind_speed': data.get('wind', {}).get('speed', 0),
+                        'visibility': data.get('visibility', 0) / 1000,  # Convert to km
+                        'timestamp': datetime.now().isoformat()
+                    }
+                    
+                    logger.info(f"Weather data retrieved for {location}")
+                    return weather_info
+                    
+                elif response.status == 404:
+                    return {
+                        'success': False,
+                        'error': f'Location "{location}" not found. Please check the spelling and try again.'
+                    }
+                else:
+                    return {
+                        'success': False,
+                        'error': f'Weather service error: {response.status}'
+                    }
+                    
+        except aiohttp.ClientError as e:
+            logger.error(f"HTTP client error getting weather for {location}: {e}")
+            return {
+                'success': False,
+                'error': 'Network error accessing weather service. Please check your connection.'
+            }
+        except Exception as e:
+            logger.error(f"Unexpected error getting weather for {location}: {e}")
+            return {
+                'success': False,
+                'error': 'An unexpected error occurred while fetching weather data.'
+            }
+
+    async def _ensure_http_session(self):
+        """Ensure HTTP session is initialized"""
+        if not self.http_session:
+            timeout = aiohttp.ClientTimeout(total=10)
+            self.http_session = aiohttp.ClientSession(
+                timeout=timeout,
+                headers={'User-Agent': 'Claude-AGI/1.0 Web Explorer'}
+            )
+
     async def run(self):
         """Main service loop"""
         self.running = True
@@ -793,4 +911,17 @@ class WebExplorer(ServiceBase):
         except Exception as e:
             logger.error(f"Error in {self.service_name} service: {e}")
         finally:
+            await self.cleanup()
             logger.info(f"{self.service_name} service stopped")
+    
+    async def cleanup(self):
+        """Cleanup resources before shutdown"""
+        try:
+            if self.http_session and not self.http_session.closed:
+                await self.http_session.close()
+                self.http_session = None
+                logger.info("HTTP session closed")
+        except Exception as e:
+            logger.error(f"Error closing HTTP session: {e}")
+        
+        await super().cleanup()

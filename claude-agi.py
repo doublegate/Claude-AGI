@@ -34,7 +34,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import yaml
 from dotenv import load_dotenv
@@ -2577,7 +2577,14 @@ class ClaudeAGI:
             self.in_conversation = False
 
     async def _generate_response(self, user_input: str) -> str:
-        """Generate response using thought generator"""
+        """Generate response using thought generator with query preprocessing for system information"""
+        
+        # Check if query requires system information
+        system_info_response = await self._check_system_information_query(user_input)
+        if system_info_response:
+            return system_info_response
+        
+        # Proceed with normal AI response generation
         if self.thought_generator.use_api:
             try:
                 # Convert conversation history for API
@@ -2600,6 +2607,122 @@ class ClaudeAGI:
         else:
             # Fallback response
             return "I'm reflecting on what you said. My thought generation capabilities are currently limited, but I'm still processing and learning from our interaction."
+    
+    async def _check_system_information_query(self, user_input: str) -> Optional[str]:
+        """Check if query requires system information and handle it accordingly"""
+        user_input_lower = user_input.lower()
+        
+        # Check for time/date queries
+        time_patterns = [
+            'what time is it', 'current time', 'what\'s the time', 'time now',
+            'what date is it', 'current date', 'what\'s the date', 'today\'s date',
+            'what day is it', 'what day', 'day of the week'
+        ]
+        
+        if any(pattern in user_input_lower for pattern in time_patterns):
+            return await self._handle_time_query()
+        
+        # Check for weather queries
+        weather_patterns = [
+            'weather', 'temperature', 'forecast', 'climate', 'rain', 'snow',
+            'sunny', 'cloudy', 'humid', 'wind'
+        ]
+        
+        if any(pattern in user_input_lower for pattern in weather_patterns):
+            location = self._extract_location_from_query(user_input)
+            if location:
+                return await self._handle_weather_query(location)
+            else:
+                return "I can help you with weather information! Please specify a location, for example: 'What's the weather in New York?' or 'Tell me the temperature in London.'"
+        
+        return None  # No system information query detected
+    
+    async def _handle_time_query(self) -> str:
+        """Handle time/date queries by calling WebExplorer service"""
+        try:
+            if self.orchestrator and 'explorer' in self.orchestrator.services:
+                explorer = self.orchestrator.services['explorer']
+                time_data = await explorer.get_system_time()
+                
+                if time_data.get('success'):
+                    return (f"The current time is {time_data['current_time']} on {time_data['day_of_week']}. "
+                           f"Today's date is {time_data['date']}.")
+                else:
+                    error_msg = time_data.get('error', 'Unknown error')
+                    return f"I'm having trouble accessing the system time right now: {error_msg}"
+            else:
+                return "I don't have access to the system time service at the moment."
+                
+        except Exception as e:
+            logger.error(f"Error handling time query: {e}")
+            return "I encountered an error while trying to get the current time. Please try again."
+    
+    async def _handle_weather_query(self, location: str) -> str:
+        """Handle weather queries by calling WebExplorer service"""
+        try:
+            if self.orchestrator and 'explorer' in self.orchestrator.services:
+                explorer = self.orchestrator.services['explorer']
+                weather_data = await explorer.get_weather_info(location)
+                
+                if weather_data.get('success'):
+                    temp = weather_data['temperature']
+                    feels_like = weather_data['feels_like']
+                    description = weather_data['description']
+                    humidity = weather_data['humidity']
+                    location_name = weather_data['location']
+                    
+                    return (f"The weather in {location_name} is currently {description.lower()} "
+                           f"with a temperature of {temp}°C (feels like {feels_like}°C). "
+                           f"The humidity is {humidity}%.")
+                else:
+                    error_msg = weather_data.get('error', 'Unknown error')
+                    return f"I couldn't get weather information: {error_msg}"
+            else:
+                return "I don't have access to the weather service at the moment."
+                
+        except Exception as e:
+            logger.error(f"Error handling weather query: {e}")
+            return "I encountered an error while trying to get weather information. Please try again."
+    
+    def _extract_location_from_query(self, user_input: str) -> Optional[str]:
+        """Extract location from weather query"""
+        # Simple location extraction patterns
+        import re
+        
+        # Look for "weather in [location]" patterns
+        patterns = [
+            r'weather (?:in|for|at) ([^?]+)',
+            r'temperature (?:in|for|at) ([^?]+)',
+            r'forecast (?:in|for|at) ([^?]+)',
+            r'climate (?:in|for|of) ([^?]+)'
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, user_input.lower())
+            if match:
+                location = match.group(1).strip()
+                # Clean up common endings
+                location = re.sub(r'\s*(today|now|right now|currently)$', '', location)
+                return location.strip()
+        
+        # Look for location after "weather" keyword
+        words = user_input.lower().split()
+        if 'weather' in words:
+            weather_index = words.index('weather')
+            # Look for location words after "weather"
+            potential_location = []
+            for i in range(weather_index + 1, len(words)):
+                word = words[i]
+                if word in ['in', 'for', 'at', 'of']:
+                    continue
+                if word in ['today', 'now', 'currently', '?']:
+                    break
+                potential_location.append(word)
+            
+            if potential_location:
+                return ' '.join(potential_location).strip()
+        
+        return None
 
     def _handle_task_exception(self, task: asyncio.Task):
         """Handle exceptions from async tasks to prevent silent failures"""

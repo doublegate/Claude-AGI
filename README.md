@@ -97,6 +97,7 @@ The Claude-AGI Project (Project Prometheus) aims to develop a genuinely consciou
 
 ### Option 1: Pre-built Executables (Recommended)
 
+<!-- markdownlint-disable MD029 -->
 1. **Download** the appropriate executable for your platform from the [latest release](https://github.com/doublegate/Claude-AGI/releases/latest):
    - **Linux**: `claude-agi-linux-x86_64.tar.gz`
    - **Windows**: `claude-agi-windows-x86_64.zip`
@@ -118,6 +119,7 @@ claude-agi.exe --help      # Windows
 ```
 
 4. **Configure** (optional): Set `ANTHROPIC_API_KEY` environment variable for full functionality
+<!-- markdownlint-enable MD029 -->
 
 ### Option 2: From Source
 
@@ -130,6 +132,7 @@ claude-agi.exe --help      # Windows
 
 #### Quick Start
 
+<!-- markdownlint-disable MD029 -->
 1. Clone the repository:
 
 ```bash
@@ -162,6 +165,7 @@ cp .env.example .env
 ```bash
 python claude-agi.py  # Enhanced multi-pane TUI (recommended)
 ```
+<!-- markdownlint-enable MD029 -->
 
 ## 🎯 Development Phases
 

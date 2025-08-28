@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "claude-agi"
-version = "1.5.3"
+version = "1.5.4"
 description = "An advanced self-consciousness platform implementing continuous consciousness, autonomous learning, and meta-cognitive capabilities for Claude AI"
 readme = "README.md"
 authors = [
