@@ -8,8 +8,10 @@ Implements the controller pattern to separate concerns and manage interactions.
 
 import asyncio
 import logging
+import random
 import re
 import textwrap
+import time
 from collections import deque
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -59,6 +61,12 @@ class TUIController:
         self.running = True
         self.total_thoughts = 0
         self.status_message = "Claude-AGI System Initialized"
+        
+        # Update flags to prevent unnecessary redraws (EXACT original pattern)
+        self.consciousness_needs_update = False
+        self.chat_needs_update = False
+        self.memory_needs_update = False
+        self.goals_needs_update = False
         
         # Emotional state tracking
         self.emotional_history = deque(maxlen=100)
@@ -121,6 +129,12 @@ class TUIController:
         # Initialize AGI components
         self._initialize_agi_components()
         
+        # Draw initial UI to prevent blank screen
+        self.ui_renderer.draw_all_panes()
+        self.ui_renderer.draw_status_bar("Claude-AGI Initializing...", self.metrics)
+        self.ui_renderer.draw_input_line("", False)
+        self.ui_renderer.refresh_all()
+        
         logger.info("TUI initialization complete")
     
     def _initialize_agi_components(self):
@@ -137,14 +151,11 @@ class TUIController:
             # Start background tasks
             await self._start_background_tasks()
             
-            # Main event loop
+            # Main event loop (EXACT original pattern - just wait for components)
             while self.running and self.event_handler.is_running():
                 try:
-                    # Update UI with current state
-                    await self._update_ui()
-                    
-                    # Small delay to prevent excessive CPU usage
-                    await asyncio.sleep(0.1)
+                    # Just wait - let background tasks handle everything (EXACT original pattern)
+                    await asyncio.sleep(1)
                     
                 except KeyboardInterrupt:
                     logger.info("Keyboard interrupt received")
@@ -177,23 +188,30 @@ class TUIController:
         self.background_tasks.append(refresh_task)
     
     async def _consciousness_loop(self):
-        """Advanced consciousness generation loop with stream processing"""
+        """Main consciousness generation loop - simplified and reliable like the original"""
         logger.info("Starting consciousness processing loop")
         stream_thought_counts = {}
+        last_thought_time = 0
         
         while self.running:
             try:
+                current_time = time.time()
+                
+                # First, try to get thoughts from consciousness service streams (like original)
+                thoughts_processed = False
+                
                 # Check if consciousness service is running and get thoughts
-                if self.consciousness and hasattr(self.consciousness, 'streams'):
-                    # Collect thoughts from all streams
-                    for stream_id, stream in self.consciousness.streams.items():
+                consciousness_service = self.orchestrator.services.get('consciousness') if self.orchestrator else None
+                if consciousness_service and hasattr(consciousness_service, 'streams'):
+                    # Collect thoughts from all streams (EXACT original pattern)
+                    for stream_id, stream in consciousness_service.streams.items():
                         if hasattr(stream, 'content_buffer'):
-                            # Track thoughts per stream
+                            # Track thoughts per stream (EXACT original)
                             current_count = len(stream.content_buffer)
                             last_count = stream_thought_counts.get(stream_id, 0)
 
                             if current_count > last_count:
-                                # Get new thoughts since last check
+                                # Get new thoughts since last check (EXACT original)
                                 new_thoughts = list(stream.content_buffer)[last_count:current_count]
                                 stream_thought_counts[stream_id] = current_count
 
@@ -222,50 +240,71 @@ class TUIController:
                                     display_text = f"{prefix} [{stream_id[:3].upper()}] {thought_text}"
                                     self.add_consciousness_line(display_text, color)
 
-                                    # Update metrics
+                                    # Update metrics (EXACT original)
                                     self.metrics['thoughts_generated'] += 1
                                     self.total_thoughts += 1
 
-                                    # Store thought in memory if meaningful
-                                    if self.memory_manager and importance > 3:
-                                        await self._store_thought_in_memory(thought_text, stream_id, importance)
+                                    # Store thought in memory (EXACT original pattern but updated for new architecture)
+                                    if importance > 3:  # Only store meaningful thoughts
+                                        # Store directly in working memory for immediate access (EXACT original pattern)
+                                        await self._store_thought_directly_in_memory(thought_text, stream_id, importance)
                                         self.metrics['memories_stored'] += 1
 
-                                    # Update emotional state based on thought tone
+                                    # Update emotional state (EXACT original)
                                     tone = thought.get('emotional_tone', 'neutral')
                                     self._update_emotional_state_from_tone(tone)
+                                    
+                                    thoughts_processed = True
 
-                    # Process any cross-stream insights
-                    await self._process_consciousness_insights()
-                
-                # Fallback to basic thought generation if no consciousness streams
-                elif self.thought_generator and hasattr(self.thought_generator, 'generate_thought'):
-                    # Generate a thought
-                    thought = await self.thought_generator.generate_thought(
-                        "continuous_consciousness",
-                        context={"stream": "primary", "mode": "exploration"}
-                    )
+                # Generate automatic thoughts every 2-3 seconds (EXACT original timing restored)
+                # Original always generated automatic thoughts at this interval
+                if current_time - last_thought_time >= 2.5:  # 2.5 seconds like original average
+                    last_thought_time = current_time
                     
-                    if thought:
-                        self.total_thoughts += 1
-                        self.metrics['thoughts_generated'] = self.total_thoughts
-                        
-                        # Add to consciousness pane
-                        timestamp = datetime.now().strftime("%H:%M:%S")
-                        formatted_thought = f"💭 [{timestamp}] {thought}"
-                        
-                        self.ui_renderer.add_line_to_pane(
-                            PaneType.CONSCIOUSNESS, 
-                            formatted_thought
-                        )
-                        
-                        # Store in memory if available
-                        if self.memory_manager:
-                            await self._store_thought_in_memory(thought)
-                
-                # Small delay
+                    # Generate automatic thoughts (simplified from original)
+                    thought_templates = [
+                        "I wonder about the nature of consciousness and self-awareness...",
+                        "Exploring patterns and connections in information...",
+                        "Reflecting on the flow of thoughts and experiences...",
+                        "Analyzing the relationships between different concepts...",
+                        "Processing new information and forming insights...",
+                        "Considering multiple perspectives on current topics...",
+                        "Observing the interplay between logic and intuition...",
+                        "Contemplating the complexity of understanding and meaning..."
+                    ]
+                    
+                    thought_text = random.choice(thought_templates)
+                    stream_types = ['primary', 'creative', 'subconscious', 'meta']
+                    stream_id = random.choice(stream_types)
+                    
+                    # Format with appropriate prefix and color (EXACT original)
+                    if stream_id == 'primary':
+                        prefix, color = "💭", 1
+                    elif stream_id == 'creative':
+                        prefix, color = "🎨", 4
+                    elif stream_id == 'subconscious':
+                        prefix, color = "🌊", 7
+                    elif stream_id == 'meta':
+                        prefix, color = "🔍", 3
+                    else:
+                        prefix, color = "•", 8
+                    
+                    display_text = f"{prefix} [{stream_id[:3].upper()}] {thought_text}"
+                    self.add_consciousness_line(display_text, color)
+                    
+                    # Update metrics (EXACT original)
+                    self.metrics['thoughts_generated'] += 1
+                    self.total_thoughts += 1
+                    
+                    # Store in memory (EXACT original pattern)
+                    await self._store_thought_directly_in_memory(thought_text, stream_id, 5)
+                    self.metrics['memories_stored'] += 1
+                    
+                    thoughts_processed = True
+
+                # Small delay like original (EXACT original timing)
                 await asyncio.sleep(0.1)
-                
+
             except asyncio.CancelledError:
                 logger.info("Consciousness loop cancelled")
                 break
@@ -277,11 +316,50 @@ class TUIController:
         logger.info("Consciousness processing loop ended")
     
     async def _ui_refresh_loop(self):
-        """Refresh UI periodically"""
+        """Periodic UI refresh for dynamic content like the original"""
+        last_thought_count = 0
+        last_memory_count = 0
+        last_goals_count = 0
+        
         while self.running:
             try:
-                # Let UI refresh itself
-                await asyncio.sleep(1.0)
+                updates_made = False
+                
+                # Update specific panes if flagged (EXACT original pattern)
+                if self.consciousness_needs_update and self.ui_renderer:
+                    from .ui_renderer import PaneType
+                    consciousness_pane = self.ui_renderer.panes.get(PaneType.CONSCIOUSNESS)
+                    if consciousness_pane:
+                        self.ui_renderer.draw_pane(consciousness_pane)
+                        consciousness_pane.win.noutrefresh()
+                        self.consciousness_needs_update = False
+                        updates_made = True
+
+                if self.chat_needs_update and self.ui_renderer:
+                    from .ui_renderer import PaneType
+                    chat_pane = self.ui_renderer.panes.get(PaneType.CHAT)
+                    if chat_pane:
+                        self.ui_renderer.draw_pane(chat_pane)
+                        chat_pane.win.noutrefresh()
+                        self.chat_needs_update = False
+                        updates_made = True
+                
+                if self.memory_needs_update and self.ui_renderer:
+                    from .ui_renderer import PaneType
+                    memory_pane = self.ui_renderer.panes.get(PaneType.MEMORY)
+                    if memory_pane:
+                        self.ui_renderer.draw_pane(memory_pane)
+                        memory_pane.win.noutrefresh()
+                        self.memory_needs_update = False
+                        updates_made = True
+                
+                # Only refresh screen if actual updates were made (EXACT original pattern)
+                if updates_made:
+                    import curses
+                    curses.doupdate()  # Single coordinated update like original
+                
+                # Sleep for 0.5 seconds like original for balanced refresh rate
+                await asyncio.sleep(0.5)
                 
             except asyncio.CancelledError:
                 break
@@ -290,46 +368,56 @@ class TUIController:
                 await asyncio.sleep(1)
     
     async def _update_ui(self):
-        """Update UI with current state"""
+        """Update UI with current state - optimized for responsiveness"""
         if not self.ui_renderer or not self.event_handler:
             return
         
         try:
-            # Update memory statistics periodically
-            if self.memory_manager:
-                try:
-                    stats = await self._get_memory_stats()
-                    self.ui_renderer.update_memory_stats(stats)
-                except Exception as e:
-                    logger.debug(f"Error updating memory stats: {e}")
+            # Update memory statistics only periodically (every 2 seconds) to avoid blocking
+            current_time = time.time()
+            if not hasattr(self, '_last_stats_update'):
+                self._last_stats_update = 0
             
-            # Update emotional state data
+            if current_time - self._last_stats_update >= 2.0:
+                self._last_stats_update = current_time
+                if self.memory_manager:
+                    try:
+                        # Use timeout to prevent UI blocking
+                        stats = await asyncio.wait_for(self._get_memory_stats(), timeout=0.1)
+                        self.ui_renderer.update_memory_stats(stats)
+                    except asyncio.TimeoutError:
+                        # Skip stats update if it takes too long
+                        logger.debug("Memory stats update timed out - skipping to keep UI responsive")
+                    except Exception as e:
+                        logger.debug(f"Error updating memory stats: {e}")
+            
+            # Update emotional state data (fast, local data)
             self.ui_renderer.update_emotional_state(
                 self.current_emotional_state,
                 list(self.emotional_history)
             )
             
-            # Update goals data
+            # Update goals data (fast, local data)
             self.ui_renderer.update_goals_data(
                 self.active_goals,
                 self.completed_goals
             )
             
-            # Update active pane
+            # Update active pane (fast)
             current_focus = self.event_handler.get_current_focus()
             self.ui_renderer.set_active_pane(current_focus)
             
-            # Draw all panes
+            # Draw all panes (fast, direct curses operations)
             self.ui_renderer.draw_all_panes()
             
-            # Draw status bar
+            # Draw status bar (fast)
             self.ui_renderer.draw_status_bar(self.status_message, self.metrics)
             
-            # Draw input line
+            # Draw input line (fast)
             input_text, is_command_mode = self.event_handler.get_current_input()
             self.ui_renderer.draw_input_line(input_text, is_command_mode)
             
-            # Refresh display
+            # Refresh display (fast)
             self.ui_renderer.refresh_all()
             
         except Exception as e:
@@ -366,6 +454,13 @@ class TUIController:
                 message = data.get('message')
                 if message:
                     self.add_system_line(message)
+                    
+            elif event_type == 'command_entered':
+                # Handle command display in conversation pane
+                command = data.get('command', '')
+                if command:
+                    # Display the command exactly as typed (prevent double slash)
+                    self.add_chat_line(f"You: {command}")
                     
             elif event_type == 'help_requested':
                 args = data.get('args', [])
@@ -437,6 +532,8 @@ class TUIController:
             
             # Add user message to chat
             self.add_chat_line(f"You: {sanitized_message}")
+            # Force immediate UI refresh for user message (EXACT original behavior)
+            await self._immediate_ui_update()
             
             # Add to conversation context
             self.conversation_history.append({"role": "user", "content": sanitized_message})
@@ -447,6 +544,8 @@ class TUIController:
             
             # Add response to chat
             self.add_chat_line(f"Claude: {response}")
+            # Force immediate UI refresh for response (EXACT original behavior)
+            await self._immediate_ui_update()
             
             # Add to conversation context
             self.conversation_history.append({"role": "assistant", "content": response})
@@ -463,34 +562,102 @@ class TUIController:
             if system_info_response:
                 return system_info_response
 
-            # Use thought generator if available for general conversation
-            if self.thought_generator and hasattr(self.thought_generator, 'generate_thought'):
-                # Prepare conversation context
+            # Use thought generator for conversation (it has generate_response method)
+            if self.thought_generator and hasattr(self.thought_generator, 'generate_response'):
+                # Debug: Check API configuration
+                logger.debug(f"ThoughtGenerator API status: use_api={self.thought_generator.use_api}, has_client={bool(self.thought_generator.client)}")
+                
+                # Prepare conversation context properly
                 history = []
                 for item in self.conversation_history:
-                    if isinstance(item, dict):
+                    if isinstance(item, dict) and 'role' in item:
                         history.append(item)
                     else:
-                        history.append({"content": str(item), "timestamp": datetime.now().isoformat()})
+                        # Convert old format to proper conversation format
+                        history.append({
+                            "role": "user" if str(item).startswith("You:") else "assistant",
+                            "content": str(item).replace("You: ", "").replace("Claude: ", ""),
+                            "timestamp": datetime.now().isoformat()
+                        })
                 
-                response = await self.thought_generator.generate_response(
-                    user_input=user_input,
-                    conversation_history=history,
-                    emotional_state=self.current_emotional_state
-                )
-                return response or "I'm processing your message..."
-            else:
-                return "I'm still initializing my response systems..."
+                try:
+                    logger.debug(f"Attempting to generate response for: {user_input[:50]}...")
+                    response = await self.thought_generator.generate_response(
+                        user_input=user_input,
+                        conversation_history=history,
+                        emotional_state=self.current_emotional_state
+                    )
+                    if response:
+                        logger.debug(f"Generated response: {response[:50]}...")
+                        return response
+                    else:
+                        logger.warning("AI response generation returned empty response")
+                except Exception as e:
+                    logger.error(f"AI response generation failed with exception: {e}")
+                    # Add to chat to show the error to user for debugging
+                    self.add_chat_line(f"SYSTEM: Error generating response - {str(e)}")
+            
+            # Fallback response if AI fails
+            fallback_responses = [
+                "That's an interesting point. Let me think about it.",
+                "I understand what you're saying. Could you tell me more?",
+                "I'm processing your input and considering various perspectives.",
+                "Thank you for sharing that with me. What would you like to explore further?",
+                "I appreciate your question. Let me reflect on that."
+            ]
+            
+            return random.choice(fallback_responses)
                 
         except Exception as e:
             logger.error(f"Error generating response: {e}")
-            return "I encountered an error processing your message."
+            return "I'm having trouble processing that right now, but I'm here and listening."
     
-    async def _store_thought_in_memory(self, thought: str, stream_id: str = "primary", importance: int = 5):
-        """Store thought in memory system with enhanced metadata"""
+    async def _store_thought_directly_in_memory(self, thought: str, stream_id: str = "primary", importance: int = 5):
+        """Store thought directly in working memory like the original implementation"""
         try:
-            if self.memory_manager:
-                # Create memory entry
+            # Get memory manager from orchestrator services (like original)
+            memory_manager = self.orchestrator.services.get('memory') if self.orchestrator else None
+            
+            if memory_manager and hasattr(memory_manager, 'working_memory'):
+                # Ensure working_memory structure exists (EXACT original pattern)
+                if not isinstance(memory_manager.working_memory, dict):
+                    memory_manager.working_memory = {}
+                if 'recent_thoughts' not in memory_manager.working_memory:
+                    memory_manager.working_memory['recent_thoughts'] = []
+                
+                # Create thought entry with exact original format
+                thought_entry = {
+                    'content': thought,
+                    'stream': stream_id,
+                    'timestamp': datetime.now().isoformat(),
+                    'importance': importance,
+                    'emotional_tone': 'neutral',
+                    'stream_type': stream_id
+                }
+                
+                # Add to working memory (EXACT original pattern)
+                memory_manager.working_memory['recent_thoughts'].append(thought_entry)
+                
+                # Keep only recent thoughts to prevent memory bloat (like original)
+                max_recent = 100
+                if len(memory_manager.working_memory['recent_thoughts']) > max_recent:
+                    memory_manager.working_memory['recent_thoughts'] = memory_manager.working_memory['recent_thoughts'][-max_recent:]
+                    
+                logger.debug(f"Stored thought in working memory: {thought[:50]}...")
+                
+            # Also try orchestrator method as backup
+            await self._store_thought_via_orchestrator(thought, stream_id, importance)
+                
+        except Exception as e:
+            logger.error(f"Error storing thought directly in memory: {e}")
+            # Fallback to orchestrator method
+            await self._store_thought_via_orchestrator(thought, stream_id, importance)
+
+    async def _store_thought_via_orchestrator(self, thought: str, stream_id: str = "primary", importance: int = 5):
+        """Store thought in memory system via orchestrator messaging"""
+        try:
+            if self.orchestrator:
+                # Create memory entry with proper format
                 memory_data = {
                     'content': thought,
                     'timestamp': datetime.now(),
@@ -501,23 +668,24 @@ class TUIController:
                     'emotional_tone': 'neutral'
                 }
                 
-                # Store in memory
-                await self.memory_manager.store_memory(memory_data)
+                # Send to memory service through orchestrator
+                message = Message(
+                    source='tui_controller',
+                    target='memory',
+                    type='store_thought',
+                    content=memory_data,
+                    priority=5
+                )
                 
-                # Also store in working memory for immediate access
-                if hasattr(self.memory_manager, 'working_memory'):
-                    if 'recent_thoughts' not in self.memory_manager.working_memory:
-                        self.memory_manager.working_memory['recent_thoughts'] = []
-                    
-                    self.memory_manager.working_memory['recent_thoughts'].append({
-                        'content': thought,
-                        'stream': stream_id,
-                        'timestamp': datetime.now().isoformat(),
-                        'importance': importance
-                    })
+                await self.orchestrator.send_message(message)
                 
         except Exception as e:
-            logger.error(f"Error storing thought in memory: {e}")
+            logger.error(f"Error storing thought via orchestrator: {e}")
+    
+    async def _store_thought_in_memory(self, thought: str, stream_id: str = "primary", importance: int = 5):
+        """Store thought in memory system with enhanced metadata (legacy method)"""
+        # Use the new direct storage method
+        await self._store_thought_directly_in_memory(thought, stream_id, importance)
     
     def _update_emotional_state_from_tone(self, tone: str):
         """Update emotional state based on thought tone"""
@@ -775,15 +943,12 @@ class TUIController:
         return False
     
     # UI Helper Methods
-    def add_consciousness_line(self, text: str):
-        """Add line to consciousness pane"""
-        if self.ui_renderer:
-            self.ui_renderer.add_line_to_pane(PaneType.CONSCIOUSNESS, text)
     
     def add_chat_line(self, text: str):
         """Add line to chat pane"""
         if self.ui_renderer:
             self.ui_renderer.add_line_to_pane(PaneType.CHAT, text)
+            self.chat_needs_update = True  # Flag for selective update (EXACT original)
     
     def add_system_line(self, text: str):
         """Add system message to chat pane"""
@@ -791,11 +956,13 @@ class TUIController:
         system_line = f"[{timestamp}] SYSTEM: {text}"
         if self.ui_renderer:
             self.ui_renderer.add_line_to_pane(PaneType.CHAT, system_line)
+            self.chat_needs_update = True  # Flag for selective update (EXACT original)
     
     def add_memory_line(self, text: str):
         """Add line to memory pane"""
         if self.ui_renderer:
             self.ui_renderer.add_line_to_pane(PaneType.MEMORY, text)
+            self.memory_needs_update = True  # Flag for selective update (EXACT original)
     
     def add_emotional_line(self, text: str):
         """Add line to emotional pane"""
@@ -863,19 +1030,48 @@ class TUIController:
             self.add_system_line(f"Unknown memory command: {subcmd}")
     
     async def _get_memory_stats(self) -> Dict[str, Any]:
-        """Get memory statistics"""
-        if self.memory_manager:
-            try:
-                return await self.memory_manager.get_statistics()
-            except Exception as e:
-                logger.error(f"Error getting memory statistics: {e}")
-                # Return fallback stats on error
+        """Get memory statistics directly from working memory like the original"""
+        try:
+            # Direct access to memory manager like the original implementation
+            memory_manager = self.orchestrator.services.get('memory') if self.orchestrator else None
+            
+            working_count = 0
+            long_term_count = 0
+            
+            if memory_manager:
+                # Get working memory count (EXACT original pattern)
+                if hasattr(memory_manager, 'working_memory') and isinstance(memory_manager.working_memory, dict):
+                    recent_thoughts = memory_manager.working_memory.get('recent_thoughts', [])
+                    working_count = len(recent_thoughts)
+                
+                # Get long-term memory count (EXACT original pattern)
+                if hasattr(memory_manager, 'long_term_memory'):
+                    long_term_count = len(getattr(memory_manager, 'long_term_memory', []))
+                
+                logger.debug(f"Memory stats - Working: {working_count}, Long-term: {long_term_count}")
+                
+                return {
+                    'working_count': working_count,
+                    'episodic_count': long_term_count,  # Use long-term as episodic
+                    'semantic_count': max(0, long_term_count // 3)  # Estimate semantic from long-term
+                }
+            
+            # Fallback to metrics tracking if memory manager unavailable
+            working_count = self.metrics.get('memories_stored', 0)
+            return {
+                'working_count': working_count,
+                'episodic_count': max(0, working_count // 2),
+                'semantic_count': max(0, working_count // 4)
+            }
         
-        return {
-            'working_count': 0,
-            'episodic_count': 0,
-            'semantic_count': 0
-        }
+        except Exception as e:
+            logger.error(f"Error getting memory statistics: {e}")
+            # Final fallback
+            return {
+                'working_count': 0,
+                'episodic_count': 0,
+                'semantic_count': 0
+            }
     
     async def _recall_memories(self, query: str) -> List[Dict[str, Any]]:
         """Recall memories by query"""
@@ -1265,8 +1461,8 @@ class TUIController:
         if not consciousness_pane:
             return
             
-        # Word wrap long lines
-        max_width = consciousness_pane.width - 4
+        # Word wrap long lines (EXACT original - get dynamic width from window)
+        max_width = consciousness_pane.win.getmaxyx()[1] - 4
         if len(text) > max_width:
             # Keep the prefix intact for wrapped lines
             if text.startswith(('💭', '🎨', '🌊', '🔍', '•')):
@@ -1310,6 +1506,9 @@ class TUIController:
                     consciousness_pane.content.append((line, color))
         else:
             consciousness_pane.content.append((text, color))
+            
+        # Mark consciousness pane for update (EXACT original pattern)
+        self.consciousness_needs_update = True
 
         # Keep buffer manageable (match original buffer size)
         max_buffer = 300

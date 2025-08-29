@@ -44,8 +44,14 @@ class Pane:
     height: int
     title: str
     buffer: List[str]
+    content: List[Any] = None  # For colored content (List[Tuple[str, int]])
     win: Any = None
     active: bool = False
+    
+    def __post_init__(self):
+        """Initialize content list if not provided"""
+        if self.content is None:
+            self.content = []
 
 
 class UIRenderer:
@@ -298,6 +304,10 @@ class UIRenderer:
         for pane in self.panes.values():
             self._draw_pane(pane)
     
+    def draw_pane(self, pane: Pane):
+        """Public interface to draw a single pane - EXACT original behavior"""
+        self._draw_pane(pane)
+    
     def _draw_pane(self, pane: Pane):
         """Draw a single pane with border and content - EXACT MATCH to original"""
         if not pane.win:
@@ -350,9 +360,12 @@ class UIRenderer:
         win = pane.win
         height, width = win.getmaxyx()
 
+        # Use content attribute for consciousness (colored content), fallback to buffer for compatibility
+        content_source = pane.content if pane.content else pane.buffer
+
         # Get scroll position (EXACT original logic)
         scroll_pos = self.scroll_positions.get(PaneType.CONSCIOUSNESS, 0)
-        total_lines = len(pane.buffer)
+        total_lines = len(content_source)
 
         # Calculate visible range (EXACT original)
         if total_lines > height - 2:
@@ -370,18 +383,19 @@ class UIRenderer:
         for i in range(start_idx, end_idx):
             if y >= height - 1:
                 break
-            if i >= len(pane.buffer):
+            if i >= len(content_source):
                 break
                 
-            line = pane.buffer[i]
+            line = content_source[i]
             if isinstance(line, tuple):
                 text, color = line
             else:
                 text = str(line)
                 color = 1  # Default consciousness color
                 
-            # Properly truncate to available width (EXACT original)
-            available_width = width - 4
+            # Display text (already wrapped by add_consciousness_line, don't double-truncate)
+            # Only truncate if text is still too long (safety check for edge cases)
+            available_width = width - 3  # Leave 1 char margin on right
             if len(text) > available_width:
                 text = text[:available_width-1] + "…"
             self.safe_addstr(win, y, 2, text, curses.color_pair(color))
@@ -405,9 +419,14 @@ class UIRenderer:
         y = 1
         
         try:
-            # Cached memory manager access (performance optimization)
-            memory_manager = self._get_cached_memory_manager()
-            working_count, long_term_count = self._get_memory_stats(memory_manager)
+            # Use updated memory stats from controller if available, otherwise fall back to direct access
+            if hasattr(self, '_memory_stats') and self._memory_stats:
+                working_count = self._memory_stats.get('working_count', 0)
+                long_term_count = self._memory_stats.get('episodic_count', 0) + self._memory_stats.get('semantic_count', 0)
+            else:
+                # Fallback to direct access (performance optimization)
+                memory_manager = self._get_cached_memory_manager()
+                working_count, long_term_count = self._get_memory_stats(memory_manager)
             
             # Sanitized stats display (security hardening)
             stats_text = self._format_safe_text(f"Working: {working_count} | Long-term: {long_term_count}", width - 6)
@@ -475,16 +494,19 @@ class UIRenderer:
         return working_count, long_term_count
     
     def _format_safe_text(self, text: str, max_width: int) -> str:
-        """Secure text formatting with sanitization and bounds checking"""
+        """Secure text formatting with sanitization and proper text wrapping like original"""
         if not isinstance(text, str):
             text = str(text)
         
         # Input sanitization (remove control characters except printable)
         sanitized = ''.join(char if char.isprintable() or char in '\n\t' else '?' for char in text)
         
-        # Safe truncation with bounds validation
-        if len(sanitized) > max_width and max_width > 3:
-            return sanitized[:max_width-3] + "..."
+        # Use proper text wrapping like original instead of aggressive truncation
+        if len(sanitized) > max_width and max_width > 10:  # Only truncate if very narrow
+            # Use textwrap for better formatting like original
+            import textwrap
+            wrapped = textwrap.wrap(sanitized, max_width, break_long_words=False)
+            return wrapped[0] if wrapped else sanitized[:max_width]
         return sanitized[:max_width] if max_width > 0 else ""
     
     def _calculate_safe_section_height(self, remaining_height: int, category_count: int) -> int:
@@ -544,22 +566,36 @@ class UIRenderer:
         return lines_used
     
     def _render_recent_thoughts(self, win, y: int, content_lines: int, width: int, pane: Pane) -> int:
-        """Render recent thoughts with security validation"""
+        """Render recent thoughts from memory manager like original"""
         lines_used = 0
         
-        if len(pane.buffer) > 0:
-            # Safe buffer access with bounds checking
-            buffer_size = min(len(pane.buffer), 2)  # Limit to prevent DoS
-            recent_items = list(pane.buffer)[-buffer_size:] if buffer_size > 0 else []
-            
-            for mem_line in recent_items:
+        # Get recent thoughts from memory manager (EXACT original pattern)
+        recent_thoughts = []
+        memory_manager = self._get_cached_memory_manager()
+        if memory_manager and hasattr(memory_manager, 'working_memory'):
+            if isinstance(memory_manager.working_memory, dict):
+                thoughts = memory_manager.working_memory.get('recent_thoughts', [])
+                if isinstance(thoughts, (list, tuple)):
+                    recent_thoughts = list(thoughts)[-5:]  # Last 5 thoughts like original
+        
+        if recent_thoughts:
+            for thought in recent_thoughts:
                 if lines_used >= content_lines:
                     break
                 
-                # Secure text processing
-                safe_content = self._format_safe_text(str(mem_line), width - 12)
-                prefix = "  • [THT] "
-                display_text = prefix + safe_content
+                # Extract content from thought structure (EXACT original pattern)
+                if isinstance(thought, dict):
+                    content = thought.get('content', '')
+                    stream = thought.get('stream', 'unk')
+                    
+                    # Format like original with stream indicator
+                    stream_prefix = stream[:3].upper()
+                    safe_content = self._format_safe_text(str(content), width - 16)
+                    display_text = f"  • [{stream_prefix}] {safe_content}"
+                else:
+                    # Handle string thoughts
+                    safe_content = self._format_safe_text(str(thought), width - 12)
+                    display_text = f"  • [THT] {safe_content}"
                 
                 self.safe_addstr(win, y + lines_used, 2, display_text, curses.color_pair(8))
                 lines_used += 1
@@ -838,7 +874,8 @@ class UIRenderer:
             
             # Show prompt based on mode
             if command_mode:
-                prompt = f"/{input_buffer}"
+                # input_buffer already contains the "/" prefix when in command mode
+                prompt = input_buffer
                 color = curses.color_pair(5)  # Red for command mode
             else:
                 prompt = f"> {input_buffer}"
@@ -949,7 +986,13 @@ class UIRenderer:
         
         pane = self.panes[pane_type]
         current_pos = self.scroll_positions.get(pane_type, 0)
-        max_lines = len(pane.buffer)
+        
+        # Use content for consciousness pane, buffer for others
+        if pane_type == PaneType.CONSCIOUSNESS and pane.content:
+            max_lines = len(pane.content)
+        else:
+            max_lines = len(pane.buffer)
+        
         visible_lines = pane.height - 2  # Account for border
         
         if max_lines <= visible_lines:
@@ -981,7 +1024,13 @@ class UIRenderer:
         
         pane = self.panes[pane_type]
         current_pos = self.scroll_positions.get(pane_type, 0)
-        max_lines = len(pane.buffer)
+        
+        # Use content for consciousness pane, buffer for others
+        if pane_type == PaneType.CONSCIOUSNESS and pane.content:
+            max_lines = len(pane.content)
+        else:
+            max_lines = len(pane.buffer)
+        
         visible_lines = pane.height - 2
         max_scroll = max(0, max_lines - visible_lines)
         

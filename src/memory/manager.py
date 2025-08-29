@@ -736,12 +736,73 @@ class MemoryManager:
         if self.use_database and self.db_manager:
             await self.db_manager.close()
             
+    async def get_statistics(self) -> Dict[str, Any]:
+        """Get memory statistics for TUI display"""
+        try:
+            # Debug logging
+            working_thoughts = self.working_memory.get('recent_thoughts', [])
+            logger.debug(f"Memory stats: working_thoughts count = {len(working_thoughts)}")
+            
+            if self.use_database and self.db_manager:
+                # Get counts from database
+                # For now, return basic counts - can be enhanced
+                working_count = len(working_thoughts)
+                return {
+                    'working_count': working_count,
+                    'episodic_count': working_count,  # Would be from DB
+                    'semantic_count': working_count // 2,  # Would be from vector DB
+                    'total_memories': working_count
+                }
+            else:
+                # Get counts from in-memory storage
+                working_count = len(working_thoughts)
+                long_term_count = len(getattr(self, 'long_term_memory', []))
+                short_term_count = len(self.working_memory.get('short_term', {}))
+                
+                # Debug logging
+                logger.debug(f"Memory counts - working: {working_count}, long_term: {long_term_count}, short_term: {short_term_count}")
+                
+                stats = {
+                    'working_count': working_count,
+                    'episodic_count': long_term_count,
+                    'semantic_count': short_term_count,
+                    'total_memories': working_count + long_term_count
+                }
+                
+                # Add some sample thoughts for debugging
+                if working_count > 0:
+                    recent = working_thoughts[-3:]
+                    for i, thought in enumerate(recent):
+                        logger.debug(f"Recent thought {i}: {thought.get('content', 'No content')[:50]}")
+                
+                return stats
+        except Exception as e:
+            logger.error(f"Error getting memory statistics: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            return {
+                'working_count': 0,
+                'episodic_count': 0,
+                'semantic_count': 0,
+                'total_memories': 0
+            }
+
     async def handle_message(self, message):
         """Handle incoming messages from orchestrator"""
         message_type = message.type
+        logger.debug(f"Memory manager received message: {message_type}")
         
         if message_type == 'store_thought':
-            await self.store_thought(message.content)
+            thought = message.content
+            logger.debug(f"Storing thought: {thought.get('content', '')[:50]}...")
+            thought_id = await self.store_thought(thought)
+            logger.debug(f"Thought stored with ID: {thought_id}")
+            
+            # Debug: Check memory counts after storing
+            working_count = len(self.working_memory.get('recent_thoughts', []))
+            long_term_count = len(getattr(self, 'long_term_memory', []))
+            logger.debug(f"Memory counts after storage: working={working_count}, long_term={long_term_count}")
+            
         elif message_type == 'recall':
             # Handle memory recall requests
             query = message.content.get('query', '')

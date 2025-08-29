@@ -129,10 +129,11 @@ class EventHandler:
                 await self._trigger_immediate_ui_update()
                 return
             
-            # Handle printable characters
-            if 32 <= key <= 126:  # Printable ASCII range
+            # Handle printable characters (excluding those with special bindings)
+            if 32 <= key <= 126 and key not in self.key_bindings:  # Printable ASCII range, not special keys
                 char = chr(key)
                 
+                # Add character to appropriate buffer (EXACT original pattern)
                 if self.command_mode:
                     self.command_buffer += char
                 else:
@@ -189,8 +190,15 @@ class EventHandler:
         if self.command_mode:
             command = self.command_buffer.strip()
             if command:
+                # Show the command in conversation pane first (user feedback)
+                await self._emit_event('command_entered', {'command': command})
+                
+                # Execute the command
                 await self._execute_command(command)
-                self.command_history.append(f"/{command}")
+                
+                # Store in history (clean version without double slash)
+                history_entry = command if command.startswith('/') else f"/{command}"
+                self.command_history.append(history_entry)
             
             self.command_mode = False
             self.command_buffer = ""
@@ -292,8 +300,14 @@ class EventHandler:
         """Handle slash key - enter command mode (EXACT original behavior)"""
         if not self.command_mode and not self.input_buffer:
             self.command_mode = True
-            self.command_buffer = "/"  # Preserve '/' prefix like original
+            self.command_buffer = "/"  # Set single '/' prefix like original (EXACT original behavior)
             # Immediate UI update for slash commands
+            await self._trigger_immediate_ui_update()
+        elif self.command_mode:
+            # If already in command mode, add '/' as normal character (like original)
+            self.command_buffer += "/"
+            # Clear exit confirmation on any input
+            self.exit_confirmation = False
             await self._trigger_immediate_ui_update()
     
     async def _execute_command(self, command: str):
@@ -303,7 +317,10 @@ class EventHandler:
             if not parts:
                 return
             
+            # Remove leading slash from command name (EXACT original behavior)
             cmd_name = parts[0].lower()
+            if cmd_name.startswith('/'):
+                cmd_name = cmd_name[1:]
             args = parts[1:] if len(parts) > 1 else []
             
             # Check built-in event handlers first

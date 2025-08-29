@@ -101,14 +101,17 @@ class ClaudeAGIApp:
             # Initialize orchestrator services first
             await self.orchestrator.initialize()
             
-            # Start the orchestrator as a background task (like original implementation)
-            orchestrator_task = asyncio.create_task(self.orchestrator.run())
-            orchestrator_task.add_done_callback(self._handle_orchestrator_exception)
-            # Store the task reference to prevent it from being garbage collected
-            self.orchestrator_task = orchestrator_task
+            # Verify orchestrator is ready before starting background task
+            if not self.orchestrator.services:
+                logger.error("Orchestrator services not initialized")
+                return
             
-            # Wait for services to be fully initialized
-            await asyncio.sleep(1)
+            # Start the orchestrator as a background task with better error handling
+            self.orchestrator_task = asyncio.create_task(self.orchestrator.run())
+            self.orchestrator_task.add_done_callback(self._handle_orchestrator_exception)
+            
+            # Wait longer for services to be fully initialized and start their cycles
+            await asyncio.sleep(2)
 
             # Get components from orchestrator services using correct pattern
             self.memory_manager = self.orchestrator.services.get('memory')
@@ -138,13 +141,17 @@ class ClaudeAGIApp:
     def run(self, stdscr):
         """Main application entry point with curses"""
         try:
+            logger.info("Starting TUI initialization")
+            
             # Initialize TUI components
             self.controller.initialize_ui(stdscr)
+            logger.info("TUI controller initialized")
 
             # Configure curses
             curses.curs_set(0)  # Hide cursor
             stdscr.clear()
             stdscr.refresh()
+            logger.info("Curses configured, starting async main loop")
 
             # Run the application
             asyncio.run(self._run_async())
@@ -153,18 +160,42 @@ class ClaudeAGIApp:
             logger.info("Application interrupted by user")
         except Exception as e:
             logger.error(f"Application error: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
 
     async def _run_async(self):
-        """Async main loop"""
+        """Async main loop with proper task coordination like the original"""
         try:
+            logger.info("Starting AGI components initialization")
             # Initialize AGI components
             await self.initialize_components()
+            logger.info("AGI components initialized, starting coordinated tasks")
 
-            # Start the controller
-            await self.controller.run()
+            # Create all tasks (EXACT original pattern)
+            tasks = []
+            
+            # Orchestrator task (already started in initialize_components)
+            if self.orchestrator_task:
+                tasks.append(self.orchestrator_task)
+            
+            # Controller task
+            controller_task = asyncio.create_task(self.controller.run())
+            tasks.append(controller_task)
+            
+            logger.info(f"Starting {len(tasks)} coordinated tasks")
+            
+            # Run all tasks together like the original (EXACT pattern)
+            try:
+                await asyncio.gather(*tasks, return_exceptions=True)
+            except asyncio.CancelledError:
+                logger.info("Main tasks cancelled")
+            except Exception as e:
+                logger.error(f"Error in task coordination: {e}")
 
         except Exception as e:
             logger.error(f"Error in async main loop: {e}")
+            import traceback
+            logger.error(f"Async main loop traceback: {traceback.format_exc()}")
         finally:
             # Cleanup
             await self._cleanup()

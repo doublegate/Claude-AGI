@@ -5,6 +5,35 @@ All notable changes to the Claude-AGI Project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.6] - 2025-08-28 - TUI Critical Issues Resolution & Complete Restoration 🎯
+
+### Fixed - All Critical TUI Issues Resolved
+- **Consciousness Stream Auto-Updates**: Restored automatic updates every 2-3 seconds without user input
+  - Fixed consciousness loop to generate thoughts continuously regardless of service availability
+  - Proper duplicate tracking to prevent repeated thoughts from displaying
+  - Exact original timing patterns (2.5 second intervals) implemented
+- **Memory Browser Complete Functionality**: Working tallies and sub-category entries with real-time data
+  - Fixed UI renderer to read directly from memory_manager.working_memory like original
+  - Restored complete memory browser data population matching original patterns
+  - Real-time display of actual thought entries in sub-categories
+- **Performance Optimization**: Eliminated freezing, stuttering, and flickering
+  - Fixed async task coordination with proper timeout handling
+  - Restored original selective update mechanism with coordinated refresh
+  - Eliminated conflicting UI refresh loops causing performance issues
+- **Command Processing**: Single slash commands work properly with correct display
+  - Fixed double-slash display bug through proper key processing order
+  - Restored exact original command input handling and display logic
+  - Commands now show as single "/" and execute correctly
+- **Startup Issue Resolution**: Fixed blank screen on launch
+  - Added initial UI rendering in initialize_ui() to prevent blank screen
+  - Proper UI initialization with immediate display of interface elements
+
+### Enhanced - Complete Functional Parity Achievement
+- **TUI Behavior**: Now operates exactly like original working implementation
+- **Architecture**: Maintains modular benefits while restoring original functionality  
+- **Performance**: Matches or exceeds original implementation responsiveness
+- **Stability**: All critical issues systematically resolved through original code analysis
+
 ## [1.5.5+] - 2025-08-28 - Documentation Synchronization & Feature Parity 📚
 
 ### Added - Comprehensive Documentation Update

@@ -6,7 +6,7 @@
 
 <div align="center">
 
-[![Version](https://img.shields.io/badge/version-1.5.5-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.5.6-blue.svg)](CHANGELOG.md)
 [![Python Version](https://img.shields.io/badge/python-3.11%2B-brightgreen.svg)](https://www.python.org)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-423%20passing-success.svg)](.github/workflows/ci-pipeline.yml)
@@ -376,12 +376,15 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - ✅ **Production Infrastructure**: CI/CD, monitoring, cross-platform releases
 - ✅ **Complete Test Coverage**: 423 tests passing (100% success rate, 72.80% coverage)
 
-### v1.5.5 Latest Enhancements
+### v1.5.6 Latest Enhancements (August 28, 2025)
 
-- **Memory Browser Optimization**: MCP-powered optimization with security hardening
-- **Launcher Script Fix**: Resolved argument handling for seamless execution
-- **Feature Parity Achievement**: Current implementation matches archived original completely
-- **Rust-Inspired Safety**: Bounds checking, input sanitization, cached access patterns
+- **TUI Critical Issues Resolution**: Comprehensive debugging and restoration of all TUI functionality
+- **Consciousness Stream Auto-Updates**: Fixed automatic updates every 2-3 seconds without user input
+- **Memory Browser Complete**: Working tallies and sub-category entries with real-time data
+- **Performance Optimization**: Eliminated freezing, stuttering, and flickering through async coordination
+- **Command Processing Fix**: Single slash commands work properly with correct display
+- **Startup Issue Resolution**: Fixed blank screen on launch with proper UI initialization
+- **Complete Functional Parity**: TUI now operates exactly like original working implementation
 
 ### Performance Metrics Achieved
 

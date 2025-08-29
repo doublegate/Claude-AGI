@@ -113,18 +113,19 @@ class AGIOrchestrator:
         """Main event loop"""
         await self.initialize()
         self.running = True  # Critical fix: Start the orchestrator loop
+        logger.info("Orchestrator main loop started successfully")
         
         while self.running:
             try:
-                # Process messages with timeout
+                # Process messages with shorter timeout for more responsive service cycles
                 message = await asyncio.wait_for(
                     self.message_queue.get(),
-                    timeout=1.0
+                    timeout=0.5
                 )
                 await self.route_message(message)
                 
             except asyncio.TimeoutError:
-                # No messages - run idle tasks
+                # No messages - run idle tasks more frequently
                 if self.running:
                     await self.idle_cycle()
                 
@@ -134,8 +135,10 @@ class AGIOrchestrator:
                 break
                 
             except Exception as e:
+                logger.error(f"Orchestrator run loop error: {e}")
                 if self.running:
                     await self.handle_error(e)
+                    await asyncio.sleep(0.1)  # Brief pause on error
                 
     async def route_message(self, message: Message):
         """Route messages between services"""
@@ -153,12 +156,16 @@ class AGIOrchestrator:
     async def idle_cycle(self):
         """Activities during idle time"""
         # Run service cycles for all services
+        logger.debug(f"Orchestrator idle_cycle running for {len(self.services)} services")
         for service_name, service in self.services.items():
             if hasattr(service, 'service_cycle'):
                 try:
+                    logger.debug(f"Calling service_cycle for {service_name}")
                     await service.service_cycle()
                 except Exception as e:
                     logger.error(f"Error in {service_name} service cycle: {e}")
+            else:
+                logger.debug(f"Service {service_name} has no service_cycle method")
         
         if self.state == SystemState.IDLE:
             # Trigger exploration or contemplation

@@ -209,6 +209,9 @@ class ConsciousnessStream(ServiceBase):
         # Allocate attention across streams
         await self.allocate_attention()
         
+        # Debug logging to track service cycle execution
+        logger.debug(f"Consciousness service cycle running. Conscious: {self.is_conscious}, Total thoughts: {self.total_thoughts}")
+        
         # Generate thoughts for active streams
         for stream_id, stream in self.streams.items():
             attention_weight = self.attention_weights.get(stream_id, 0)
@@ -217,14 +220,27 @@ class ConsciousnessStream(ServiceBase):
                 # Generate thought with probability based on attention (boosted for reliability)
                 # Boost attention weights to ensure more frequent generation
                 boosted_probability = min(1.0, attention_weight * 3.0)
+                logger.debug(f"Stream {stream_id}: attention={attention_weight:.2f}, probability={boosted_probability:.2f}")
                 if random.random() < boosted_probability:
-                    thought = await self.generate_thought(stream)
-                    if thought:
-                        await self.process_thought(thought, stream)
+                    try:
+                        # Add timeout to prevent blocking on AI API calls
+                        thought = await asyncio.wait_for(self.generate_thought(stream), timeout=3.0)
+                        if thought:
+                            await self.process_thought(thought, stream)
+                            logger.debug(f"Generated thought for {stream_id}: {thought['content'][:50]}...")
+                    except asyncio.TimeoutError:
+                        logger.debug(f"Thought generation timeout for {stream_id}, skipping this cycle")
+                    except Exception as e:
+                        logger.debug(f"Error generating thought for {stream_id}: {e}")
                         
         # Integrate across streams periodically
         if self.total_thoughts % 10 == 0:
-            await self.integrate_streams()
+            try:
+                await asyncio.wait_for(self.integrate_streams(), timeout=2.0)
+            except asyncio.TimeoutError:
+                logger.debug("Stream integration timeout, skipping this cycle")
+            except Exception as e:
+                logger.debug(f"Error in stream integration: {e}")
             
         # Small delay to control thought generation rate
         await asyncio.sleep(0.5)
