@@ -292,14 +292,14 @@ class TransferLearningEngine:
 
     def _calculate_domain_similarity(self, domain1: str, domain2: str) -> float:
         """Calculate similarity between domains"""
-        # Predefined similarity matrix
+        # Predefined similarity matrix (keys sorted alphabetically)
         similarities = {
-            ('technical', 'analytical'): 0.8,
-            ('creative', 'cognitive'): 0.7,
-            ('problem_solving', 'analytical'): 0.75,
-            ('problem_solving', 'cognitive'): 0.7,
-            ('meta_learning', 'cognitive'): 0.8,
-            ('technical', 'problem_solving'): 0.65,
+            ('analytical', 'technical'): 0.8,
+            ('cognitive', 'creative'): 0.7,
+            ('analytical', 'problem_solving'): 0.75,
+            ('cognitive', 'problem_solving'): 0.7,
+            ('cognitive', 'meta_learning'): 0.8,
+            ('problem_solving', 'technical'): 0.65,
             ('creative', 'problem_solving'): 0.6,
         }
 

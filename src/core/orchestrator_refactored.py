@@ -86,32 +86,168 @@ class AGIOrchestrator:
         from src.memory.manager import MemoryManager
         from src.consciousness.stream import ConsciousnessStream
         from src.safety.enhanced_safety import EnhancedSafetyFramework
-        
+        from src.emotional.processor import EmotionalProcessor
+        from src.learning.engine import LearningEngine
+        from src.web.explorer import WebExplorer
+        from src.creative.engine import CreativeEngine
+        from src.meta.cognitive import MetaCognitive
+        from src.social.intelligence import SocialIntelligence
+
+        # Phase 2-6 service imports
+        from src.learning.learning_service import LearningService
+        from src.social.social_service import SocialService
+        from src.creative.creative_service import CreativeService
+        from src.web.web_service import WebService
+        from src.metacognitive.metacognitive_service import MetaCognitiveService
+        from src.reasoning.reasoning_service import ReasoningService
+        from src.core.self_modification import SelfModificationSystem
+
+        # PHASE 1: Core Infrastructure Services
+
         # Initialize memory manager
         memory_manager = MemoryManager()
         use_database = self.config.get('database', {}).get('enabled', False)
         await memory_manager.initialize(use_database=use_database)
         self.service_registry.register('memory', memory_manager, {
             'type': 'core',
-            'description': 'Memory management service'
+            'description': 'Memory management service',
+            'phase': 1
         })
-        
+
         # Initialize consciousness stream
         consciousness = ConsciousnessStream(self)
         self.service_registry.register('consciousness', consciousness, {
             'type': 'core',
-            'description': 'Consciousness stream service'
+            'description': 'Consciousness stream service',
+            'phase': 1
         })
-        
+
         # Initialize safety framework
         security_config = self.config.get('security', {})
         safety = EnhancedSafetyFramework(self, security_config)
         self.service_registry.register('safety', safety, {
             'type': 'core',
-            'description': 'Safety and security framework'
+            'description': 'Safety and security framework',
+            'phase': 1
         })
-        
-        logger.info("Core services initialized and registered")
+
+        # PHASE 1: Cognitive Services
+
+        # Initialize emotional processor
+        emotional = EmotionalProcessor(self)
+        self.service_registry.register('emotional', emotional, {
+            'type': 'cognitive',
+            'description': 'Emotional intelligence processor',
+            'phase': 1
+        })
+
+        # Initialize learning engine
+        learning = LearningEngine(self)
+        self.service_registry.register('learning', learning, {
+            'type': 'cognitive',
+            'description': 'Pattern and skill learning engine',
+            'phase': 1
+        })
+
+        # Initialize web explorer
+        explorer = WebExplorer(self)
+        self.service_registry.register('explorer', explorer, {
+            'type': 'cognitive',
+            'description': 'Web exploration and discovery',
+            'phase': 1
+        })
+
+        # Initialize creative engine
+        creative = CreativeEngine(self)
+        self.service_registry.register('creative', creative, {
+            'type': 'cognitive',
+            'description': 'Creative ideation and generation',
+            'phase': 1
+        })
+
+        # Initialize metacognitive
+        meta = MetaCognitive(self)
+        self.service_registry.register('meta', meta, {
+            'type': 'cognitive',
+            'description': 'Meta-cognitive monitoring',
+            'phase': 1
+        })
+
+        # Initialize social intelligence
+        social = SocialIntelligence(self)
+        self.service_registry.register('social', social, {
+            'type': 'cognitive',
+            'description': 'Social understanding and interaction',
+            'phase': 1
+        })
+
+        # PHASE 2: Advanced Learning & Web Services
+
+        # Initialize comprehensive learning service
+        learning_service = LearningService(self)
+        self.service_registry.register('learning_system', learning_service, {
+            'type': 'advanced',
+            'description': 'Comprehensive learning with goals, knowledge graph, skills',
+            'phase': 2
+        })
+
+        # Initialize web service with fact verification
+        web_service = WebService(self)
+        self.service_registry.register('web_system', web_service, {
+            'type': 'advanced',
+            'description': 'Web exploration with fact verification',
+            'phase': 2
+        })
+
+        # Initialize self-modification system
+        self_mod = SelfModificationSystem()
+        self.service_registry.register('self_modification', self_mod, {
+            'type': 'advanced',
+            'description': 'Safe self-improvement system',
+            'phase': 2
+        })
+
+        # PHASE 3: Social Intelligence
+
+        # Initialize advanced social service
+        social_service = SocialService(self)
+        self.service_registry.register('social_system', social_service, {
+            'type': 'advanced',
+            'description': 'Relationship management and personalization',
+            'phase': 3
+        })
+
+        # PHASE 4: Creative Capabilities
+
+        # Initialize advanced creative service
+        creative_service = CreativeService(self)
+        self.service_registry.register('creative_system', creative_service, {
+            'type': 'advanced',
+            'description': 'Creative evaluation with novelty detection',
+            'phase': 4
+        })
+
+        # PHASE 5: Meta-Cognitive
+
+        # Initialize metacognitive service
+        metacognitive_service = MetaCognitiveService(self)
+        self.service_registry.register('metacognitive_system', metacognitive_service, {
+            'type': 'advanced',
+            'description': 'Self-model and introspection',
+            'phase': 5
+        })
+
+        # PHASE 6: AGI Integration
+
+        # Initialize reasoning service
+        reasoning_service = ReasoningService(self)
+        self.service_registry.register('reasoning_system', reasoning_service, {
+            'type': 'advanced',
+            'description': 'Causal reasoning and prediction',
+            'phase': 6
+        })
+
+        logger.info("All services initialized and registered (Phases 1-6)")
         
     def _register_service_handlers(self):
         """Register service message handlers with event bus"""
