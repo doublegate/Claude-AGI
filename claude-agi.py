@@ -36,7 +36,7 @@ from src.consciousness.stream import ConsciousnessStream
 from src.core.ai_integration import ThoughtGenerator
 from src.core.orchestrator import AGIOrchestrator
 from src.interface.tui_controller import TUIController
-from src.memory.manager import MemoryManager
+from src.memory.manager_refactored import MemoryManager  # Using refactored MemoryManager
 from src.safety.core_safety import SafetyFramework
 
 load_dotenv()
