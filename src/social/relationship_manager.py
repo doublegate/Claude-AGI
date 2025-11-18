@@ -46,12 +46,16 @@ class RelationshipManager:
     """
     Manages relationships with users including trust, preferences,
     and interaction history.
+
+    Optionally integrates with MultiUserManager for enhanced
+    multi-user support with context isolation and privacy.
     """
 
-    def __init__(self):
+    def __init__(self, multi_user_manager=None):
         self.profiles: Dict[str, UserProfile] = {}
         self.interaction_history: Dict[str, deque] = defaultdict(lambda: deque(maxlen=1000))
         self.current_user: Optional[str] = None
+        self.multi_user_manager = multi_user_manager
 
     async def get_or_create_profile(self, user_id: str, name: str = None) -> UserProfile:
         """Get existing profile or create new one"""
@@ -189,3 +193,47 @@ class RelationshipManager:
             'average_emotional_bond': avg_bond,
             'close_relationships': relationship_distribution['close']
         }
+
+    async def switch_user_context(self, user_id: str):
+        """
+        Switch to a different user's context.
+
+        Uses MultiUserManager if available for enhanced isolation.
+
+        Args:
+            user_id: User to switch to
+        """
+        if self.multi_user_manager:
+            # Use multi-user manager's session switching
+            sessions = await self.multi_user_manager.get_user_sessions(user_id)
+            if sessions:
+                # Switch to most recent session
+                await self.multi_user_manager.switch_to_session(sessions[-1].session_id)
+            else:
+                # Create new session if none exists
+                session = await self.multi_user_manager.create_session(user_id)
+                await self.multi_user_manager.switch_to_session(session.session_id)
+
+        # Update current user
+        self.current_user = user_id
+        logger.info(f"Switched to user context: {user_id}")
+
+    async def get_current_user_id(self) -> Optional[str]:
+        """
+        Get the currently active user ID.
+
+        Uses MultiUserManager if available for accurate session tracking.
+
+        Returns:
+            Current user ID or None
+        """
+        if self.multi_user_manager:
+            return await self.multi_user_manager.get_current_user_id()
+        return self.current_user
+
+    async def get_profile_for_current_user(self) -> Optional[UserProfile]:
+        """Get profile for currently active user"""
+        user_id = await self.get_current_user_id()
+        if user_id and user_id in self.profiles:
+            return self.profiles[user_id]
+        return None
