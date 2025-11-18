@@ -24,6 +24,24 @@ from .unified_knowledge_api import (
     UnifiedKnowledgeResult,
     QueryType
 )
+from .news_integration import (
+    NewsIntegration,
+    NewsArticle,
+    NewsCategory,
+    NewsSentiment
+)
+from .weather_integration import (
+    WeatherIntegration,
+    WeatherData,
+    WeatherForecast,
+    WeatherCondition
+)
+from .arxiv_integration import (
+    ArxivIntegration,
+    ArxivPaper,
+    ArxivCategory,
+    Author
+)
 
 __all__ = [
     'WebExplorer', 'WebService',
@@ -33,5 +51,8 @@ __all__ = [
     'WikipediaKnowledgeExtractor', 'ContentFormat',
     'WikidataIntegration', 'WikidataEntity', 'WikidataProperty',
     'WikidataTriple', 'WikidataKnowledgeGraph', 'PropertyType',
-    'UnifiedKnowledgeAPI', 'UnifiedKnowledgeResult', 'QueryType'
+    'UnifiedKnowledgeAPI', 'UnifiedKnowledgeResult', 'QueryType',
+    'NewsIntegration', 'NewsArticle', 'NewsCategory', 'NewsSentiment',
+    'WeatherIntegration', 'WeatherData', 'WeatherForecast', 'WeatherCondition',
+    'ArxivIntegration', 'ArxivPaper', 'ArxivCategory', 'Author'
 ]
