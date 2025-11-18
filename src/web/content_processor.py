@@ -361,11 +361,16 @@ class WebContentProcessor:
                 if len(related_topics) >= 5:
                     break
 
-        # Questions raised (sentences ending with ?)
+        # Questions raised (sentences that start with question words or originally had ?)
         questions = []
-        for sentence in sentences:
-            if '?' in sentence:
-                question = sentence.strip() + '?'
+        for i, sentence in enumerate(sentences):
+            sentence_stripped = sentence.strip()
+            # Check if it's a question by looking for question words at start
+            question_words = ['what', 'how', 'why', 'when', 'where', 'who', 'which', 'whose', 'whom', 'is', 'are', 'can', 'could', 'would', 'should', 'do', 'does', 'did']
+            is_question = any(sentence_stripped.lower().startswith(word) for word in question_words)
+
+            if is_question:
+                question = sentence_stripped if sentence_stripped.endswith('?') else sentence_stripped + '?'
                 if len(question) > 10 and len(question) < 150:
                     questions.append(question)
                     if len(questions) >= 3:

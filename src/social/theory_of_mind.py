@@ -189,9 +189,11 @@ class TheoryOfMind:
         if '?' in statement:
             confidence -= 0.2
 
-        # Reduce for hedging language
-        if any(hedge in statement.lower() for hedge in ['maybe', 'perhaps', 'possibly', 'might']):
-            confidence -= 0.15
+        # Reduce for hedging language (count each hedge word)
+        hedge_words = ['maybe', 'perhaps', 'possibly', 'might', 'could']
+        statement_lower = statement.lower()
+        hedge_count = sum(1 for hedge in hedge_words if hedge in statement_lower)
+        confidence -= 0.15 * hedge_count
 
         return max(0.0, min(1.0, confidence))
 
@@ -274,26 +276,29 @@ class TheoryOfMind:
         # Simple sentiment analysis (would use NLP in production)
         valence = self._analyze_valence(message)
         arousal = self._analyze_arousal(message)
-        emotion = self._map_to_emotion(valence, arousal)
 
         # Calculate confidence
         confidence = 0.5
         indicators = []
 
-        # Check for explicit emotion words
+        # Check for explicit emotion words first (they override sentiment)
+        # Format: word -> (valence, arousal, canonical_emotion)
         emotion_words = {
-            'happy': (0.7, 0.6), 'sad': (-0.7, 0.3), 'angry': (-0.6, 0.8),
-            'excited': (0.6, 0.9), 'calm': (0.3, 0.2), 'worried': (-0.4, 0.7),
-            'frustrated': (-0.5, 0.7), 'content': (0.5, 0.3)
+            'happy': (0.7, 0.6, 'happy'), 'sad': (-0.7, 0.3, 'sad'), 'angry': (-0.6, 0.8, 'angry'),
+            'excited': (0.6, 0.9, 'excited'), 'calm': (0.3, 0.2, 'calm'), 'worried': (-0.4, 0.7, 'worried'),
+            'frustrated': (-0.5, 0.7, 'frustrated'), 'frustrating': (-0.5, 0.7, 'frustrated'),
+            'content': (0.5, 0.3, 'content'), 'terrible': (-0.6, 0.5, 'frustrated')
         }
 
+        explicit_emotion = None
         message_lower = message.lower()
-        for word, (v, a) in emotion_words.items():
+        for word, (v, a, canonical) in emotion_words.items():
             if word in message_lower:
                 valence = (valence + v) / 2
                 arousal = (arousal + a) / 2
                 confidence = 0.8
                 indicators.append(f"explicit: {word}")
+                explicit_emotion = canonical  # Use the canonical emotion name
 
         # Check punctuation intensity
         if '!' in message:
@@ -302,6 +307,9 @@ class TheoryOfMind:
 
         if '...' in message:
             indicators.append("ellipsis (contemplative)")
+
+        # Determine final emotion (prefer explicit if found)
+        emotion = explicit_emotion if explicit_emotion else self._map_to_emotion(valence, arousal)
 
         inference = EmotionalStateInference(
             emotion=emotion,
@@ -410,7 +418,7 @@ class TheoryOfMind:
         # Check if user believes something that might not be true
         for belief in model.beliefs.values():
             if belief_content.lower() in belief.content.lower():
-                return belief.confidence > 0.5
+                return belief.confidence >= 0.5
 
         return False
 

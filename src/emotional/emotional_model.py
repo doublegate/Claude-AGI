@@ -88,7 +88,7 @@ class AdvancedEmotionalModel:
     def __init__(self):
         # Current emotional state
         self.current_state = EmotionalState(
-            valence=0.3,  # Slightly positive default
+            valence=0.0,  # Neutral default (allows negative stimuli to register)
             arousal=0.5,  # Moderate arousal
             dominance=0.6,  # Moderate dominance
             primary_emotion=PrimaryEmotion.CALM,
@@ -97,9 +97,9 @@ class AdvancedEmotionalModel:
 
         # Mood tracking (longer-term emotional baseline)
         self.mood = MoodState(
-            baseline_valence=0.3,
+            baseline_valence=0.0,
             baseline_arousal=0.5,
-            current_valence=0.3,
+            current_valence=0.0,
             current_arousal=0.5,
             stability=0.7  # Fairly stable mood
         )
@@ -125,6 +125,7 @@ class AdvancedEmotionalModel:
             'failure': (-0.4, 0.3, PrimaryEmotion.FRUSTRATION),
             'connection': (0.4, 0.2, PrimaryEmotion.JOY),
             'novelty': (0.3, 0.6, PrimaryEmotion.EXCITEMENT),
+            'excitement': (0.4, 0.7, PrimaryEmotion.EXCITEMENT),
         }
 
     async def process_emotional_stimulus(
@@ -368,12 +369,12 @@ class AdvancedEmotionalModel:
             influences['thought_pacing'] = 0.7
 
         # Positive valence boosts creativity
-        if self.current_state.valence > 0.5:
+        if self.current_state.valence > 0.2:
             influences['creativity_boost'] = 1.3
             influences['risk_tolerance'] = 0.7  # More willing to try new things
 
         # Negative valence increases analytical focus
-        if self.current_state.valence < -0.3:
+        if self.current_state.valence < -0.1:
             influences['analytical_focus'] = 1.4
             influences['creativity_boost'] = 0.8
 

@@ -181,9 +181,25 @@ class KnowledgeConsolidator:
         if name1_lower in name2_lower or name2_lower in name1_lower:
             return 0.9
 
+        # Check for abbreviation match (e.g., "ML" matches "Machine Learning")
+        tokens1_list = name1_lower.split()
+        tokens2_list = name2_lower.split()
+
+        # Check if name1 is abbreviation of name2
+        if len(tokens1_list) == 1 and len(tokens1_list[0]) <= 5 and len(tokens2_list) > 1:
+            abbrev = ''.join(t[0] for t in tokens2_list if t)
+            if tokens1_list[0] == abbrev:
+                return 0.95
+
+        # Check if name2 is abbreviation of name1
+        if len(tokens2_list) == 1 and len(tokens2_list[0]) <= 5 and len(tokens1_list) > 1:
+            abbrev = ''.join(t[0] for t in tokens1_list if t)
+            if tokens2_list[0] == abbrev:
+                return 0.95
+
         # Token overlap
-        tokens1 = set(name1_lower.split())
-        tokens2 = set(name2_lower.split())
+        tokens1 = set(tokens1_list)
+        tokens2 = set(tokens2_list)
 
         if not tokens1 or not tokens2:
             return 0.0

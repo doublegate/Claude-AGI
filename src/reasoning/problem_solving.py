@@ -234,7 +234,7 @@ class ProblemSolvingFramework:
         subproblems = []
 
         # Simple decomposition heuristics
-        if len(problem.description) > 200:
+        if len(problem.description) > 150:
             # Large problem - break into phases
             subproblems.append(Subproblem(
                 subproblem_id=f"{problem.problem_id}_analyze",
@@ -342,9 +342,18 @@ class ProblemSolvingFramework:
         # Strategy-specific solution generation
         if strategy == StrategyType.DECOMPOSITION:
             subproblems = await self.decompose_problem(problem)
-            solution.implementation_steps = [
-                f"Solve: {sp.description}" for sp in subproblems
-            ]
+            if subproblems:
+                solution.implementation_steps = [
+                    f"Solve: {sp.description}" for sp in subproblems
+                ]
+            else:
+                # Generic decomposition steps for simpler problems
+                solution.implementation_steps = [
+                    "Break problem into smaller components",
+                    "Solve each component independently",
+                    "Integrate solutions",
+                    "Verify complete solution"
+                ]
             solution.pros = ["Manageable chunks", "Clear progress tracking"]
             solution.cons = ["May miss holistic insights", "Overhead of coordination"]
 
@@ -459,7 +468,16 @@ class ProblemSolvingFramework:
         Returns:
             Selected solution or None
         """
-        session = await self.start_problem_solving_session(problem)
+        # Check if session already exists for this problem
+        session = None
+        for s in self.active_sessions.values():
+            if s.problem.problem_id == problem.problem_id:
+                session = s
+                break
+
+        # Create new session if none exists
+        if session is None:
+            session = await self.start_problem_solving_session(problem)
 
         best_solution = None
         best_score = 0.0
