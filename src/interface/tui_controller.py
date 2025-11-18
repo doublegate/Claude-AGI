@@ -22,6 +22,9 @@ from ..core.orchestrator import AGIOrchestrator, Message, SystemState
 from ..database.models import EmotionalState, Goal, Interest, StreamType
 from ..memory.manager import MemoryManager
 from .commands import AdvancedCommands
+from .command_registry import CommandRegistry
+from .consciousness_coordinator import ConsciousnessCoordinator
+from .conversation_coordinator import ConversationCoordinator
 from .event_handler import EventHandler
 from .ui_renderer import PaneType, UIRenderer
 
@@ -108,9 +111,14 @@ class TUIController:
         
         # Task management
         self.background_tasks: List[asyncio.Task] = []
-        
+
         # Advanced command processor
         self.advanced_commands = AdvancedCommands()
+
+        # Coordinators (initialized after UI setup)
+        self.consciousness_coordinator: Optional[ConsciousnessCoordinator] = None
+        self.conversation_coordinator: Optional[ConversationCoordinator] = None
+        self.command_registry: Optional[CommandRegistry] = None
     
     def initialize_ui(self, stdscr):
         """Initialize UI components with curses screen"""
@@ -138,10 +146,45 @@ class TUIController:
         logger.info("TUI initialization complete")
     
     def _initialize_agi_components(self):
-        """Initialize AGI components after UI setup"""
-        # These will be set by the main application
-        # This method provides a hook for initialization
-        pass
+        """Initialize AGI components and coordinators after UI setup"""
+        logger.info("Initializing coordinators")
+
+        # Initialize ConsciousnessCoordinator
+        self.consciousness_coordinator = ConsciousnessCoordinator(
+            self.orchestrator,
+            self.add_consciousness_line
+        )
+        self.consciousness_coordinator.set_metrics_callback(self._update_metrics)
+        self.consciousness_coordinator.set_memory_callback(self._store_thought_directly_in_memory)
+
+        # Initialize ConversationCoordinator
+        self.conversation_coordinator = ConversationCoordinator(
+            self.thought_generator,
+            self.orchestrator,
+            self.add_chat_line
+        )
+        self.conversation_coordinator.set_emotional_state(self.current_emotional_state)
+        self.conversation_coordinator.set_ui_update_callback(self._immediate_ui_update)
+
+        # Initialize CommandRegistry
+        self.command_registry = CommandRegistry(
+            self.add_chat_line,
+            self.add_system_line
+        )
+        # Set command handlers
+        self.command_registry.set_handlers(
+            advanced_commands=self.advanced_commands,
+            memory_handler=self.memory_command,
+            consciousness_handler=self.stream_command,
+            emotional_handler=self.emotional_command,
+            goals_handler=self.goals_command,
+            layout_handler=self.layout_command,
+            metrics_handler=self.metrics_command,
+            state_handler=self.state_command,
+            quit_handler=self.quit_command
+        )
+
+        logger.info("Coordinators initialized successfully")
     
     async def run(self):
         """Main controller loop"""
@@ -174,15 +217,16 @@ class TUIController:
     async def _start_background_tasks(self):
         """Start all background tasks"""
         logger.info("Starting background tasks")
-        
+
         # Input handling task
         input_task = asyncio.create_task(self.event_handler.input_loop())
         self.background_tasks.append(input_task)
-        
-        # Consciousness processing task
-        consciousness_task = asyncio.create_task(self._consciousness_loop())
-        self.background_tasks.append(consciousness_task)
-        
+
+        # Consciousness processing task - delegated to coordinator
+        if self.consciousness_coordinator:
+            consciousness_task = asyncio.create_task(self.consciousness_coordinator.run_consciousness_loop())
+            self.background_tasks.append(consciousness_task)
+
         # UI refresh task
         refresh_task = asyncio.create_task(self._ui_refresh_loop())
         self.background_tasks.append(refresh_task)
@@ -496,63 +540,27 @@ class TUIController:
             logger.error(f"Error handling event {event_type}: {e}")
     
     async def route_command(self, command: str, args: List[str]):
-        """Route command to appropriate handler with validation"""
-        # Validate command name
-        if not command or not isinstance(command, str) or len(command) > 50:
-            self.add_system_line("Invalid command format")
-            return
-        
-        # Validate command arguments
-        if not self._validate_command_args(args):
-            self.add_system_line("Invalid command arguments detected")
-            return
-            
-        if command in self.commands:
-            try:
-                await self.commands[command](args)
-            except Exception as e:
-                logger.error(f"Error executing command {command}: {e}")
-                self.add_system_line(f"Error in /{command}: Command execution failed")
+        """Route command to appropriate handler - delegated to CommandRegistry"""
+        if self.command_registry:
+            await self.command_registry.route_command(command, args)
         else:
-            self.add_system_line(f"Unknown command: /{command}")
+            # Fallback to old command routing if registry not initialized
+            if command in self.commands:
+                try:
+                    await self.commands[command](args)
+                except Exception as e:
+                    logger.error(f"Error executing command {command}: {e}")
+                    self.add_system_line(f"Error in /{command}: Command execution failed")
+            else:
+                self.add_system_line(f"Unknown command: /{command}")
     
     async def handle_user_message(self, message: str):
-        """Handle user message input with security validation"""
-        try:
-            # Validate and sanitize input
-            if not self._validate_user_input(message):
-                self.add_chat_line("Invalid input detected. Please try again with different content.")
-                return
-            
-            # Sanitize the message
-            sanitized_message = self._sanitize_input(message)
-            if not sanitized_message:
-                self.add_chat_line("Empty message after sanitization.")
-                return
-            
-            # Add user message to chat
-            self.add_chat_line(f"You: {sanitized_message}")
-            # Force immediate UI refresh for user message (EXACT original behavior)
-            await self._immediate_ui_update()
-            
-            # Add to conversation context
-            self.conversation_history.append({"role": "user", "content": sanitized_message})
-            self.in_conversation = True
-            
-            # Generate response
-            response = await self._generate_response(sanitized_message)
-            
-            # Add response to chat
-            self.add_chat_line(f"Claude: {response}")
-            # Force immediate UI refresh for response (EXACT original behavior)
-            await self._immediate_ui_update()
-            
-            # Add to conversation context
-            self.conversation_history.append({"role": "assistant", "content": response})
-            
-        except Exception as e:
-            logger.error(f"Error handling user message: {e}")
-            self.add_chat_line(f"Error processing message: Unable to handle request safely")
+        """Handle user message input - delegated to ConversationCoordinator"""
+        if self.conversation_coordinator:
+            await self.conversation_coordinator.handle_user_message(message)
+        else:
+            logger.error("ConversationCoordinator not initialized")
+            self.add_chat_line("Error: Conversation handler not available")
     
     async def _generate_response(self, user_input: str) -> str:
         """Generate response to user input with system information preprocessing"""
@@ -1430,7 +1438,16 @@ class TUIController:
             
         except Exception as e:
             logger.error(f"Error in immediate UI update: {e}")
-    
+
+    async def _update_metrics(self, metric_name: str, increment: int = 1):
+        """Update performance metrics - helper for coordinators"""
+        if metric_name in self.metrics:
+            self.metrics[metric_name] += increment
+        elif metric_name == 'thoughts_generated':
+            self.metrics['thoughts_generated'] = self.metrics.get('thoughts_generated', 0) + increment
+        elif metric_name == 'memories_stored':
+            self.metrics['memories_stored'] = self.metrics.get('memories_stored', 0) + increment
+
     async def _handle_terminal_resize(self, width: int, height: int):
         """Handle terminal resize event (EXACT original behavior)"""
         try:
