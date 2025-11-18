@@ -48,44 +48,46 @@ class KnowledgeExtractor:
 
     def _build_concept_patterns(self) -> Dict[str, List[str]]:
         """Build regex patterns for concept extraction"""
+        # Use [\w\s]+ to match multi-word concepts
         return {
             'definition': [
-                r'(\w+) is (?:a |an )?(\w+)',
-                r'(\w+) refers to (\w+)',
-                r'(\w+) means (\w+)',
+                r'([\w\s]+?) is (?:a |an )?([\w\s]+?)(?:\.|,|;|$)',
+                r'([\w\s]+?) refers to ([\w\s]+?)(?:\.|,|;|$)',
+                r'([\w\s]+?) means ([\w\s]+?)(?:\.|,|;|$)',
             ],
             'property': [
-                r'(\w+) (?:has|have) (\w+)',
-                r'(\w+) (?:is|are) (\w+)',
+                r'([\w\s]+?) (?:has|have) ([\w\s]+?)(?:\.|,|;|$)',
+                r'([\w\s]+?) (?:is|are) ([\w\s]+?)(?:\.|,|;|$)',
             ],
             'action': [
-                r'(\w+) (?:can|could|may) (\w+)',
-                r'(\w+) (?:does|do) (\w+)',
+                r'([\w\s]+?) (?:can|could|may) ([\w\s]+?)(?:\.|,|;|$)',
+                r'([\w\s]+?) (?:does|do) ([\w\s]+?)(?:\.|,|;|$)',
             ]
         }
 
     def _build_relationship_patterns(self) -> Dict[str, List[str]]:
         """Build regex patterns for relationship extraction"""
+        # Use [\w\s]+ to match multi-word concepts
         return {
             'causes': [
-                r'(\w+) causes (\w+)',
-                r'(\w+) leads to (\w+)',
-                r'(\w+) results in (\w+)',
+                r'([\w\s]+?) causes ([\w\s]+?)(?:\.|,|;|$)',
+                r'([\w\s]+?) leads to ([\w\s]+?)(?:\.|,|;|$)',
+                r'([\w\s]+?) results in ([\w\s]+?)(?:\.|,|;|$)',
             ],
             'part_of': [
-                r'(\w+) is part of (\w+)',
-                r'(\w+) belongs to (\w+)',
-                r'(\w+) is (?:a |an )?component of (\w+)',
+                r'([\w\s]+?) (?:is|are) (?:a |an )?(?:subset|part) of ([\w\s]+?)(?:\.|,|;|$)',
+                r'([\w\s]+?) (?:belongs|belong) to ([\w\s]+?)(?:\.|,|;|$)',
+                r'([\w\s]+?) (?:is|are) (?:a |an )?component of ([\w\s]+?)(?:\.|,|;|$)',
             ],
             'requires': [
-                r'(\w+) requires (\w+)',
-                r'(\w+) needs (\w+)',
-                r'(\w+) depends on (\w+)',
+                r'([\w\s]+?) requires ([\w\s]+?)(?:\.|,|;|$)',
+                r'([\w\s]+?) needs ([\w\s]+?)(?:\.|,|;|$)',
+                r'([\w\s]+?) depends on ([\w\s]+?)(?:\.|,|;|$)',
             ],
             'similar_to': [
-                r'(\w+) is similar to (\w+)',
-                r'(\w+) is like (\w+)',
-                r'(\w+) resembles (\w+)',
+                r'([\w\s]+?) is similar to ([\w\s]+?)(?:\.|,|;|$)',
+                r'([\w\s]+?) is like ([\w\s]+?)(?:\.|,|;|$)',
+                r'([\w\s]+?) resembles ([\w\s]+?)(?:\.|,|;|$)',
             ]
         }
 
@@ -108,13 +110,13 @@ class KnowledgeExtractor:
                 matches = re.finditer(pattern, text, re.IGNORECASE)
                 for match in matches:
                     if len(match.groups()) >= 2:
-                        name = match.group(1)
-                        value = match.group(2)
+                        name = match.group(1).strip()
+                        value = match.group(2).strip()
 
                         concepts.append(ExtractedConcept(
                             name=name,
                             concept_type=concept_type,
-                            context=match.group(0),
+                            context=match.group(0).strip(),
                             confidence=0.7,  # Pattern-based confidence
                             properties={'value': value}
                         ))
@@ -188,8 +190,8 @@ Format as JSON array: [{{"name": "...", "type": "...", "description": "..."}}]""
                 matches = re.finditer(pattern, text, re.IGNORECASE)
                 for match in matches:
                     if len(match.groups()) >= 2:
-                        source = match.group(1)
-                        target = match.group(2)
+                        source = match.group(1).strip()
+                        target = match.group(2).strip()
 
                         # Filter by known concepts if provided
                         if known_concepts:
@@ -202,7 +204,7 @@ Format as JSON array: [{{"name": "...", "type": "...", "description": "..."}}]""
                             source=source,
                             target=target,
                             relation_type=relation_type,
-                            context=match.group(0),
+                            context=match.group(0).strip(),
                             confidence=0.7
                         ))
 
@@ -361,14 +363,33 @@ class LearningPathGenerator:
                 # Convert IDs to names
                 return [self.knowledge_graph.concepts[cid].name for cid in path]
 
-            # Explore neighbors (outgoing edges)
+            # Import RelationType for comparison
+            from .knowledge_graph import RelationType
+
+            # For learning paths, we want to find what we can learn next
+            # So we follow incoming edges for REQUIRES (what requires the current concept)
+            # and outgoing edges for PART_OF/IS_A (what is part of or a type of current concept)
+
+            # Follow incoming REQUIRES edges (what requires this concept)
+            for edge_id in self.knowledge_graph.incoming_edges.get(current_id, []):
+                relationship = self.knowledge_graph.relationships.get(edge_id)
+                if not relationship:
+                    continue
+
+                if relationship.relation_type == RelationType.REQUIRES:
+                    next_id = relationship.source_id  # Go to what requires this
+
+                    if next_id not in visited:
+                        visited.add(next_id)
+                        queue.append((next_id, path + [next_id]))
+
+            # Also follow outgoing PART_OF and IS_A edges
             for edge_id in self.knowledge_graph.outgoing_edges.get(current_id, []):
                 relationship = self.knowledge_graph.relationships.get(edge_id)
                 if not relationship:
                     continue
 
-                # Prefer prerequisite/foundational relationships
-                if relationship.relation_type in ['REQUIRES', 'PART_OF', 'IS_A']:
+                if relationship.relation_type in [RelationType.PART_OF, RelationType.IS_A]:
                     next_id = relationship.target_id
 
                     if next_id not in visited:
