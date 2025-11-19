@@ -32,25 +32,26 @@ class TestMemoryPerformanceBenchmarks:
         manager = MemoryManager()
         await manager.initialize(use_database=False)
         yield manager
-        await manager.close()
+        # Cleanup - manager_refactored doesn't need explicit close for in-memory mode
+        try:
+            if hasattr(manager, 'close'):
+                await manager.close()
+        except AttributeError:
+            pass  # No cleanup needed for in-memory mode
 
     @pytest.mark.asyncio
-    async def test_memory_store_throughput(self, memory_manager, benchmark):
+    async def test_memory_store_throughput(self, memory_manager):
         """Benchmark: Memory storage throughput (operations per second)"""
 
-        async def store_thoughts():
-            """Store 100 thoughts"""
-            for i in range(100):
-                await memory_manager.store_thought({
-                    'content': f'Benchmark thought {i}',
-                    'stream': 'primary',
-                    'timestamp': datetime.now().isoformat(),
-                    'importance': 5
-                })
-
-        # Measure time
+        # Store 100 thoughts and measure time
         start_time = time.perf_counter()
-        await store_thoughts()
+        for i in range(100):
+            await memory_manager.store_thought({
+                'content': f'Benchmark thought {i}',
+                'stream': 'primary',
+                'timestamp': datetime.now().isoformat(),
+                'importance': 5
+            })
         end_time = time.perf_counter()
 
         duration = end_time - start_time
@@ -59,8 +60,8 @@ class TestMemoryPerformanceBenchmarks:
         # Requirement: >100 ops/sec for memory storage
         assert throughput > 100, f"Memory storage throughput {throughput:.2f} ops/s < 100 ops/s"
 
-        print(f"\nMemory Store Throughput: {throughput:.2f} ops/s")
-        print(f"Time for 100 operations: {duration:.3f}s")
+        print(f"\n✓ Memory Store Throughput: {throughput:.2f} ops/s (target: >100 ops/s)")
+        print(f"  Time for 100 operations: {duration:.3f}s")
 
     @pytest.mark.asyncio
     async def test_memory_recall_performance(self, memory_manager):

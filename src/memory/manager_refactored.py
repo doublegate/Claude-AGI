@@ -26,7 +26,6 @@ except ImportError:
     DatabaseManager = None
 
 from .episodic_memory_store import EpisodicMemoryStore
-from .memory_coordinator import MemoryCoordinator
 from .semantic_index import SemanticIndex
 from .working_memory_store import WorkingMemoryStore
 
@@ -41,7 +40,6 @@ class MemoryManager:
     - WorkingMemoryStore: Redis and short-term storage
     - EpisodicMemoryStore: PostgreSQL and long-term storage
     - SemanticIndex: FAISS and similarity search
-    - MemoryCoordinator: High-level operations
 
     Maintains backwards compatibility with original MemoryManager API.
     """
@@ -56,7 +54,6 @@ class MemoryManager:
         self.working_memory: Optional[WorkingMemoryStore] = None
         self.episodic_memory: Optional[EpisodicMemoryStore] = None
         self.semantic_index: Optional[SemanticIndex] = None
-        self.coordinator: Optional[MemoryCoordinator] = None
 
         # Message queue for service integration (backwards compatibility)
         self.message_queue = asyncio.Queue()
@@ -105,13 +102,6 @@ class MemoryManager:
         # Initialize semantic index
         await self.semantic_index.initialize()
 
-        # Create coordinator
-        self.coordinator = MemoryCoordinator(
-            self.working_memory,
-            self.episodic_memory,
-            self.semantic_index
-        )
-
         logger.info("Refactored memory manager initialized successfully")
         logger.info(f"  - Working memory: {'Redis' if self.use_database else 'In-memory'}")
         logger.info(f"  - Episodic memory: {'PostgreSQL' if self.use_database else 'In-memory'}")
@@ -122,133 +112,157 @@ class MemoryManager:
     # ==========================
 
     async def store_thought(self, thought: Dict[str, Any]) -> str:
-        """Store a thought (delegates to coordinator)"""
-        if not self.coordinator:
+        """Store a thought (delegates to working memory)"""
+        if not self.working_memory:
             raise RuntimeError("MemoryManager not initialized")
-        return await self.coordinator.store_thought(thought)
+        return await self.working_memory.store_thought(thought)
 
     async def recall_recent(self, n: int = 10) -> List[Dict]:
-        """Recall recent thoughts (delegates to coordinator)"""
-        if not self.coordinator:
+        """Recall recent thoughts (delegates to working memory)"""
+        if not self.working_memory:
             raise RuntimeError("MemoryManager not initialized")
-        return await self.coordinator.recall_recent(n, include_episodic=False)
+        return await self.working_memory.recall_recent(n)
 
     async def recall_by_id(self, thought_id: str) -> Optional[Dict]:
-        """Recall specific thought by ID (delegates to coordinator)"""
-        if not self.coordinator:
+        """Recall specific thought by ID (delegates to working memory)"""
+        if not self.working_memory:
             raise RuntimeError("MemoryManager not initialized")
-        return await self.coordinator.recall_by_id(thought_id)
+        return await self.working_memory.recall_by_id(thought_id)
 
     async def recall_similar(self, query: str, k: int = 5) -> List[Dict]:
-        """Recall similar memories (delegates to coordinator)"""
-        if not self.coordinator:
+        """Recall similar memories (delegates to semantic index)"""
+        if not self.semantic_index:
             raise RuntimeError("MemoryManager not initialized")
-        return await self.coordinator.recall_similar(query, k, threshold=0.5)
+        results = await self.semantic_index.search(query, k)
+        # Convert results to memory format
+        memories = []
+        for thought_id, score in results:
+            memory = await self.working_memory.recall_by_id(thought_id)
+            if memory:
+                memory['similarity_score'] = score
+                memories.append(memory)
+        return memories
 
-    async def consolidate_memories(self):
-        """Consolidate working memory to long-term (delegates to coordinator)"""
-        if not self.coordinator:
+    async def consolidate_memories(self, min_importance: float = 0.5):
+        """Consolidate working memory to episodic (basic implementation)"""
+        if not self.working_memory or not self.episodic_memory:
             raise RuntimeError("MemoryManager not initialized")
-        await self.coordinator.consolidate_memories(min_importance=0.5)
 
-    async def identify_important_memories(self, thoughts: List[Dict]) -> List[Dict]:
-        """Identify important memories (simple filtering)"""
-        return [t for t in thoughts if t.get('importance', 0) >= 7]
+        # Get recent thoughts
+        recent = await self.working_memory.recall_recent(n=100)
+
+        # Move important thoughts to episodic memory
+        for thought in recent:
+            importance = thought.get('importance', 0)
+            if importance >= min_importance * 10:  # Scale to 0-10
+                await self.episodic_memory.store_memory(thought)
 
     async def create_associations(self, thoughts: List[Dict]):
-        """Create associations between thoughts (delegates to coordinator)"""
-        if not self.coordinator:
-            raise RuntimeError("MemoryManager not initialized")
-        await self.coordinator.create_associations(thoughts)
+        """Create associations between thoughts (placeholder)"""
+        # Future implementation could use semantic index to link related thoughts
+        logger.info(f"Creating associations for {len(thoughts)} thoughts")
 
-    async def prune_memories(self):
-        """Prune old memories (delegates to coordinator)"""
-        if not self.coordinator:
+    async def prune_memories(self, days_old: int = 90, min_importance: float = 0.3):
+        """Prune old memories (delegates to episodic memory)"""
+        if not self.episodic_memory:
             raise RuntimeError("MemoryManager not initialized")
-        await self.coordinator.prune_memories(days_old=90, min_importance=0.3)
+        await self.episodic_memory.prune_old_memories(days_old, min_importance)
 
     async def update_context(self, key: str, value: Any):
-        """Update active context (delegates to coordinator)"""
-        if not self.coordinator:
+        """Update context (delegates to working memory)"""
+        if not self.working_memory:
             raise RuntimeError("MemoryManager not initialized")
-        await self.coordinator.update_context(key, value)
+        await self.working_memory.update_context(key, value)
 
     async def get_context(self, key: str) -> Any:
-        """Get context value (delegates to coordinator)"""
-        if not self.coordinator:
+        """Get context value (delegates to working memory)"""
+        if not self.working_memory:
             raise RuntimeError("MemoryManager not initialized")
-        return await self.coordinator.get_context(key)
+        return await self.working_memory.get_context(key)
 
     async def clear_working_memory(self):
-        """Clear working memory (delegates to coordinator)"""
-        if not self.coordinator:
+        """Clear working memory (delegates to working memory store)"""
+        if not self.working_memory:
             raise RuntimeError("MemoryManager not initialized")
-        await self.coordinator.clear_working_memory()
+        await self.working_memory.clear()
 
     async def get_statistics(self) -> Dict[str, Any]:
-        """Get memory statistics (delegates to coordinator)"""
-        if not self.coordinator:
-            raise RuntimeError("MemoryManager not initialized")
-        return await self.coordinator.get_statistics()
+        """Get memory statistics (aggregates from all stores)"""
+        stats = {}
 
-    async def handle_message(self, message):
-        """Handle messages from other services (delegates to coordinator)"""
-        if not self.coordinator:
-            raise RuntimeError("MemoryManager not initialized")
-        return await self.coordinator.handle_message(message)
+        if self.working_memory:
+            recent = await self.working_memory.recall_recent(n=10000)
+            stats['working_memory'] = {
+                'thought_count': len(recent),
+                'storage_type': 'Redis' if self.use_database else 'In-memory'
+            }
+
+        if self.episodic_memory:
+            episodic_recent = await self.episodic_memory.recall_recent(n=10000)
+            stats['episodic_memory'] = {
+                'memory_count': len(episodic_recent),
+                'storage_type': 'PostgreSQL' if self.use_database else 'In-memory'
+            }
+
+        if self.semantic_index:
+            index_stats = await self.semantic_index.get_statistics()
+            stats['semantic_index'] = index_stats
+
+        stats['total_thoughts'] = stats.get('working_memory', {}).get('thought_count', 0)
+
+        return stats
+
+    async def handle_message(self, message: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle service message (backwards compatibility)"""
+        # Basic message handling - store thoughts from messages
+        if message.get('type') == 'store_thought':
+            thought_id = await self.store_thought(message.get('thought', {}))
+            return {'status': 'success', 'thought_id': thought_id}
+
+        return {'status': 'unknown_message_type'}
 
     async def close(self):
-        """Clean up resources (delegates to coordinator)"""
-        if self.coordinator:
-            await self.coordinator.close()
+        """Clean up resources"""
+        # No cleanup needed for in-memory stores
+        # Database connections are managed externally
+        logger.info("Memory manager closed")
 
     # ==========================
-    # Utility Methods (for backwards compatibility)
-    # ==========================
-
-    def _get_emotional_intensity(self, thought: Dict) -> float:
-        """Get emotional intensity from thought"""
-        emotional_tone = thought.get('emotional_tone', 'neutral')
-
-        intensity_map = {
-            'joy': 0.8,
-            'contentment': 0.4,
-            'neutral': 0.0,
-            'concern': 0.5,
-            'anxiety': 0.7,
-            'sadness': 0.6
-        }
-
-        return intensity_map.get(emotional_tone, 0.0)
-
-    def _get_emotional_valence(self, thought: Dict) -> float:
-        """Get emotional valence from thought"""
-        return self.coordinator._get_emotional_valence(thought) if self.coordinator else 0.0
-
-    # ==========================
-    # Additional helper methods for TUI compatibility
-    # ==========================
-
-    async def get_recent_memories(self, limit: int = 10) -> List[Dict]:
-        """Get recent memories (alias for recall_recent)"""
-        return await self.recall_recent(limit)
-
-    # ==========================
-    # Component Access (for advanced use)
+    # Component Access (for testing and advanced usage)
     # ==========================
 
     def get_working_memory(self) -> Optional[WorkingMemoryStore]:
-        """Get working memory component"""
+        """Get working memory store"""
         return self.working_memory
 
     def get_episodic_memory(self) -> Optional[EpisodicMemoryStore]:
-        """Get episodic memory component"""
+        """Get episodic memory store"""
         return self.episodic_memory
 
     def get_semantic_index(self) -> Optional[SemanticIndex]:
-        """Get semantic index component"""
+        """Get semantic index"""
         return self.semantic_index
 
-    def get_coordinator(self) -> Optional[MemoryCoordinator]:
-        """Get memory coordinator"""
-        return self.coordinator
+    def get_coordinator(self):
+        """Get coordinator (returns self for backwards compatibility)"""
+        return self
+
+    # ==========================
+    # Helper Methods (backwards compatibility)
+    # ==========================
+
+    def _get_emotional_valence(self, thought: Dict) -> float:
+        """Get emotional valence of thought (placeholder)"""
+        return thought.get('emotional_valence', 0.0)
+
+    # ==========================
+    # Service Interface (MessageHandler compatibility)
+    # ==========================
+
+    async def send_message(self, message: Dict[str, Any]):
+        """Send message (service interface)"""
+        await self.message_queue.put(message)
+
+    async def receive_message(self) -> Dict[str, Any]:
+        """Receive message (service interface)"""
+        return await self.message_queue.get()
