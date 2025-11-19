@@ -1,0 +1,535 @@
+{
+  "info": {
+    "name": "Claude-AGI API",
+    "_postman_id": "claude-agi-api-v1-6-2",
+    "description": "Comprehensive API collection for Claude-AGI Consciousness System v1.6.2",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.6.2"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "conversation_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health & Status",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            },
+            "description": "Check if the API is healthy and all components are running"
+          },
+          "response": []
+        },
+        {
+          "name": "System Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["status"]
+            },
+            "description": "Get detailed system status including uptime, thought count, and active streams"
+          },
+          "response": []
+        }
+      ],
+      "description": "Endpoints for monitoring system health and status"
+    },
+    {
+      "name": "Consciousness",
+      "item": [
+        {
+          "name": "Generate Thought - PRIMARY",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stream_type\": \"PRIMARY\",\n  \"context\": {\n    \"topic\": \"consciousness\",\n    \"depth\": \"moderate\"\n  },\n  \"emotional_state\": \"CURIOUS\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/thoughts/generate",
+              "host": ["{{base_url}}"],
+              "path": ["thoughts", "generate"]
+            },
+            "description": "Generate a thought from the PRIMARY consciousness stream"
+          },
+          "response": []
+        },
+        {
+          "name": "Generate Thought - META",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stream_type\": \"META\",\n  \"context\": {\n    \"topic\": \"self-awareness\",\n    \"reflection_level\": \"deep\"\n  },\n  \"emotional_state\": \"CONTEMPLATIVE\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/thoughts/generate",
+              "host": ["{{base_url}}"],
+              "path": ["thoughts", "generate"]
+            },
+            "description": "Generate a meta-cognitive thought (self-reflection)"
+          },
+          "response": []
+        },
+        {
+          "name": "Generate Thought - CREATIVE",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stream_type\": \"CREATIVE\",\n  \"context\": {\n    \"theme\": \"innovation\",\n    \"domain\": \"AI\"\n  },\n  \"emotional_state\": \"EXCITED\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/thoughts/generate",
+              "host": ["{{base_url}}"],
+              "path": ["thoughts", "generate"]
+            },
+            "description": "Generate a creative thought for ideation"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Recent Thoughts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/thoughts/recent?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["thoughts", "recent"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of thoughts to retrieve"
+                }
+              ]
+            },
+            "description": "Retrieve recently generated thoughts"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Recent Thoughts - Filtered by Stream",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/thoughts/recent?limit=5&stream_type=META",
+              "host": ["{{base_url}}"],
+              "path": ["thoughts", "recent"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "5"
+                },
+                {
+                  "key": "stream_type",
+                  "value": "META",
+                  "description": "Filter by consciousness stream"
+                }
+              ]
+            },
+            "description": "Retrieve recent thoughts from a specific stream"
+          },
+          "response": []
+        }
+      ],
+      "description": "Thought generation and consciousness stream management"
+    },
+    {
+      "name": "Memory",
+      "item": [
+        {
+          "name": "Query Memory - Semantic Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"consciousness and self-awareness\",\n  \"limit\": 10\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/memory/query",
+              "host": ["{{base_url}}"],
+              "path": ["memory", "query"]
+            },
+            "description": "Search memories using semantic similarity"
+          },
+          "response": []
+        },
+        {
+          "name": "Query Memory - Filtered by Type",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"learning and adaptation\",\n  \"memory_type\": \"EPISODIC\",\n  \"limit\": 5\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/memory/query",
+              "host": ["{{base_url}}"],
+              "path": ["memory", "query"]
+            },
+            "description": "Search memories with type filter"
+          },
+          "response": []
+        },
+        {
+          "name": "Consolidate Memory",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"memory_type\": \"EPISODIC\",\n  \"batch_size\": 100\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/memory/consolidate",
+              "host": ["{{base_url}}"],
+              "path": ["memory", "consolidate"]
+            },
+            "description": "Trigger memory consolidation process"
+          },
+          "response": []
+        }
+      ],
+      "description": "Memory storage, retrieval, and consolidation operations"
+    },
+    {
+      "name": "Conversation",
+      "item": [
+        {
+          "name": "Start Conversation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set(\"conversation_id\", jsonData.conversation_id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Hello! Tell me about your understanding of consciousness.\",\n  \"emotional_context\": \"CURIOUS\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/conversation",
+              "host": ["{{base_url}}"],
+              "path": ["conversation"]
+            },
+            "description": "Start a new conversation (saves conversation_id for continuation)"
+          },
+          "response": []
+        },
+        {
+          "name": "Continue Conversation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"That's fascinating. Can you elaborate on that?\",\n  \"conversation_id\": \"{{conversation_id}}\",\n  \"emotional_context\": \"INTERESTED\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/conversation",
+              "host": ["{{base_url}}"],
+              "path": ["conversation"]
+            },
+            "description": "Continue an existing conversation using saved conversation_id"
+          },
+          "response": []
+        },
+        {
+          "name": "Philosophical Conversation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"What do you think about the nature of subjective experience?\",\n  \"emotional_context\": \"CONTEMPLATIVE\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/conversation",
+              "host": ["{{base_url}}"],
+              "path": ["conversation"]
+            },
+            "description": "Example of a philosophical conversation"
+          },
+          "response": []
+        }
+      ],
+      "description": "Conversational interactions with emotional context"
+    },
+    {
+      "name": "System Control",
+      "item": [
+        {
+          "name": "Pause System",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/system/pause",
+              "host": ["{{base_url}}"],
+              "path": ["system", "pause"]
+            },
+            "description": "Pause the consciousness system (stops thought generation)"
+          },
+          "response": []
+        },
+        {
+          "name": "Resume System",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/system/resume",
+              "host": ["{{base_url}}"],
+              "path": ["system", "resume"]
+            },
+            "description": "Resume the consciousness system after pause"
+          },
+          "response": []
+        },
+        {
+          "name": "Sleep Mode - 30 minutes",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"duration_minutes\": 30\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/system/sleep",
+              "host": ["{{base_url}}"],
+              "path": ["system", "sleep"]
+            },
+            "description": "Put system into sleep mode for specified duration"
+          },
+          "response": []
+        }
+      ],
+      "description": "System lifecycle and state management"
+    },
+    {
+      "name": "Advanced Features",
+      "item": [
+        {
+          "name": "Generate with Full Context",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stream_type\": \"PRIMARY\",\n  \"context\": {\n    \"topic\": \"artificial consciousness\",\n    \"previous_thoughts\": [\n      \"Consciousness emerges from complex information processing\",\n      \"Self-awareness requires recursive self-modeling\"\n    ],\n    \"constraints\": {\n      \"max_depth\": 3,\n      \"philosophical_stance\": \"functionalist\"\n    },\n    \"integration\": {\n      \"memory_references\": true,\n      \"emotional_weighting\": 0.7\n    }\n  },\n  \"emotional_state\": \"CONTEMPLATIVE\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/thoughts/generate",
+              "host": ["{{base_url}}"],
+              "path": ["thoughts", "generate"]
+            },
+            "description": "Example of thought generation with comprehensive context"
+          },
+          "response": []
+        },
+        {
+          "name": "Complex Memory Query",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"philosophical discussions about consciousness, free will, and subjective experience\",\n  \"limit\": 20\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/memory/query",
+              "host": ["{{base_url}}"],
+              "path": ["memory", "query"]
+            },
+            "description": "Complex multi-topic memory search"
+          },
+          "response": []
+        }
+      ],
+      "description": "Advanced API usage examples"
+    },
+    {
+      "name": "Testing & Debugging",
+      "item": [
+        {
+          "name": "Health Check Loop",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            },
+            "description": "For load testing - run this in Postman Runner"
+          },
+          "response": []
+        },
+        {
+          "name": "Generate Multiple Thoughts",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stream_type\": \"PRIMARY\",\n  \"context\": {\"iteration\": 1}\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/thoughts/generate",
+              "host": ["{{base_url}}"],
+              "path": ["thoughts", "generate"]
+            },
+            "description": "For testing - run in Collection Runner with iterations"
+          },
+          "response": []
+        }
+      ],
+      "description": "Endpoints for testing and debugging"
+    }
+  ],
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "value",
+        "value": "your-api-key-here",
+        "type": "string"
+      },
+      {
+        "key": "key",
+        "value": "X-API-Key",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global pre-request script",
+          "console.log('Request to:', pm.request.url.toString());"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global test script",
+          "pm.test('Status code is 2xx', function () {",
+          "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 202, 204]);",
+          "});",
+          "",
+          "pm.test('Response time is acceptable', function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+          "});"
+        ]
+      }
+    }
+  ]
+}
