@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Creative Workshop - Claude-AGI Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        select, input[type="text"], input[type="range"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        select:focus, input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        input[type="range"] {
+            padding: 5px;
+        }
+
+        .range-value {
+            display: inline-block;
+            margin-left: 10px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.3s;
+            width: 100%;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .result h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .result p {
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+
+        .result .label {
+            font-weight: bold;
+            color: #555;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-card .number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-card .label {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .concept-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .concept-item {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 3px solid #667eea;
+        }
+
+        .concept-item .name {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .concept-item .domain {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 3px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 Creative Workshop</h1>
+            <p>Explore AI-Powered Creative Synthesis</p>
+        </div>
+
+        <div class="main-grid">
+            <!-- Concept Blending -->
+            <div class="card">
+                <h2>🔮 Concept Blending</h2>
+                <div class="input-group">
+                    <label>First Concept:</label>
+                    <select id="blend-concept1">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Second Concept:</label>
+                    <select id="blend-concept2">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Blend Ratio: <span class="range-value" id="blend-ratio-value">0.5</span></label>
+                    <input type="range" id="blend-ratio" min="0" max="1" step="0.1" value="0.5">
+                </div>
+                <button onclick="blendConcepts()">Blend Concepts</button>
+                <div id="blend-result" class="result"></div>
+                <div id="blend-error" class="error"></div>
+            </div>
+
+            <!-- Cross-Domain Analogies -->
+            <div class="card">
+                <h2>🌉 Cross-Domain Analogies</h2>
+                <div class="input-group">
+                    <label>Source Concept:</label>
+                    <select id="analogy-source">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Target Domain:</label>
+                    <select id="analogy-domain">
+                        <option value="physics">Physics</option>
+                        <option value="biology">Biology</option>
+                        <option value="AI">AI</option>
+                        <option value="music">Music</option>
+                        <option value="art">Art</option>
+                        <option value="philosophy">Philosophy</option>
+                        <option value="technology">Technology</option>
+                        <option value="economics">Economics</option>
+                    </select>
+                </div>
+                <button onclick="findAnalogy()">Find Analogy</button>
+                <div id="analogy-result" class="result"></div>
+                <div id="analogy-error" class="error"></div>
+            </div>
+
+            <!-- Creative Idea Generation -->
+            <div class="card">
+                <h2>💡 Creative Ideas</h2>
+                <div class="input-group">
+                    <label>Theme:</label>
+                    <input type="text" id="idea-theme" placeholder="e.g., artificial intelligence, creativity, future">
+                </div>
+                <div class="input-group">
+                    <label>Number of Ideas: <span class="range-value" id="idea-count-value">5</span></label>
+                    <input type="range" id="idea-count" min="1" max="10" step="1" value="5">
+                </div>
+                <button onclick="generateIdeas()">Generate Ideas</button>
+                <div id="ideas-result" class="result"></div>
+                <div id="ideas-error" class="error"></div>
+            </div>
+
+            <!-- Pattern Abstraction -->
+            <div class="card">
+                <h2>🔍 Pattern Abstraction</h2>
+                <div class="input-group">
+                    <label>Select Concepts (hold Ctrl/Cmd for multiple):</label>
+                    <select id="pattern-concepts" multiple size="5">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+                <button onclick="abstractPattern()">Abstract Pattern</button>
+                <div id="pattern-result" class="result"></div>
+                <div id="pattern-error" class="error"></div>
+            </div>
+        </div>
+
+        <!-- Concept Browser -->
+        <div class="card">
+            <h2>📚 Available Concepts</h2>
+            <div id="concepts-list" class="concept-list">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading concepts...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Dashboard -->
+        <div class="card">
+            <h2>📊 Statistics</h2>
+            <div id="stats-grid" class="stats-grid">
+                <div class="stat-card">
+                    <div class="number">-</div>
+                    <div class="label">Total Concepts</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number">-</div>
+                    <div class="label">Domains</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number">-</div>
+                    <div class="label">Syntheses Created</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number">-</div>
+                    <div class="label">Analogies Found</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let concepts = [];
+
+        // Load concepts on page load
+        async function loadConcepts() {
+            try {
+                const response = await fetch('/api/concepts');
+                const data = await response.json();
+                concepts = data.concepts;
+                populateConceptSelects();
+                displayConcepts();
+                loadStats();
+            } catch (error) {
+                console.error('Error loading concepts:', error);
+            }
+        }
+
+        function populateConceptSelects() {
+            const selects = [
+                'blend-concept1', 'blend-concept2',
+                'analogy-source', 'pattern-concepts'
+            ];
+
+            selects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                select.innerHTML = concepts.map(c =>
+                    `<option value="${c.id}">${c.name} (${c.domain})</option>`
+                ).join('');
+            });
+        }
+
+        function displayConcepts() {
+            const container = document.getElementById('concepts-list');
+            container.innerHTML = concepts.map(c => `
+                <div class="concept-item">
+                    <div class="name">${c.name}</div>
+                    <div class="domain">${c.domain}</div>
+                </div>
+            `).join('');
+        }
+
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const stats = await response.json();
+
+                const statCards = document.querySelectorAll('.stat-card .number');
+                statCards[0].textContent = stats.total_concepts || concepts.length;
+                statCards[1].textContent = stats.total_domains || new Set(concepts.map(c => c.domain)).size;
+                statCards[2].textContent = stats.total_syntheses || 0;
+                statCards[3].textContent = stats.total_analogies || 0;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Update range displays
+        document.getElementById('blend-ratio').addEventListener('input', (e) => {
+            document.getElementById('blend-ratio-value').textContent = e.target.value;
+        });
+
+        document.getElementById('idea-count').addEventListener('input', (e) => {
+            document.getElementById('idea-count-value').textContent = e.target.value;
+        });
+
+        async function blendConcepts() {
+            const concept1 = document.getElementById('blend-concept1').value;
+            const concept2 = document.getElementById('blend-concept2').value;
+            const ratio = parseFloat(document.getElementById('blend-ratio').value);
+
+            const resultDiv = document.getElementById('blend-result');
+            const errorDiv = document.getElementById('blend-error');
+
+            if (!concept1 || !concept2) {
+                showError(errorDiv, 'Please select two concepts');
+                return;
+            }
+
+            try {
+                showLoading(resultDiv);
+                const response = await fetch('/api/blend', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({concept1, concept2, ratio})
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <h3>${data.synthesis.name}</h3>
+                        <p>${data.synthesis.description}</p>
+                        <p><span class="label">Strategy:</span> ${data.synthesis.strategy}</p>
+                        <p><span class="label">Novelty:</span> ${data.synthesis.novelty}</p>
+                        <p><span class="label">Confidence:</span> ${(data.synthesis.confidence * 100).toFixed(0)}%</p>
+                    `;
+                    resultDiv.classList.add('show');
+                    errorDiv.classList.remove('show');
+                    loadStats();
+                } else {
+                    showError(errorDiv, data.error || 'Failed to blend concepts');
+                    resultDiv.classList.remove('show');
+                }
+            } catch (error) {
+                showError(errorDiv, 'Error: ' + error.message);
+                resultDiv.classList.remove('show');
+            }
+        }
+
+        async function findAnalogy() {
+            const source = document.getElementById('analogy-source').value;
+            const targetDomain = document.getElementById('analogy-domain').value;
+
+            const resultDiv = document.getElementById('analogy-result');
+            const errorDiv = document.getElementById('analogy-error');
+
+            if (!source) {
+                showError(errorDiv, 'Please select a source concept');
+                return;
+            }
+
+            try {
+                showLoading(resultDiv);
+                const response = await fetch('/api/analogy', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({source, target_domain: targetDomain})
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <h3>Analogy Found!</h3>
+                        <p><span class="label">Source:</span> ${data.analogy.source_concept} (${data.analogy.source_domain})</p>
+                        <p><span class="label">Target:</span> ${data.analogy.target_concept} (${data.analogy.target_domain})</p>
+                        <p><span class="label">Strength:</span> ${(data.analogy.strength * 100).toFixed(0)}%</p>
+                        <p>${data.analogy.explanation}</p>
+                    `;
+                    resultDiv.classList.add('show');
+                    errorDiv.classList.remove('show');
+                    loadStats();
+                } else {
+                    showError(errorDiv, data.error || 'No analogy found');
+                    resultDiv.classList.remove('show');
+                }
+            } catch (error) {
+                showError(errorDiv, 'Error: ' + error.message);
+                resultDiv.classList.remove('show');
+            }
+        }
+
+        async function generateIdeas() {
+            const theme = document.getElementById('idea-theme').value;
+            const numIdeas = parseInt(document.getElementById('idea-count').value);
+
+            const resultDiv = document.getElementById('ideas-result');
+            const errorDiv = document.getElementById('ideas-error');
+
+            if (!theme) {
+                showError(errorDiv, 'Please enter a theme');
+                return;
+            }
+
+            try {
+                showLoading(resultDiv);
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({theme, num_ideas: numIdeas})
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <h3>Ideas for "${data.theme}"</h3>
+                        ${data.ideas.map((idea, i) => `
+                            <div style="margin: 15px 0; padding: 10px; background: white; border-radius: 6px;">
+                                <strong>${i + 1}. ${idea.name}</strong>
+                                <p>${idea.description}</p>
+                                <small>Strategy: ${idea.strategy} | Novelty: ${idea.novelty}</small>
+                            </div>
+                        `).join('')}
+                    `;
+                    resultDiv.classList.add('show');
+                    errorDiv.classList.remove('show');
+                } else {
+                    showError(errorDiv, 'Failed to generate ideas');
+                    resultDiv.classList.remove('show');
+                }
+            } catch (error) {
+                showError(errorDiv, 'Error: ' + error.message);
+                resultDiv.classList.remove('show');
+            }
+        }
+
+        async function abstractPattern() {
+            const select = document.getElementById('pattern-concepts');
+            const selected = Array.from(select.selectedOptions).map(opt => opt.value);
+
+            const resultDiv = document.getElementById('pattern-result');
+            const errorDiv = document.getElementById('pattern-error');
+
+            if (selected.length < 2) {
+                showError(errorDiv, 'Please select at least 2 concepts');
+                return;
+            }
+
+            try {
+                showLoading(resultDiv);
+                const response = await fetch('/api/abstract', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({concepts: selected})
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <h3>${data.synthesis.name}</h3>
+                        <p>${data.synthesis.description}</p>
+                        <p><span class="label">Novelty:</span> ${data.synthesis.novelty}</p>
+                        <p><span class="label">Confidence:</span> ${(data.synthesis.confidence * 100).toFixed(0)}%</p>
+                    `;
+                    resultDiv.classList.add('show');
+                    errorDiv.classList.remove('show');
+                } else {
+                    showError(errorDiv, data.error || 'Failed to abstract pattern');
+                    resultDiv.classList.remove('show');
+                }
+            } catch (error) {
+                showError(errorDiv, 'Error: ' + error.message);
+                resultDiv.classList.remove('show');
+            }
+        }
+
+        function showLoading(resultDiv) {
+            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>Processing...</p></div>';
+            resultDiv.classList.add('show');
+        }
+
+        function showError(errorDiv, message) {
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+            setTimeout(() => errorDiv.classList.remove('show'), 5000);
+        }
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', loadConcepts);
+    </script>
+</body>
+</html>

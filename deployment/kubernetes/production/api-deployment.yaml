@@ -1,0 +1,321 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: claude-agi-secrets
+  namespace: claude-agi-prod
+type: Opaque
+stringData:
+  # IMPORTANT: Replace these with actual secrets in production
+  anthropic-api-key: "sk-ant-REPLACE_WITH_ACTUAL_KEY"
+  jwt-secret-key: "REPLACE_WITH_256_BIT_SECRET"
+  postgres-password: "REPLACE_WITH_STRONG_PASSWORD"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: claude-agi-config
+  namespace: claude-agi-prod
+data:
+  # Production configuration
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "INFO"
+
+  # Database configuration
+  POSTGRES_HOST: "postgresql.claude-agi-prod.svc.cluster.local"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "claude_agi_prod"
+  POSTGRES_USER: "claude_agi"
+
+  # Redis configuration
+  REDIS_URL: "redis://redis-cluster.claude-agi-prod.svc.cluster.local:6379"
+  REDIS_CLUSTER_MODE: "true"
+
+  # API configuration
+  API_PORT: "9090"
+  API_WORKERS: "4"
+  API_TIMEOUT: "300"
+
+  # Rate limiting
+  RATE_LIMIT_ENABLED: "true"
+  RATE_LIMIT_STRATEGY: "sliding_window"
+
+  # Security
+  ENABLE_SECURITY_HEADERS: "true"
+  API_KEY_REQUIRED: "true"
+  CORS_ORIGINS: "https://yourdomain.com"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: claude-agi-api
+  namespace: claude-agi-prod
+  labels:
+    app: claude-agi
+    component: api
+spec:
+  replicas: 3  # High availability with 3 replicas
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0  # Zero downtime deployments
+  selector:
+    matchLabels:
+      app: claude-agi
+      component: api
+  template:
+    metadata:
+      labels:
+        app: claude-agi
+        component: api
+        version: "1.6.2"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      # Security context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+
+      # Anti-affinity for pod distribution
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - claude-agi
+                - key: component
+                  operator: In
+                  values:
+                  - api
+              topologyKey: kubernetes.io/hostname
+
+      # Init containers
+      initContainers:
+      - name: wait-for-postgres
+        image: busybox:1.35
+        command: ['sh', '-c', 'until nc -z postgresql 5432; do echo waiting for postgres; sleep 2; done;']
+
+      - name: wait-for-redis
+        image: busybox:1.35
+        command: ['sh', '-c', 'until nc -z redis-cluster 6379; do echo waiting for redis; sleep 2; done;']
+
+      containers:
+      - name: api
+        image: claude-agi:1.6.2  # Build and push to your registry
+        imagePullPolicy: IfNotPresent
+
+        ports:
+        - name: http
+          containerPort: 9090
+          protocol: TCP
+
+        env:
+        # Environment from ConfigMap
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: claude-agi-config
+              key: ENVIRONMENT
+
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: claude-agi-config
+              key: LOG_LEVEL
+
+        # Database configuration
+        - name: POSTGRES_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: claude-agi-config
+              key: POSTGRES_HOST
+
+        - name: POSTGRES_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: claude-agi-config
+              key: POSTGRES_PORT
+
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: claude-agi-config
+              key: POSTGRES_DB
+
+        - name: POSTGRES_USER
+          valueFrom:
+            configMapKeyRef:
+              name: claude-agi-config
+              key: POSTGRES_USER
+
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: claude-agi-secrets
+              key: postgres-password
+
+        # Redis configuration
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: claude-agi-config
+              key: REDIS_URL
+
+        # Secrets
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: claude-agi-secrets
+              key: anthropic-api-key
+
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: claude-agi-secrets
+              key: jwt-secret-key
+
+        # Resource limits
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+
+        # Health checks
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 9090
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 9090
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+
+        # Startup probe for slow-starting container
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 9090
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 30  # 5 minutes to start
+
+        # Security context
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+
+        # Volume mounts
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: cache
+          mountPath: /app/.cache
+
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: cache
+        emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: claude-agi-api
+  namespace: claude-agi-prod
+  labels:
+    app: claude-agi
+    component: api
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9090
+    targetPort: http
+    protocol: TCP
+    name: http
+  selector:
+    app: claude-agi
+    component: api
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: claude-agi-api-hpa
+  namespace: claude-agi-prod
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: claude-agi-api
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300  # 5 minute stabilization
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: claude-agi-api-pdb
+  namespace: claude-agi-prod
+spec:
+  minAvailable: 2  # Always keep at least 2 pods running
+  selector:
+    matchLabels:
+      app: claude-agi
+      component: api

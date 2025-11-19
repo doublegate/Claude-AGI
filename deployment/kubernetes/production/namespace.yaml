@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: claude-agi-prod
+  labels:
+    name: claude-agi-prod
+    environment: production

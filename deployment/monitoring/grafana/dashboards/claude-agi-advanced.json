@@ -1,0 +1,342 @@
+{
+  "dashboard": {
+    "title": "Claude-AGI Production Dashboard",
+    "tags": ["claude-agi", "production"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "10s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "API Request Rate",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [{
+          "expr": "rate(http_requests_total{job=\"claude-agi-api\"}[5m])",
+          "legendFormat": "{{method}} {{path}}",
+          "refId": "A"
+        }],
+        "yaxes": [
+          {"format": "reqps", "label": "Requests/sec"},
+          {"show": false}
+        ]
+      },
+      {
+        "id": 2,
+        "title": "API Latency (p95, p99)",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"claude-agi-api\"}[5m]))",
+            "legendFormat": "p95",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{job=\"claude-agi-api\"}[5m]))",
+            "legendFormat": "p99",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {"format": "s", "label": "Latency"},
+          {"show": false}
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Error Rate",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "targets": [{
+          "expr": "rate(http_requests_total{job=\"claude-agi-api\",status=~\"5..\"}[5m])",
+          "legendFormat": "{{status}} {{path}}",
+          "refId": "A"
+        }],
+        "yaxes": [
+          {"format": "reqps", "label": "Errors/sec"},
+          {"show": false}
+        ],
+        "alert": {
+          "conditions": [{
+            "evaluator": {
+              "params": [10],
+              "type": "gt"
+            },
+            "operator": {"type": "and"},
+            "query": {"params": ["A", "5m", "now"]},
+            "reducer": {"type": "avg"},
+            "type": "query"
+          }],
+          "executionErrorState": "alerting",
+          "frequency": "60s",
+          "handler": 1,
+          "name": "High Error Rate Alert",
+          "noDataState": "no_data"
+        }
+      },
+      {
+        "id": 4,
+        "title": "Pod CPU Usage",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "targets": [{
+          "expr": "rate(container_cpu_usage_seconds_total{namespace=\"claude-agi-prod\",pod=~\"claude-agi-api-.*\"}[5m])",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }],
+        "yaxes": [
+          {"format": "percentunit", "label": "CPU"},
+          {"show": false}
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Pod Memory Usage",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+        "targets": [{
+          "expr": "container_memory_usage_bytes{namespace=\"claude-agi-prod\",pod=~\"claude-agi-api-.*\"}",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }],
+        "yaxes": [
+          {"format": "bytes", "label": "Memory"},
+          {"show": false}
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Rate Limiting - Requests Blocked",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+        "targets": [{
+          "expr": "rate(rate_limit_exceeded_total{job=\"claude-agi-api\"}[5m])",
+          "legendFormat": "{{endpoint}}",
+          "refId": "A"
+        }],
+        "yaxes": [
+          {"format": "reqps", "label": "Blocked/sec"},
+          {"show": false}
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Consciousness Stream Activity",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+        "targets": [{
+          "expr": "rate(thought_generation_total{job=\"claude-agi-api\"}[5m])",
+          "legendFormat": "{{stream_type}}",
+          "refId": "A"
+        }],
+        "yaxes": [
+          {"format": "ops", "label": "Thoughts/sec"},
+          {"show": false}
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Memory Operations",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+        "targets": [
+          {
+            "expr": "rate(memory_store_operations_total{job=\"claude-agi-api\",operation=\"store\"}[5m])",
+            "legendFormat": "Store",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(memory_store_operations_total{job=\"claude-agi-api\",operation=\"retrieve\"}[5m])",
+            "legendFormat": "Retrieve",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {"format": "ops", "label": "Operations/sec"},
+          {"show": false}
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Redis Connection Pool",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32},
+        "targets": [
+          {
+            "expr": "redis_connection_pool_active{job=\"claude-agi-api\"}",
+            "legendFormat": "Active",
+            "refId": "A"
+          },
+          {
+            "expr": "redis_connection_pool_idle{job=\"claude-agi-api\"}",
+            "legendFormat": "Idle",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "Connections"},
+          {"show": false}
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Database Query Duration",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 32},
+        "targets": [{
+          "expr": "rate(db_query_duration_seconds_sum{job=\"claude-agi-api\"}[5m]) / rate(db_query_duration_seconds_count{job=\"claude-agi-api\"}[5m])",
+          "legendFormat": "{{query_type}}",
+          "refId": "A"
+        }],
+        "yaxes": [
+          {"format": "s", "label": "Duration"},
+          {"show": false}
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Authentication Success Rate",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 40},
+        "targets": [{
+          "expr": "rate(auth_attempts_total{job=\"claude-agi-api\",result=\"success\"}[5m]) / rate(auth_attempts_total{job=\"claude-agi-api\"}[5m]) * 100",
+          "refId": "A"
+        }],
+        "options": {
+          "graphMode": "none",
+          "orientation": "horizontal",
+          "textMode": "value_and_name",
+          "colorMode": "value"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": null, "color": "red"},
+                {"value": 95, "color": "yellow"},
+                {"value": 99, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 12,
+        "title": "Active API Keys",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 40},
+        "targets": [{
+          "expr": "api_keys_active{job=\"claude-agi-api\"}",
+          "refId": "A"
+        }],
+        "options": {
+          "graphMode": "area",
+          "orientation": "horizontal"
+        }
+      },
+      {
+        "id": 13,
+        "title": "Total Memories Stored",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 40},
+        "targets": [{
+          "expr": "memory_total_count{job=\"claude-agi-api\"}",
+          "refId": "A"
+        }],
+        "options": {
+          "graphMode": "area",
+          "orientation": "horizontal"
+        }
+      },
+      {
+        "id": 14,
+        "title": "Anthropic API Calls",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 40},
+        "targets": [{
+          "expr": "increase(anthropic_api_calls_total{job=\"claude-agi-api\"}[1h])",
+          "refId": "A"
+        }],
+        "options": {
+          "graphMode": "area",
+          "orientation": "horizontal"
+        }
+      },
+      {
+        "id": 15,
+        "title": "Graph Query Performance",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 44},
+        "targets": [{
+          "expr": "histogram_quantile(0.95, rate(graph_query_duration_seconds_bucket{job=\"claude-agi-api\"}[5m]))",
+          "legendFormat": "{{query_type}} p95",
+          "refId": "A"
+        }],
+        "yaxes": [
+          {"format": "s", "label": "Duration"},
+          {"show": false}
+        ]
+      },
+      {
+        "id": 16,
+        "title": "Creative Synthesis Activity",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 44},
+        "targets": [{
+          "expr": "rate(creative_synthesis_total{job=\"claude-agi-api\"}[5m])",
+          "legendFormat": "{{strategy}}",
+          "refId": "A"
+        }],
+        "yaxes": [
+          {"format": "ops", "label": "Syntheses/sec"},
+          {"show": false}
+        ]
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "datasource",
+          "type": "datasource",
+          "query": "prometheus",
+          "current": {
+            "text": "Prometheus",
+            "value": "Prometheus"
+          }
+        },
+        {
+          "name": "namespace",
+          "type": "query",
+          "query": "label_values(up{job=\"claude-agi-api\"}, namespace)",
+          "current": {
+            "text": "claude-agi-prod",
+            "value": "claude-agi-prod"
+          }
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "datasource": "Prometheus",
+          "enable": true,
+          "expr": "ALERTS{alertstate=\"firing\",job=\"claude-agi-api\"}",
+          "iconColor": "red",
+          "name": "Alerts",
+          "step": "60s",
+          "tagKeys": "alertname",
+          "textFormat": "{{alertname}}",
+          "titleFormat": "Alert"
+        }
+      ]
+    }
+  }
+}

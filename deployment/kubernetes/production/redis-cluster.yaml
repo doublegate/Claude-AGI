@@ -1,0 +1,132 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-cluster-config
+  namespace: claude-agi-prod
+data:
+  redis.conf: |
+    cluster-enabled yes
+    cluster-require-full-coverage no
+    cluster-node-timeout 15000
+    cluster-config-file /data/nodes.conf
+    cluster-migration-barrier 1
+    appendonly yes
+    protected-mode no
+    bind 0.0.0.0
+    maxmemory 512mb
+    maxmemory-policy allkeys-lru
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-cluster
+  namespace: claude-agi-prod
+  labels:
+    app: redis-cluster
+spec:
+  clusterIP: None
+  ports:
+  - port: 6379
+    targetPort: 6379
+    name: client
+  - port: 16379
+    targetPort: 16379
+    name: gossip
+  selector:
+    app: redis-cluster
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis-cluster
+  namespace: claude-agi-prod
+spec:
+  serviceName: redis-cluster
+  replicas: 6
+  selector:
+    matchLabels:
+      app: redis-cluster
+  template:
+    metadata:
+      labels:
+        app: redis-cluster
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        command: ["redis-server"]
+        args: ["/conf/redis.conf"]
+        ports:
+        - containerPort: 6379
+          name: client
+        - containerPort: 16379
+          name: gossip
+        volumeMounts:
+        - name: conf
+          mountPath: /conf
+        - name: data
+          mountPath: /data
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          tcpSocket:
+            port: 6379
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: conf
+        configMap:
+          name: redis-cluster-config
+          items:
+          - key: redis.conf
+            path: redis.conf
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: "fast-ssd"  # Use your cluster's SSD storage class
+      resources:
+        requests:
+          storage: 10Gi
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: redis-cluster-init
+  namespace: claude-agi-prod
+spec:
+  template:
+    spec:
+      containers:
+      - name: cluster-init
+        image: redis:7-alpine
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Waiting for Redis pods to be ready..."
+          sleep 30
+          NODES=""
+          for i in 0 1 2 3 4 5; do
+            NODES="$NODES redis-cluster-$i.redis-cluster.claude-agi-prod.svc.cluster.local:6379"
+          done
+          echo "Creating cluster with nodes: $NODES"
+          redis-cli --cluster create $NODES --cluster-replicas 1 --cluster-yes
+      restartPolicy: OnFailure

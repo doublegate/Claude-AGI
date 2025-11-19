@@ -26,14 +26,14 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from src.creative.creative_synthesis import (
     CreativeSynthesisEngine,
     SynthesisStrategy,
     NoveltyLevel
 )
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='templates')
 engine = CreativeSynthesisEngine()
 
 
