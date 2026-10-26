@@ -35,7 +35,7 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_SECURITY_ADMIN_USER=admin
-      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource,grafana-piechart-panel
+      - GF_PLUGINS_PREINSTALL=grafana-clock-panel@2.1.8,grafana-piechart-panel@1.6.4
     networks:
       - monitoring
     restart: unless-stopped
@@ -61,7 +61,7 @@ services:
     restart: unless-stopped
 
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.56.2
+    image: ghcr.io/google/cadvisor:0.56.2
     container_name: claude-agi-cadvisor
     ports:
       - "8080:8080"

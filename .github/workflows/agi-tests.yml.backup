@@ -19,7 +19,7 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: |
-          pip install torch>=2.14.1 --index-url https://download.pytorch.org/whl/cpu
+          pip install 'torch>=2.14.1' --index-url https://download.pytorch.org/whl/cpu
           pip install -r requirements.txt
           pip install -r requirements-test.txt
       - name: Run unit tests
@@ -51,7 +51,7 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: |
-          pip install torch>=2.14.1 --index-url https://download.pytorch.org/whl/cpu
+          pip install 'torch>=2.14.1' --index-url https://download.pytorch.org/whl/cpu
           pip install -r requirements.txt
           pip install -r requirements-test.txt
       - name: Run integration tests
@@ -71,7 +71,7 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: |
-          pip install torch>=2.14.1 --index-url https://download.pytorch.org/whl/cpu
+          pip install 'torch>=2.14.1' --index-url https://download.pytorch.org/whl/cpu
           pip install -r requirements.txt
           pip install -r requirements-test.txt
       - name: Run safety validations
@@ -89,7 +89,7 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: |
-          pip install torch>=2.14.1 --index-url https://download.pytorch.org/whl/cpu
+          pip install 'torch>=2.14.1' --index-url https://download.pytorch.org/whl/cpu
           pip install -r requirements.txt
           pip install -r requirements-test.txt
       - name: Run performance benchmarks

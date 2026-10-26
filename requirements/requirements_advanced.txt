@@ -1,12 +1,10 @@
 # requirements_advanced.txt
 
 # Causal Reasoning
-dowhy>=0.14              # Causal inference
-pgmpy>=1.1.2             # Probabilistic graphical models
-causalnex>=0.12.2        # Causal networks
+dowhy>=0.14              # Causal inference and causal networks
+pgmpy>=1.1.2             # Probabilistic graphical models and Bayesian networks
 
 # Meta-Learning
-learn2learn>=0.2.0       # Meta-learning algorithms
 higher>=0.2.1            # Higher-order optimization
 
 # Optimization
