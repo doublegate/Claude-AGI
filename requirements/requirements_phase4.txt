@@ -1,13 +1,13 @@
 # requirements_phase4.txt
 
 # Creative Generation
-markovify==0.9+        # Text generation
-pytorch-transformers   # Advanced generation
-music21==9.1+          # Music composition
-pillow>=11.3.0          # Image manipulation - SECURITY UPDATE: Fixed CVE-2025-48379 buffer overflow
-ascii-art==2.3+        # ASCII art generation
+markovify>=0.9.4         # Text generation
+transformers>=5.20.2     # Advanced generation
+music21>=10.5.1          # Music composition
+pillow>=13.0.0           # Image manipulation - SECURITY UPDATE: Fixed CVE-2025-48379 buffer overflow
+ascii-art>=0.2.0         # ASCII art generation
 
 # Project Management
-git-python==3.1+       # Git integration
-jira==3.6+             # Project tracking
-notion-client==2.2+    # Notion integration
+GitPython>=3.2.1         # Git integration
+jira>=3.10.5             # Project tracking
+notion-client>=3.1.0     # Notion integration

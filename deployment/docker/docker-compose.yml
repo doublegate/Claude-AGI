@@ -32,7 +32,7 @@ services:
     restart: unless-stopped
 
   postgres:
-    image: postgres:15-alpine
+    image: postgres:17-alpine
     container_name: claude-agi-postgres
     environment:
       - POSTGRES_DB=claude_agi
@@ -47,7 +47,7 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     container_name: claude-agi-redis
     command: redis-server --appendonly yes
     volumes:

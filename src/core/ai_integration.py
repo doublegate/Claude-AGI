@@ -12,7 +12,7 @@ import logging
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 import anthropic
-from anthropic import AsyncAnthropic, HUMAN_PROMPT, AI_PROMPT
+from anthropic import AsyncAnthropic
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from ..database.models import StreamType, EmotionalState
