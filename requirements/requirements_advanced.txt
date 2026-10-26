@@ -1,15 +1,13 @@
 # requirements_advanced.txt
 
 # Causal Reasoning
-dowhy==0.11+           # Causal inference
-pgmpy==0.1+            # Probabilistic graphical models
-causalnex==0.12+       # Causal networks
+dowhy>=0.14              # Causal inference and causal networks
+pgmpy>=1.1.2             # Probabilistic graphical models and Bayesian networks
 
 # Meta-Learning
-learn2learn==0.2+      # Meta-learning algorithms
-higher==0.2+           # Higher-order optimization
+higher>=0.2.1            # Higher-order optimization
 
 # Optimization
-optuna==3.5+           # Hyperparameter optimization
-ray>=2.9.3              # Distributed computing - SECURITY UPDATE: Fixed log injection vulnerability
-dask==2024.2+          # Parallel computing
+optuna>=5.0.0            # Hyperparameter optimization
+ray>=2.59.0              # Distributed computing - SECURITY UPDATE: Fixed log injection vulnerability
+dask>=2026.8.0           # Parallel computing
